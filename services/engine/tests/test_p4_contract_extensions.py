@@ -193,8 +193,8 @@ def test_infeasible_current_rotation_is_disclosed_with_violations():
     assert validate("recommendation-result", result) == [] and validate_result_semantics(result) == []
     baseline = result["baseline"]
     assert baseline["violations"] == ["synthetic: rule broken"]
-    assert baseline["tradeoffs"][0].startswith("Breaks an agronomic rule (P3)")
-    assert "breaks 1 agronomic rule" in baseline["explanation"]
+    assert baseline["tradeoffs"][0].startswith("Breaks a crop rotation rule")
+    assert "breaks 1 crop rotation rule" in baseline["explanation"]
     assert seq not in seqs(result["plans"])  # never recommended
     assert all("violations" not in p for p in result["plans"])
 
@@ -272,7 +272,7 @@ def test_scenario_and_current_rotation_comparisons_stay_distinct():
     for plan in outcome.plans + [outcome.baseline]:
         text = " ".join(plan["benefits"] + plan["tradeoffs"]) + plan["explanation"]
         assert "baseline" not in text.lower()
-        assert "reference climate" in text
+        assert "current climate" in text
     baseline_text = " ".join(outcome.baseline["tradeoffs"] + outcome.baseline["benefits"])
     assert "rank" not in baseline_text  # the current rotation is never ranked
     assert any("current rotation" in t for p in outcome.plans for t in p["benefits"] + p["tradeoffs"])
@@ -305,7 +305,7 @@ def test_scores_use_null_for_unknown_and_include_evaluator_local_checks():
     outcome = recommend(make_request(), ENV, fake_rules(), FakeEvaluator(missing=("soil",), local_checks=["check drainage"]))
     plan = outcome.plans[0]
     assert plan["scores"]["soil"] is None and plan["scores"]["water"] is not None
-    assert "P3: check drainage" in plan["local_checks"]
+    assert "check drainage" in plan["local_checks"]
 
 
 def test_semantic_validator_matches_new_zod_rules():

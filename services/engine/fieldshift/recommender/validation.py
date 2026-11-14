@@ -53,7 +53,7 @@ def history_issues(request: dict, catalog_ids) -> list[str]:
         if catalog_ids and entry["crop_id"] not in catalog_ids:  # no rules at all: reported elsewhere
             issues.append(
                 f"The previous crop {entry['crop_id']} is not in the regional rules; "
-                "compatibility with it depends on the P3 evaluator."
+                "its fit with the first planned crop is not checked."
             )
     return issues
 
