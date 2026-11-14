@@ -1,13 +1,52 @@
-# Contribuții
+# Contributing to NASA Space Apps 2026
 
-Citiți `AGENTS.md` și `docs/team.md`. Contractele se stabilesc înaintea componentelor.
-Nu adăugați autentificare publică: produsul curent este un calculator fără conturi.
+## Team Branches
 
-Lucrați pe branchuri proprii sau pe branchuri de funcționalitate și deschideți PR către
-`main`. Un coleg verifică schimbarea. Refacerea mediului este pe `mihail`; utilizatorul
-face integrarea în `main`. Nu faceți force push pe branchurile altor colegi sau pe main.
+Work only on your personal branch:
 
-Pentru contracte, modificați Zod și fixture-urile, generați schemele și anunțați P1/P2/P3/P4/P5.
-Verificați tipurile TS și testele relevante. Actualizați `docs/status.md` cu limitările reale.
-Nu comiteți secrete, `.env`, dependențe, fișiere NASA mari sau rezultate ale fermierilor.
-Nu prezentați datele demonstrative ca observații reale sau recomandări validate.
+* **Mihai:** `mihai`
+* **Andrei:** `andrei`
+* **Tudor:** `tudor`
+* **Alexia:** `alexia`
+* **Maria:** `maria`
+
+## First-Time Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/bravomihai/nasa-space-apps-2026.git
+   cd nasa-space-apps-2026
+   ```
+
+2. Switch to your branch (or create it from `main` if it doesn't exist yet):
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b <your-branch-name>
+   git push -u origin <your-branch-name>
+   ```
+
+## How to Pull & Push Correctly
+
+### 1. Before you start working (Pull latest changes)
+Always sync your branch with `main` before writing new code:
+```bash
+git checkout main
+git pull origin main
+git checkout <your-branch-name>
+git merge main
+```
+
+### 2. When you finish a task (Push your changes)
+Save and push your work to your own branch:
+```bash
+git add .
+git commit -m "short description of what you changed"
+git push origin <your-branch-name>
+```
+
+## Merging into `main` (Review Required)
+
+* **Do not push directly to `main`.**
+* Open a **Pull Request (PR)** on GitHub from `<your-branch-name>` into `main`.
+* **At least one teammate must review and approve** the Pull Request before it can be merged into `main`.
