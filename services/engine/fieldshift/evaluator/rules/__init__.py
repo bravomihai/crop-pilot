@@ -75,10 +75,21 @@ def load_provisional_romania_rules(location: dict, environment: dict) -> dict:
     for entry in environment.get("daily", []):
         try:
             day = date.fromisoformat(entry["date"])
-            temperature = float(entry["values"]["T2M"])
         except (KeyError, TypeError, ValueError):
             continue
-        if day.month in range(4, 10) and math.isfinite(temperature):
+        if day.month not in range(4, 10):
+            continue
+        # The data service's cleaned daily value (`tmean`), or the raw NASA POWER record.
+        value = entry.get("tmean")
+        if value is None:
+            value = (entry.get("values") or {}).get("T2M")
+        if value is None and entry.get("tmin") is not None and entry.get("tmax") is not None:
+            value = (entry["tmin"] + entry["tmax"]) / 2
+        try:
+            temperature = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(temperature) and temperature > -900:
             temperatures.append(temperature)
     if not temperatures:
         return {

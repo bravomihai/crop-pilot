@@ -203,3 +203,17 @@ def test_winterkill_note_only_for_winter_crops(request_, environment, rules):
     winter = evaluate(["pea", "winter_wheat", "maize"], request_, environment, rules)
     assert not any("Winterkill" in g for g in spring["data_gaps"])
     assert any("Winterkill risk for winter wheat" in g for g in winter["data_gaps"])
+
+
+def test_provisional_profile_reads_the_data_services_cleaned_days():
+    # build_environment returns flat cleaned days (tmean, tmin, tmax), not raw POWER values.
+    from fieldshift.evaluator.rules import load_provisional_romania_rules
+
+    cluj = {"latitude": 46.73, "longitude": 23.75}
+    cleaned = {"daily": [{"date": f"2020-{m:02d}-15", "tmean": 16.0, "tmin": 9.0, "tmax": 23.0} for m in range(4, 10)]}
+    only_min_max = {"daily": [{"date": f"2020-{m:02d}-15", "tmean": None, "tmin": 9.0, "tmax": 23.0} for m in range(4, 10)]}
+    for environment in (cleaned, only_min_max):
+        rules = load_provisional_romania_rules(cluj, environment)
+        assert rules["crops"], rules.get("data_gaps")
+        assert rules["region"]["id"].startswith("ro-romania-provisional-")
+        assert rules["region"]["mean_apr_sep_t2m_c"] == 16.0
