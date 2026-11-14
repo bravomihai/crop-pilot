@@ -317,3 +317,36 @@ test("future charts accept plain display props and expose text tables instead of
   assert.match(climate, /2.00 mm\/year/);
   assert.match(climate, /Read yearly values as a table/);
 });
+
+test("results show the past-season replay and the field's climate from the result", async () => {
+  const { PlanReplay, ClimateCard } = await import("../src/components/results-evidence");
+  const { replaySeries, climateSeries } = await import("../src/lib/chart-data");
+  const full = resultSchema.parse(
+    JSON.parse(readFileSync(new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url), "utf8")),
+  );
+  const series = replaySeries(full.plans, full.baseline, "water");
+  assert.equal(series[0].label, "Your current rotation");
+  assert.equal(series[0].baseline, true);
+  assert.deepEqual(series[1].points.map((p) => p.value), [81, 74, 62]);
+  const climate = climateSeries(full.climate_context!, "hot_days_gt32");
+  assert.deepEqual(climate.points.map((p) => p.value), [30, 40, 60]);
+  const replayHtml = renderToStaticMarkup(createElement(PlanReplay, { result: full }));
+  assert.match(replayHtml, /How each plan would have done/);
+  assert.match(replayHtml, /2010–2012/);
+  const climateHtml = renderToStaticMarkup(createElement(ClimateCard, { result: full }));
+  assert.match(climateHtml, /Your field(&#x27;|')s climate, 2010–2012/);
+  assert.match(climateHtml, /Trend: \+150 days per decade/);
+  const bare = { ...full, climate_context: undefined, plans: full.plans.map(({ replay, ...plan }) => plan), baseline: undefined };
+  assert.equal(renderToStaticMarkup(createElement(PlanReplay, { result: bare })), "");
+  assert.equal(renderToStaticMarkup(createElement(ClimateCard, { result: bare })), "");
+});
+
+
+test("results explain the terms the challenge names, in plain words", async () => {
+  const { default: Glossary, GLOSSARY, CROP_ROLES } = await import("../src/components/glossary");
+  const html = renderToStaticMarkup(createElement(Glossary));
+  for (const term of ["Evapotranspiration", "Water balance", "Soil moisture", "Frost risk", "NDVI", "Satellite and regional data vs your field"])
+    assert.match(html, new RegExp(term));
+  assert.ok(GLOSSARY.length >= 8 && CROP_ROLES.length >= 4);
+  assert.ok(CROP_ROLES.some((entry) => /Legumes/.test(entry.role)));
+});

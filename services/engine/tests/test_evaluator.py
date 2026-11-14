@@ -217,3 +217,30 @@ def test_provisional_profile_reads_the_data_services_cleaned_days():
         assert rules["crops"], rules.get("data_gaps")
         assert rules["region"]["id"].startswith("ro-romania-provisional-")
         assert rules["region"]["mean_apr_sep_t2m_c"] == 16.0
+
+
+def test_fusarium_check_only_when_wheat_follows_maize(request_, environment, rules):
+    request_["history"] = [{"crop_id": "sunflower", "harvest_year": 2026}]
+    no_maize = evaluate(["pea", "winter_wheat", "winter_rapeseed"], request_, environment, rules)
+    after_maize = evaluate(["maize", "winter_wheat", "pea"], request_, environment, rules)
+    assert not any("Fusarium" in c for c in no_maize["local_checks"])
+    assert any("Fusarium" in c for c in after_maize["local_checks"])
+
+
+def test_maize_rootworm_check_only_for_maize_after_maize(request_, environment, rules):
+    request_["history"] = [{"crop_id": "maize", "harvest_year": 2026}]
+    repeat = evaluate(["maize", "winter_wheat", "pea"], request_, environment, rules)
+    request_["history"] = [{"crop_id": "winter_wheat", "harvest_year": 2026}]
+    first = evaluate(["maize", "winter_wheat", "pea"], request_, environment, rules)
+    assert any("Diabrotica" in c for c in repeat["local_checks"])
+    assert not any("Diabrotica" in c for c in first["local_checks"])
+
+
+@pytest.mark.parametrize("rotation", [
+    ["sunflower", "winter_barley", "winter_barley"],
+    ["pea", "winter_wheat", "winter_wheat"],
+])
+def test_straw_cereal_after_itself_is_not_recommended(rotation, request_, environment, rules):
+    request_["history"] = []
+    out = evaluate(rotation, request_, environment, rules)
+    assert out["feasibility"] == "infeasible", out["violations"]

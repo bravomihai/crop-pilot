@@ -16,6 +16,7 @@
     "test:cache": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx tests/cache.integration.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@fieldshift/contracts": "workspace:*",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",

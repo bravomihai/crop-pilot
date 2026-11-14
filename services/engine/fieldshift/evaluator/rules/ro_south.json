@@ -60,7 +60,7 @@
       "ky": 1.05,
       "ecocrop": { "topt": [15, 23], "tabs": [5, 27], "ph_opt": [6.0, 7.0], "ph_abs": [5.5, 8.5] },
       "residue": 0.8,
-      "max_consecutive": 2,
+      "max_consecutive": 1,
       "hazards": {
         "heat": { "tmax_c": 32, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.5 },
         "winterkill": { "tmin_c": -18, "months": [12, 1, 2], "severity": 0.8 },
@@ -82,7 +82,7 @@
       "ky": 1.0,
       "ecocrop": { "topt": [15, 20], "tabs": [2, 40], "ph_opt": [6.5, 7.5], "ph_abs": [6.0, 8.0] },
       "residue": 0.8,
-      "max_consecutive": 2,
+      "max_consecutive": 1,
       "hazards": {
         "heat": { "tmax_c": 32, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.5 },
         "winterkill": { "tmin_c": -14, "months": [12, 1, 2], "severity": 0.8 },
@@ -204,11 +204,11 @@
   ],
   "successor": {
     "winter_wheat": {
-      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "good",
+      "winter_wheat": "forbidden", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "good",
       "sunflower": "good", "soybean": "good", "pea": "good"
     },
     "winter_barley": {
-      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "good",
+      "winter_wheat": "poor", "winter_barley": "forbidden", "winter_rapeseed": "good", "maize": "good",
       "sunflower": "good", "soybean": "good", "pea": "good"
     },
     "winter_rapeseed": {
@@ -264,10 +264,10 @@
   "local_checks": {
     "sunflower": "Check the field's broomrape (Orobanche cumana) history and choose a resistant sunflower hybrid.",
     "winter_rapeseed": "Check residual herbicides from the previous crop before sowing rapeseed, and seedbed moisture at the end of August.",
-    "maize": "Check for western corn rootworm (Diabrotica) if maize was grown on this field in the previous two years.",
+    "maize": { "text": "Check for western corn rootworm (Diabrotica): maize follows maize on this field.", "after": ["maize"] },
     "soybean": "Check that the soybean maturity group fits the area and that seed is inoculated if soybean is new on the field.",
     "pea": "Check pea root-disease history; keep at least four years between pea crops.",
-    "winter_wheat": "Check Fusarium risk and residue management if wheat follows maize.",
+    "winter_wheat": { "text": "Check Fusarium risk and bury or chop the maize residues: wheat follows maize.", "after": ["maize"] },
     "winter_barley": "Check winter hardiness of the barley variety for this area."
   },
   "sources": [
