@@ -5,15 +5,19 @@ import type { Location } from "@fieldshift/contracts";
 export default function LocationMap({
   location,
   onSelect,
+  disabled = false,
 }: {
   location?: Location;
   onSelect: (value: Location) => void;
+  disabled?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null),
     map = useRef<LeafletMap | null>(null),
     marker = useRef<CircleMarker | null>(null);
   const callback = useRef(onSelect);
   callback.current = onSelect;
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
   useEffect(() => {
     let disposed = false;
     void import("leaflet").then((L) => {
@@ -24,13 +28,14 @@ export default function LocationMap({
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map.current);
-      map.current.on("click", (event) =>
+      map.current.on("click", (event) => {
+        if (disabledRef.current) return;
         callback.current({
-          name: "Punct selectat pe hartă",
+          name: "Point selected on the map",
           latitude: Number(event.latlng.lat.toFixed(6)),
           longitude: Number(event.latlng.lng.toFixed(6)),
-        }),
-      );
+        });
+      });
     });
     return () => {
       disposed = true;
@@ -60,7 +65,8 @@ export default function LocationMap({
       ref={container}
       className="map"
       role="region"
-      aria-label="Hartă: selectează un punct prin click"
+      aria-label="Map: click to select a point"
+      aria-disabled={disabled || undefined}
     />
   );
 }

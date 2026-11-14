@@ -18,7 +18,7 @@ export async function getRecommendations(
       generated_at: new Date().toISOString(),
       assumptions: [
         ...demoResult.assumptions,
-        "Mod frontend independent: calendarul exemplului este fix, iar formularul nu este evaluat.",
+        "Independent frontend mode: the example calendar is fixed and form entries are not evaluated.",
       ],
     });
   }
@@ -30,6 +30,6 @@ export async function getRecommendations(
   });
   const body = await response.json();
   if (!response.ok)
-    throw new Error(body.error ?? "Analiza nu a putut fi finalizată.");
+    throw new Error(body.error ?? "The analysis could not be completed.");
   return resultSchema.parse(body);
 }

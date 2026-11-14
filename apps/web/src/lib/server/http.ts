@@ -15,7 +15,7 @@ export function errorResponse(error: unknown, requestId?: string) {
   return NextResponse.json(
     {
       code: known ? error.code : "internal_error",
-      error: known ? error.message : "Solicitarea nu a putut fi procesată.",
+      error: known ? error.message : "The request could not be processed.",
       request_id: requestId,
     },
     { status: known ? error.status : 500 },
@@ -26,7 +26,7 @@ export async function readJson(
   maxBytes = 32768,
 ): Promise<unknown> {
   const reader = req.body?.getReader();
-  if (!reader) throw new ApiError(400, "invalid_json", "Lipsește formularul.");
+  if (!reader) throw new ApiError(400, "invalid_json", "The request body is missing.");
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -39,7 +39,7 @@ export async function readJson(
         throw new ApiError(
           413,
           "request_too_large",
-          "Formularul este prea mare.",
+          "The request body is too large.",
         );
       }
       chunks.push(value);
@@ -50,7 +50,7 @@ export async function readJson(
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new ApiError(400, "invalid_json", "Formularul nu este JSON valid.");
+    throw new ApiError(400, "invalid_json", "The request body is not valid JSON.");
   }
 }
 export function requireInternalToken(req: Request) {
@@ -59,7 +59,7 @@ export function requireInternalToken(req: Request) {
     throw new ApiError(
       503,
       "not_configured",
-      "Integrarea internă nu este configurată.",
+      "The internal integration is not configured.",
     );
   const supplied =
     req.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
@@ -67,5 +67,5 @@ export function requireInternalToken(req: Request) {
     Buffer.byteLength(supplied) !== Buffer.byteLength(expected) ||
     !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
   )
-    throw new ApiError(401, "unauthorized", "Acces intern refuzat.");
+    throw new ApiError(401, "unauthorized", "Internal access denied.");
 }

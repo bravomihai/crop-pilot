@@ -11,7 +11,7 @@ type Context = { params: Promise<{ key: string }> };
 async function keyFor(ctx: Context) {
   const { key } = await ctx.params;
   if (!/^environment:[a-f0-9]{64}$/.test(key))
-    throw new ApiError(400, "invalid_key", "Cheie cache invalidă.");
+    throw new ApiError(400, "invalid_key", "Invalid cache key.");
   return key;
 }
 export async function GET(req: Request, ctx: Context) {

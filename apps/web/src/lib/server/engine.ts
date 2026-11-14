@@ -15,13 +15,13 @@ export async function recommend(
     throw new ApiError(
       400,
       "validation_error",
-      "Verifică localizarea, data disponibilității și valorile formularului.",
+      "Check the location, availability date, and form values.",
     );
   if (Object.values(parsed.data.priorities).every((v) => v === 0))
     throw new ApiError(
       400,
       "validation_error",
-      "Alege cel puțin o prioritate.",
+      "Choose at least one priority.",
     );
   const url = process.env.ENGINE_URL,
     token = process.env.INTERNAL_API_TOKEN;
@@ -29,7 +29,7 @@ export async function recommend(
     throw new ApiError(
       503,
       "engine_not_configured",
-      "Motorul de analiză nu este configurat.",
+      "The analysis engine is not configured.",
     );
   let response: Response;
   try {
@@ -50,20 +50,20 @@ export async function recommend(
     throw new ApiError(
       502,
       "engine_unavailable",
-      "Motorul nu este disponibil momentan. Poți reîncerca.",
+      "The analysis engine is temporarily unavailable. Please try again.",
     );
   }
   if (response.status === 503)
     throw new ApiError(
       503,
       "engine_not_ready",
-      "Motorul agronomic este încă în dezvoltare. Folosește modul demonstrativ.",
+      "The agronomic engine is still in development. Use demo mode.",
     );
   if (!response.ok)
     throw new ApiError(
       502,
       "engine_error",
-      "Motorul nu a putut finaliza analiza.",
+      "The engine could not complete the analysis.",
     );
   const result = resultSchema.safeParse(
     await response.json().catch(() => null),
@@ -76,7 +76,7 @@ export async function recommend(
     throw new ApiError(
       502,
       "invalid_engine_result",
-      "Motorul a returnat un rezultat incomplet sau invalid.",
+      "The engine returned an incomplete or invalid result.",
     );
   if (
     result.data.location.latitude !== parsed.data.location.latitude ||
@@ -85,7 +85,7 @@ export async function recommend(
     throw new ApiError(
       502,
       "invalid_engine_result",
-      "Localizarea rezultatului nu corespunde cererii.",
+      "The result location does not match the request.",
     );
   return result.data;
 }

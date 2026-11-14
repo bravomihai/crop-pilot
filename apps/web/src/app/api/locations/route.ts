@@ -9,16 +9,16 @@ export async function GET(req: Request) {
       throw new ApiError(
         400,
         "validation_error",
-        "Introdu cel puțin două caractere pentru localitate.",
+        "Enter between 2 and 100 characters for the location.",
       );
-    const key = cacheKey("geocoding", q.toLowerCase());
+    const key = cacheKey("geocoding", `en:${q.toLowerCase()}`);
     const cached = await readCache(key);
     if (cached) return NextResponse.json(cached);
     const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
     url.search = new URLSearchParams({
       name: q,
       count: "8",
-      language: "ro",
+      language: "en",
       format: "json",
     }).toString();
     const response = await fetch(url, {
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       throw new ApiError(
         502,
         "geocoding_unavailable",
-        "Căutarea localităților nu este disponibilă. Poți introduce coordonatele.",
+        "Location search is unavailable. You can choose a point on the map.",
       );
     const data = (await response.json()) as {
       results?: {
