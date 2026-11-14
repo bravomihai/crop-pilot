@@ -1,16 +1,15 @@
-"""P3 owns regional rules and evaluation, independent of farmer priority weights.
+"""P3: regional rules and the evaluation of one rotation, independent of farmer priorities.
 
-Implement compatibility, previous-crop checks, crop-specific exposure and calendar windows.
-Preserve unknown inputs; do not invent neutral scores or infer field soil from coarse moisture.
-Every numeric estimate must identify its source and calculation.
+`load_rules(location)` returns the regional knowledge (crops, calendars, FAO-56 and EcoCrop
+parameters, successions, sources). `evaluate(rotation, request, environment, rules)` places
+the rotation in time, checks it against the rules, replays it over every past season in the
+environment (with the hypothetical scenario applied) and returns four criterion scores in
+[0, 1] with their evidence. Unknown inputs give `None` scores, never a neutral value.
 """
 
+from __future__ import annotations
 
-def load_rules(location: dict) -> dict:
-    raise NotImplementedError("Regional agronomic rules are not implemented")
+from .core import evaluate
+from .rules import load_rules
 
-
-def evaluate(
-    rotation: list[str], request: dict, environment: dict, rules: dict
-) -> dict:
-    raise NotImplementedError("Agronomic rotation evaluation is not implemented")
+__all__ = ["evaluate", "load_rules"]
