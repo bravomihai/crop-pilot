@@ -8,6 +8,31 @@ export const locationSchema = z
     longitude: z.number().min(-180).max(180),
   })
   .strict();
+export const fieldBoundarySchema = z
+  .object({
+    type: z.literal("Polygon"),
+    coordinates: z
+      .array(
+        z
+          .array(
+            z.tuple([
+              z.number().min(-180).max(180),
+              z.number().min(-90).max(90),
+            ]),
+          )
+          .min(4)
+          .max(101),
+      )
+      .length(1),
+  })
+  .strict()
+  .refine(({ coordinates }) => {
+    const ring = coordinates[0];
+    return (
+      ring[0][0] === ring[ring.length - 1][0] &&
+      ring[0][1] === ring[ring.length - 1][1]
+    );
+  }, "The field boundary ring must be closed.");
 export const dateSchema = z.iso.date();
 export const cropIdSchema = z.string().regex(/^[a-z][a-z0-9_]*$/);
 // Where a history entry came from. Typed or documented history is stronger evidence than
@@ -38,6 +63,7 @@ export const requestSchema = z
   .object({
     schema_version: z.literal(CONTRACT_VERSION).default(CONTRACT_VERSION),
     location: locationSchema,
+    field_boundary: fieldBoundarySchema.optional(),
     available_from: dateSchema,
     crop_count: z.literal(3).default(3),
     history: z.array(cropHistorySchema).max(30).default([]),
@@ -64,6 +90,11 @@ export const requestSchema = z
           .array(z.string().regex(/^[a-z][a-z0-9_]*$/))
           .max(50)
           .default([]),
+        selected_crops: z
+          .array(z.string().regex(/^[a-z][a-z0-9_]*$/))
+          .max(50)
+          .optional(),
+        selected_crops_only: z.boolean().optional(),
       })
       .strict(),
     scenario: z
@@ -191,6 +222,17 @@ export const planSchema = z
     replay: z.array(replaySeasonSchema).max(60).optional(),
   })
   .strict();
+export const monthlyClimateSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    mean_daily_max_c: z.number().nullable(),
+    max_daily_max_c: z.number().nullable(),
+    mean_daily_min_c: z.number().nullable(),
+    min_daily_min_c: z.number().nullable(),
+    max_temp_observations: z.number().int().min(0),
+    min_temp_observations: z.number().int().min(0),
+  })
+  .strict();
 export const resultSchema = z
   .object({
     schema_version: z.literal(CONTRACT_VERSION),
@@ -204,6 +246,7 @@ export const resultSchema = z
     // way as the plans. Present only when the request has `current_rotation`. It is not
     // counted in `status` and may repeat a plan's sequence.
     baseline: planSchema.optional(),
+    monthly_climate: z.array(monthlyClimateSchema),
     // Observed yearly climate at the location (from the data the plans were evaluated on).
     climate_context: climateContextSchema.optional(),
     assumptions: z.array(z.string()),

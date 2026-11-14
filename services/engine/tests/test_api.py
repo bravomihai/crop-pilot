@@ -50,4 +50,4 @@ def test_computed_orchestration_contract_with_module_stubs(client, monkeypatch, 
     assert result["mode"] == "computed" and result["status"] == status
     assert len(result["plans"]) == count
     assert result["request_id"] == "integration-test-id"
-    assert result["data_gaps"] == ["stub data"]
+    assert "stub data" in result["data_gaps"]

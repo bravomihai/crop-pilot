@@ -1,8 +1,8 @@
 # P3 evaluator
 
 Code: `services/engine/fieldshift/evaluator/`. Rules: `evaluator/rules/ro_south.json`.
-Tests: `services/engine/tests/test_evaluator.py`, on real NASA POWER data (2005–2025) for a
-test point in the Bărăgan (`tests/fixtures/environment-ro-south.json`).
+Tests: `services/engine/tests/test_evaluator.py`, using a Bărăgan fixture
+(`tests/fixtures/environment-ro-south.json`); the fixture is not a geographic coverage limit.
 
 ```python
 rules = load_rules(request["location"])           # zone rules, or no crops outside covered zones
@@ -77,13 +77,14 @@ Extra keys that the contract allows for plans and P4 can pass on:
 
 | Key | Required | Notes |
 |---|---|---|
-| `daily[]` with `date` and minimum and maximum temperature, rain | **yes** | NASA POWER names (`T2M_MIN`, `T2M_MAX`, `PRECTOTCORR` under `values`) or `tmin`, `tmax`, `precip`. At least ~6 complete years; 20 is better. |
-| `daily[]` humidity (`RH2M` or `T2MDEW`), wind (`WS2M`), radiation (`ALLSKY_SFC_SW_DWN`) | recommended | Enables FAO-56 Penman-Monteith; otherwise Hargreaves. Mihail's adapter already fetches them. |
-| `static.elevation_m` | recommended | POWER returns it in `geometry.coordinates[2]`. |
-| `static.soil.ph`, `clay_pct`, `sand_pct`, `silt_pct` (SoilGrids, 0–30 cm) | recommended | Texture sets soil water storage; pH enters productivity. `awc_m3_m3` is used if given. |
-| `static.slope_pct` (SRTM) | optional | Adds erosion to the soil score. |
+| `daily[]` with `date`, `tmin`, `tmax`, `tmean`, `precip` | **yes** | P2 cleans NASA POWER names into °C and mm/day; missing values stay `None`. At least ~6 complete years; 20 is better. |
+| `daily[]` humidity, dewpoint, wind, radiation, `et0` | recommended | P2 computes FAO-56 Penman-Monteith ET0 when inputs are available, otherwise Hargreaves. P3 recomputes ET0 when a temperature scenario is applied. |
+| `static.elevation_m` | recommended | Read from NASA POWER; used in Penman-Monteith ET0. |
+| `static.soil` (SoilGrids, depth-weighted 0–30 cm) | recommended | Clay, sand, silt, pH and organic carbon are modelled estimates. Texture and estimated available water capacity affect the water balance; pH affects relative productivity. SoilGrids is not a field analysis. |
+| `static.slope_pct` (SRTM) | optional | A 3×3 point-neighborhood estimate; adds erosion to the soil score, not a field-wide measurement. |
 | `sources[]` with `id` and **`title`** | yes | Without a title, the dataset name is used. |
 | `data_gaps[]` at the top level | yes | The pipeline reads it from there. |
+| `quality` | recommended | Daily row count, missing source values, and ET0 method counts; used to describe coverage, not as a substitute for field validation. |
 
 Not used yet: SMAP soil moisture (could set the starting soil water), CMIP6 deltas
 (scenario presets), GAEZ attainable yields (productivity), Sentinel-2 crop history.
@@ -107,9 +108,10 @@ Change the JSON, not the code.
 
 ## Climate context (`result.climate_context`)
 
-`evaluator.climate_context(environment, location)` turns the same daily data into one row per
-complete calendar year. The pipeline adds it to every computed result. The values are observed
-only; the scenario never touches them.
+`data_service.climate_context(daily, source_ids)` turns cleaned daily data into one row per
+complete calendar year. The pipeline prefers this P2 result and retains the evaluator version
+as a fallback for older environment fixtures. The values are observed only; the scenario never
+touches them. Annual fields remain `null` when their input series has missing days.
 
 | Field | Meaning |
 |---|---|

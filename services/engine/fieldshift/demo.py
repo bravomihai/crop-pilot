@@ -4,11 +4,11 @@ from calendar import monthrange
 from datetime import date, timedelta, datetime, timezone
 
 CATALOG = {
-    "pea": ("Mazăre", 3, 7),
-    "maize": ("Porumb", 4, 9),
-    "winter_wheat": ("Grâu de toamnă", 10, 7),
-    "winter_barley": ("Orz de toamnă", 10, 6),
-    "sunflower": ("Floarea-soarelui", 4, 9),
+    "pea": ("Pea", 3, 7),
+    "maize": ("Maize", 4, 9),
+    "winter_wheat": ("Winter wheat", 10, 7),
+    "winter_barley": ("Winter barley", 10, 6),
+    "sunflower": ("Sunflower", 4, 9),
 }
 SEQUENCES = [
     ("pea", "winter_wheat", "maize"),
@@ -39,7 +39,7 @@ def demo_steps(sequence: tuple[str, ...], available: date) -> list[dict]:
                     "start": harvest_start.isoformat(),
                     "end": harvest_end.isoformat(),
                 },
-                "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată.",
+                "reason": "Illustrative position in the plan; agronomic compatibility is not calculated.",
             }
         )
         available = harvest_end + timedelta(days=30)
@@ -48,24 +48,35 @@ def demo_steps(sequence: tuple[str, ...], available: date) -> list[dict]:
 
 def recommend_demo(request: dict, request_id: str) -> dict:
     excluded = set(request["constraints"].get("excluded_crops", []))
-    sequences = [s for s in SEQUENCES if not excluded.intersection(s)]
+    constraints = request["constraints"]
+    selected = (
+        set(constraints.get("selected_crops", []))
+        if constraints.get("selected_crops_only", False)
+        else None
+    )
+    sequences = [
+        sequence
+        for sequence in SEQUENCES
+        if not excluded.intersection(sequence)
+        and (selected is None or set(sequence).issubset(selected))
+    ]
     plans = []
     for index, sequence in enumerate(sequences):
         plans.append(
             {
                 "id": f"demo-{index + 1}",
-                "label": f"Plan demonstrativ {index + 1}",
+                "label": f"Demo plan {index + 1}",
                 "steps": demo_steps(
                     sequence, date.fromisoformat(request["available_from"])
                 ),
                 "benefits": [
-                    "Ilustrează prezentarea unei succesiuni de trei culturi principale."
+                    "Illustrates a sequence of three successive main crops."
                 ],
                 "tradeoffs": [
-                    "Calendarul este fictiv și trebuie înlocuit cu ferestre locale documentate.",
-                    "Apa, solul și clima nu sunt încă evaluate; planul nu are un scor agronomic.",
+                    "The calendar is fictional and must be replaced with documented local windows.",
+                    "Water, soil, and climate are not yet evaluated; the plan has no agronomic score.",
                 ],
-                "explanation": "Exemplu pentru integrarea interfeței și a backendului. Prioritățile și scenariul nu generează predicții în acest mod.",
+                "explanation": "An example for frontend and backend integration. Priorities and the scenario do not generate predictions in this mode.",
                 "confidence": "low",
                 "source_ids": ["demo-fixture"],
             }
@@ -82,24 +93,25 @@ def recommend_demo(request: dict, request_id: str) -> dict:
         else "insufficient_data",
         "location": request["location"],
         "plans": plans,
+        "monthly_climate": [],
         "assumptions": [
-            "Rezultat fictiv pentru dezvoltare, nu recomandare agronomică.",
-            "Trei culturi principale succesive; nu presupune repetarea automată a planului.",
-            "Modul demo respectă data de pornire și excluderile, dar nu evaluează prioritățile, solul sau scenariul.",
+            "A fictional result for development, not an agronomic recommendation.",
+            "Three successive main crops; the plan does not repeat automatically.",
+            "Demo mode respects the start date and exclusions, but does not evaluate priorities, soil, or the scenario.",
         ],
         "data_gaps": [
-            "Motorul de evaluare și optimizare agronomică trebuie implementat de P3/P4."
+            "The agronomic evaluation and optimization engine still needs to be implemented by P3/P4."
         ]
         + (
             []
             if request.get("history")
-            else ["Istoricul culturilor nu a fost completat."]
+            else ["Crop history has not been provided."]
         ),
         "sources": [
             {
                 "id": "demo-fixture",
-                "title": "Date fictive pentru dezvoltare — fără observații NASA",
+                "title": "Fictional development data — no NASA observations",
             }
         ],
-        "disclaimer": "Nu utiliza aceste exemple drept instrucțiuni de cultivare. Ferestrele și compatibilitățile necesită verificare locală.",
+        "disclaimer": "Do not use these examples as cultivation instructions. Crop windows and compatibility require local verification.",
     }
