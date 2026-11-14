@@ -26,6 +26,7 @@ UNKNOWN — never as a passing constraint and never as a neutral score:
       "warnings": ["..."] | [{"message": "...", "severity": "low|medium|high"}],
       "data_gaps": ["..."],
       "local_checks": ["what a local agronomist should verify"],
+      "assumptions": ["method assumption, e.g. replay period and ET method"],
       "source_ids": ["..."],
       "sources": [{"id": "...", "title": "...", "url": "https://...", "resolution": "..."}],
       "scenario_applied": bool,   # true only if request["scenario"] changed the evaluation
@@ -92,6 +93,7 @@ class Evaluation:
     warnings: tuple[EvalWarning, ...] = ()
     data_gaps: tuple[str, ...] = ()
     local_checks: tuple[str, ...] = ()
+    assumptions: tuple[str, ...] = ()
     replay: tuple[dict, ...] = ()
     source_ids: tuple[str, ...] = ()
     sources: tuple[dict, ...] = ()
@@ -329,6 +331,7 @@ def parse_evaluation(raw, rotation) -> Evaluation:
         warnings=_warnings(raw.get("warnings"), errors),
         data_gaps=_strings(raw.get("data_gaps"), errors, "data_gaps"),
         local_checks=_strings(raw.get("local_checks"), errors, "local_checks"),
+        assumptions=_strings(raw.get("assumptions"), errors, "assumptions"),
         replay=_replay(raw.get("replay"), rotation, errors),
         source_ids=_strings(raw.get("source_ids"), errors, "source_ids"),
         sources=tuple(sources),
