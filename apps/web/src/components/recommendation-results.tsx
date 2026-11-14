@@ -8,6 +8,7 @@ import ScoreComparison from "./charts/score-comparison";
 import RotationTimeline from "./charts/rotation-timeline";
 import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
+import Glossary from "./glossary";
 
 export default function RecommendationResults({
   result,
@@ -186,6 +187,7 @@ export default function RecommendationResults({
             )}
             <p className="request-id">Request reference: {result.request_id}</p>
           </details>
+          <Glossary />
           <p className="result-disclaimer">{result.disclaimer}</p>
         </div>
       )}

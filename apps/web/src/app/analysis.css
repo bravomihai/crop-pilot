@@ -1075,3 +1075,10 @@
 .results-evidence label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .results-evidence select { min-height: 32px; }
 .results-evidence .evidence-note { margin: 0; font-size: 13px; line-height: 1.5; opacity: 0.8; }
+
+.glossary { margin: 16px 0; }
+.glossary summary { cursor: pointer; font-weight: 600; }
+.glossary dl { display: grid; gap: 10px; margin: 12px 0; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.glossary h4 { margin: 16px 0 0; }

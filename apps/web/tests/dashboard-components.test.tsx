@@ -340,3 +340,13 @@ test("results show the past-season replay and the field's climate from the resul
   assert.equal(renderToStaticMarkup(createElement(PlanReplay, { result: bare })), "");
   assert.equal(renderToStaticMarkup(createElement(ClimateCard, { result: bare })), "");
 });
+
+
+test("results explain the terms the challenge names, in plain words", async () => {
+  const { default: Glossary, GLOSSARY, CROP_ROLES } = await import("../src/components/glossary");
+  const html = renderToStaticMarkup(createElement(Glossary));
+  for (const term of ["Evapotranspiration", "Water balance", "Soil moisture", "Frost risk", "NDVI", "Satellite and regional data vs your field"])
+    assert.match(html, new RegExp(term));
+  assert.ok(GLOSSARY.length >= 8 && CROP_ROLES.length >= 4);
+  assert.ok(CROP_ROLES.some((entry) => /Legumes/.test(entry.role)));
+});
