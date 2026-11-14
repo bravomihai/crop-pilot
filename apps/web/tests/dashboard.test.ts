@@ -348,3 +348,23 @@ test("PDF selection checks extension, size, and header without parsing document 
     /10 MB/,
   );
 });
+
+
+test("autumn sowing hint covers 6 November to the end of February only", async () => {
+  const { afterAutumnSowing } = await import("../src/lib/planning-dates");
+  assert.equal(afterAutumnSowing("2026-11-05"), false);
+  assert.equal(afterAutumnSowing("2026-11-06"), true);
+  assert.equal(afterAutumnSowing("2027-02-28"), true);
+  assert.equal(afterAutumnSowing("2027-03-01"), false);
+  assert.equal(afterAutumnSowing("2026-09-20"), false);
+  assert.equal(afterAutumnSowing("not a date"), false);
+});
+
+test("a page link can preselect a field inside Romania only", async () => {
+  const { fieldFromQuery } = await import("../src/lib/planning-dates");
+  assert.deepEqual(fieldFromQuery("?lat=44.45&lon=26.5&name=Fundulea"), { name: "Fundulea", latitude: 44.45, longitude: 26.5 });
+  assert.equal(fieldFromQuery("?lat=44.45&lon=26.5")?.name, "Your field");
+  assert.equal(fieldFromQuery("?lat=40&lon=26.5"), null);
+  assert.equal(fieldFromQuery("?lat=abc&lon=26.5"), null);
+  assert.equal(fieldFromQuery(""), null);
+});
