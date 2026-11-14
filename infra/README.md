@@ -1,47 +1,30 @@
-# Infrastructure (AWS, P5)
+# AWS — calculator web fără conturi
 
-Proposal for the hackathon: the fewest moving parts that still run online. Everything here is a recommendation; P5 decides.
+Pentru început: web Next.js și engine Python în containere pe EC2 sau ECS/Fargate.
+PostgreSQL poate rula local în Compose; pe AWS folosiți RDS PostgreSQL dacă doriți cache
+persistent administrat. Cache-ul este opțional și se poate dezactiva.
 
-```
-Browser ──► Frontend (React static build)        AWS Amplify Hosting  (or S3 + CloudFront)
-   │
-   └──► Backend (Next.js API) ──► Engine (Python) one EC2 host, docker compose, HTTPS via Caddy
-            ▲          │              │
- Twilio ────┘          ▼              ▼
- (SMS/WhatsApp)    DynamoDB        S3 (NASA data cache, optional)
-```
+- Publicați numai web-ul prin HTTPS, cu reverse proxy/load balancer.
+- Engine comunică prin rețeaua privată, folosind `INTERNAL_API_TOKEN`.
+- Nu expuneți PostgreSQL sau endpointul engine către internet.
+- Configurați secretul din SSM/Secrets Manager; valorile din exemple sunt numai locale.
+- Rulați `pnpm db:deploy` ca pas de release, cu DATABASE_URL corespunzător, înainte de cache.
+- Folosiți HTTPS către RDS cu certificatul CA adecvat; nu dezactivați verificarea TLS.
+- Next.js așteaptă motorul până la `ENGINE_TIMEOUT_MS` (implicit 90 secunde); configurați
+  timeoutul proxy-ului peste această limită. Pentru calcule mai lungi, proiectați explicit
+  o coadă și retenția datelor; nu introduceți implicit persistența cererilor fermierilor.
+- Limitați cererile la nivelul proxy/AWS WAF și verificați traficul fără a loga formulare.
+- Nu trimiteți SMS și nu reconfigurați numărul/webhookul Anveo existent pentru acest repo.
 
-## Pieces
+Nu există infrastructură creată sau deploy efectuat de această refacere.
+Exemplu de proxy: `Caddyfile.example` (adaptați domeniul și rețeaua).
 
-| Piece | Recommended | Why | Alternative |
-|---|---|---|---|
-| Frontend | **Amplify Hosting** (static, `npm run build` → `dist/`) | Git-connected deploys, HTTPS included | S3 + CloudFront |
-| Backend + engine | **One EC2 instance** (e.g. t3.small) running `docker compose up -d` from the repo root | One machine to debug; engine and backend talk over the compose network; no cold starts during the demo | Backend on Amplify (Next.js SSR) + engine on ECS Fargate or a Lambda container |
-| HTTPS for the API | **Caddy** in front of port 3000, with a domain pointing at the instance's Elastic IP | Twilio webhooks and the HTTPS frontend need an HTTPS API | Application Load Balancer + ACM certificate |
-| Database | **DynamoDB** with two tables: `farms` (pk `farm_id`, GSI on phone) and `analyses` (pk `analysis_id`, GSI on `farm_id`) | No server to run; fits the JSON documents | RDS Postgres |
-| Data cache | Local disk on EC2 first; **S3** if the engine moves off one host | Avoid re-downloading NASA data | |
-| Secrets | Environment variables in `.env` on the host, later SSM Parameter Store | | |
+Surse: Next.js https://nextjs.org/docs/app/getting-started/deploying
+ECS https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html
+RDS https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html
 
-The backend's in-memory store (`backend/lib/store.ts`) works on a single EC2 host until a restart. Move to DynamoDB before the demo so a redeploy doesn't wipe farms.
+Geocoding: https://open-meteo.com/en/docs/geocoding-api (noncommercial prototype; review terms before commercial use).
+Map tiles: https://operations.osmfoundation.org/policies/tiles/ (attribution, normal browser caching, no bulk download).
 
-## SMS / WhatsApp
-
-| Option | Pros | Cons |
-|---|---|---|
-| **Twilio** (recommended for the demo) | The webhook is already written for its format (`backend/app/api/sms/inbound`); SMS and WhatsApp on the same webhook; WhatsApp sandbox works without Meta approval | Outside AWS; paid number |
-| AWS End User Messaging SMS | Stays in AWS | Two-way SMS needs an origination number that supports inbound in Romania (check availability); no WhatsApp; inbound arrives via SNS, so a different handler |
-
-Setup with Twilio:
-1. Buy a number with SMS (or use the WhatsApp sandbox).
-2. Set the incoming-message webhook to `https://<api-domain>/api/sms/inbound` (HTTP POST).
-3. Put `TWILIO_AUTH_TOKEN` on the host and implement the signature check (TODO in the route).
-
-## Deploy checklist
-
-1. EC2: Ubuntu, install Docker, clone the repo, create `.env` with `FRONTEND_ORIGIN`, `PUBLIC_APP_URL`, `TWILIO_AUTH_TOKEN`.
-2. `docker compose up -d --build` and check `curl localhost:3000/api/health` → `"engine": "remote"`.
-3. Caddy: `api.<domain> { reverse_proxy localhost:3000 }`. Open ports 80/443 only.
-4. Amplify: connect the repo, app root `frontend`, build `npm run build`, output `dist`, env `VITE_API_URL=https://api.<domain>`, `VITE_USE_EXAMPLE=false`.
-5. Add an Amplify rewrite so `/r/<id>` (SMS links) serves `index.html`.
-6. Twilio webhook → `https://api.<domain>/api/sms/inbound`.
-7. Before the demo: precompute the demo farm so the analysis doesn't depend on NASA APIs being fast on stage.
+CI: `ci/checks.yml.example` conține verificările propuse. Nu este activ pe GitHub; pentru
+activare mutați-l în `.github/workflows/checks.yml` cu acces workflow corespunzător.

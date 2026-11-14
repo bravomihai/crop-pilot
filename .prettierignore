@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+packages/contracts/schemas/
+apps/web/src/generated/
+node_modules/

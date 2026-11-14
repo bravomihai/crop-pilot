@@ -1,0 +1,29 @@
+name: Static and contract checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  contracts-and-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contracts:generate
+      - run: git diff --exit-code -- packages/contracts/schemas
+      - run: pnpm db:generate
+      - run: pnpm typecheck
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.5"
+      - run: uv sync --project services/engine --frozen --extra dev
+      - run: services/engine/.venv/bin/python -m pytest services/engine/tests

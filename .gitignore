@@ -1,32 +1,25 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Editors
-.vscode/
-.idea/
-
-# Environment / secrets
+# Secrets and machine-specific settings
 .env
 .env.*
 !.env.example
-
-# Python
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Generated dependencies and outputs
+node_modules/
+.next/
+dist/
+*.tsbuildinfo
+apps/web/src/generated/
+next-env.d.ts
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
 *.egg-info/
 .pytest_cache/
 .ipynb_checkpoints/
-
-# Node
-node_modules/
-.next/
-dist/
-next-env.d.ts
-*.tsbuildinfo
-
-# Local data caches (NASA downloads etc.)
-data/
-engine/cache/
+# Downloaded assets; never ignore Python source folders called data_service
+/data/
+/services/engine/cache/

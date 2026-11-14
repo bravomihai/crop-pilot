@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fieldshift}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fieldshift}
+      POSTGRES_DB: ${POSTGRES_DB:-fieldshift}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: build
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fieldshift}:${POSTGRES_PASSWORD:-fieldshift}@postgres:5432/${POSTGRES_DB:-fieldshift}
+    command: ["pnpm", "db:deploy"]
+    depends_on:
+      postgres: { condition: service_healthy }
+  engine:
+    build:
+      context: .
+      dockerfile: services/engine/Dockerfile
+    environment:
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Copy .env.example to .env and set the internal token}
+      ENGINE_MODE: ${ENGINE_MODE:-demo}
+      ENABLE_NASA_POWER: "false"
+      CACHE_BACKEND_URL: http://web:3000
+    ports: ["127.0.0.1:8000:8000"]
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fieldshift}:${POSTGRES_PASSWORD:-fieldshift}@postgres:5432/${POSTGRES_DB:-fieldshift}
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      ENGINE_URL: http://engine:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
+      ENGINE_TIMEOUT_MS: "90000"
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      engine: { condition: service_started }
+volumes:
+  postgres_data:

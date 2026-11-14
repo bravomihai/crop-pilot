@@ -1,70 +1,93 @@
-# Field Shift: rotation planning with NASA data
+# FieldShift — calculator pentru succesiunea culturilor
 
-NASA Space Apps Challenge 2026, challenge **"Field Shift: Adapting Farms with NASA Data"**.
+NASA Space Apps 2026 · Field Shift: Adapting Farms with NASA Data.
 
-A decision-support tool that compares a farmer's **current crop rotation with at least two alternatives** for a specific field. Each option shows why it was suggested, the evidence behind it (NASA Earth observations replayed over the field's own recent seasons and future climate scenarios), its benefits, its risks and what to check with a local agronomist. It supports farmer judgment; it doesn't replace it.
+Fermierul introduce localitatea/un punct, data disponibilității, ce a cultivat, informații
+de sol dacă le are și prioritățile sale. Primește trei planuri pentru următoarele trei
+culturi principale, cu ferestre de semănat/recoltare și compromisuri. Nu își face cont.
+Nu salvăm profiluri sau analize personale. O nouă vizită înseamnă un formular nou.
 
-Farmers use it in the browser or by **SMS / WhatsApp**.
+**Starea actuală:** mediu de dezvoltare și integrare demonstrativă. Evaluarea agronomică
+și optimizarea sunt pentru P3/P4. Rezultatele demo sunt fictive și marcate în interfață.
+Modul `computed` nu este încă disponibil. Nu sunt recomandări validate pentru cultivare.
 
-## How it works
+## Structură
 
-```
-Form / SMS → fetch field data → generate rotations → evaluate → rank by priorities → results
-```
+| Director             | Rol                                                                     |
+| -------------------- | ----------------------------------------------------------------------- |
+| `apps/web`           | Next.js + React, formular și API public, Prisma/PostgreSQL pentru cache |
+| `services/engine`    | FastAPI și module Python pentru P2/P3/P4                                |
+| `packages/contracts` | Sursa Zod, tipuri TS, scheme JSON generate, exemple                     |
+| `docs`               | Arhitectură, API, responsabilități, status                              |
+| `infra`              | AWS și reverse proxy                                                    |
 
-1. The farmer draws the field and enters crop history, the current rotation, priorities (water, soil, income, …) and constraints.
-2. The engine pulls NASA data for the field (POWER climate, SMAP soil moisture, SRTM slope, CMIP6 scenarios, …).
-3. It generates candidate rotations, filters out agronomically bad ones with sourced rules, and scores each on nine criteria.
-4. Farmer priorities weight the scores; the existing rotation plus the best alternatives are returned with explanations and a confidence level.
-5. What-ifs (priorities, climate scenario, rain/temperature sliders) re-run the ranking.
+Începe cu [AGENTS.md](AGENTS.md), [docs/team.md](docs/team.md) și [contractul API](docs/api.md).
 
-Details: [docs/architecture.md](docs/architecture.md).
+## Instalare locală
 
-## Repository
+Node 22, pnpm 10.11.0, Python 3.11+, uv 0.9.5 și, opțional, Docker pentru PostgreSQL.
 
-```
-contracts/   Shared data formats (JSON Schema + examples) and API docs. Start here.
-frontend/    React + Vite web app                                     P1
-engine/      Python: data service (P2), evaluator (P3), recommender (P4)
-backend/     Next.js API, storage, SMS/WhatsApp webhook               P5
-infra/       AWS deployment notes                                     P5
-docs/        Architecture and decisions
-notebooks/   Data exploration
-```
-
-| Person | Builds | Done when |
-|---|---|---|
-| P1: Frontend | Map and field drawing, form, charts, rotation comparison, scenario controls | The whole flow works in the browser |
-| P2: Data integration | NASA data fetch, cleaning, general indicators, cache | The app gets the data for any field on its own |
-| P3: Agronomic evaluator | Crop tables and rules with sources, compatibility checks, water/temperature/soil calculations | Any rotation of supported crops is evaluated automatically |
-| P4: Recommendation engine | Rotation generation, choosing alternatives, ranking by priorities, scenario re-runs, explanations | The app produces the options and the reasons for them |
-| P5: Backend and infra | API, database, saving farms and analyses, SMS, deployment | The app runs online and all parts talk to each other |
-
-**Every component starts out working on the example data in [`contracts/examples/`](contracts/examples/)**, so each person can build and test their part alone and the full flow works from the start.
-
-## Run locally
-
-Each folder's README has the details.
-
-```bash
-# Engine (Python 3.11+)
-cd engine && pip install -e ".[dev]" && pytest && uvicorn fieldshift.api:app --port 8000
-
-# Backend (Node 20+), in another terminal
-cd backend && npm install && npm run dev
-
-# Frontend, in another terminal
-cd frontend && npm install && npm run dev      # http://localhost:5173
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+pnpm contracts:generate
+pnpm db:generate
+cp apps/web/.env.example apps/web/.env.local
+cp services/engine/.env.example services/engine/.env
+uv sync --project services/engine --frozen --extra dev
 ```
 
-Or run backend + engine together with `docker compose up --build`.
+În două terminale, când doriți să porniți aplicația:
 
-Check that the examples still match the contracts: `python contracts/validate.py`.
+```sh
+# Terminal 1
+cd services/engine
+.venv/bin/uvicorn fieldshift.api:app --env-file .env --reload --port 8000
+```
 
-## Working together
+```sh
+# Terminal 2, de la rădăcină
+pnpm dev
+```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md): work on your own branch, open a PR into `main`, one teammate reviews.
+Web: `http://localhost:3000`. Motorul este intern. Tokenul trebuie să fie identic în
+cele două fișiere de mediu. Configurația implicită locală este `ENGINE_MODE=demo`.
 
-## Data sources
+### Frontend independent
 
-[NASA POWER](https://power.larc.nasa.gov/) · [SMAP](https://smap.jpl.nasa.gov/) · [ECOSTRESS](https://ecostress.jpl.nasa.gov/) · [GPM IMERG](https://gpm.nasa.gov/) · Landsat / MODIS · GRACE-FO · SRTM · [NEX-GDDP-CMIP6](https://www.nccs.nasa.gov/services/data-collections/land-based-products/nex-gddp-cmip6) · Sentinel-2 · FAO EcoCrop · FAO GAEZ v4 · FAO-56 · ISRIC SoilGrids · EuroCrops
+Setează `NEXT_PUBLIC_USE_MOCK_API=true` în `apps/web/.env.local`, apoi pornește doar web-ul.
+`src/lib/api.ts` citește fixture-ul comun. Formularul nu este evaluat în acest mod și
+calendarul exemplului este fix; interfața afișează avertismentul. Harta și căutarea
+localităților folosesc internet; poți selecta punctul fără căutare.
+
+### Cache PostgreSQL
+
+Cache-ul este opțional și conține date publice, nu formulare/rezultate de fermieri.
+
+```sh
+cp .env.example .env
+# Configurează valorile locale înainte de pornire.
+docker compose up -d postgres
+# Prisma CLI citește apps/web/.env; Next.js citește și .env.local.
+cp apps/web/.env.example apps/web/.env
+pnpm db:deploy
+```
+
+Setează `CACHE_ENABLED=true` în mediul web. Pentru toate serviciile în containere:
+`docker compose up --build`. Migrarea locală este un serviciu separat din Compose.
+Nu folosi credențialele demonstrative pe un deployment comun.
+
+## Verificări
+
+```sh
+pnpm contracts:generate
+pnpm db:generate
+pnpm typecheck
+services/engine/.venv/bin/python -m pytest services/engine/tests
+```
+
+[Starea exactă și limitele](docs/status.md). SMS prin Anveo și WhatsApp prin Meta sunt
+în afara acestei versiuni. Nu există Twilio, login, SQS sau stocare de ferme în acest repo.
+
+Dependențele sunt fixate în `pnpm-lock.yaml` și `services/engine/uv.lock`.
+Instalarea uv: https://docs.astral.sh/uv/getting-started/installation/ .

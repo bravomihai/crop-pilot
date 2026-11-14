@@ -1,48 +1,50 @@
-# Architecture
+# Arhitectura curentă
 
-## Components
+```text
+Browser (React în Next.js)
+  POST /api/recommendations
+        │ validează cererea și generează request_id
+        ▼
+Backend Next.js ── HTTP + token intern ──► FastAPI
+        │                                  pipeline
+        │                       data_service → evaluator → recommender
+        ◄──────── rezultat JSON validat ────────┘
+        │
+        ▼
+Trei planuri + calendare + compromisuri + surse + lipsuri
 
-```
-                 ┌────────────── backend (Next.js) ──────────────┐
-React frontend ─►│ /api/farms  /api/analyses  /api/sms/inbound   │◄─ Twilio (SMS / WhatsApp)
-                 │ storage (in-memory → DynamoDB)                │
-                 └───────────────┬───────────────────────────────┘
-                                 │ POST /analyze (FarmRequest)
-                 ┌───────────────▼──────────── engine (Python) ───────────────┐
-                 │ pipeline.analyze                                           │
-                 │   data.fetch_field_data ─► FieldData                (P2)   │
-                 │   evaluator.load_rules  ─► CropRules                (P3)   │
-                 │   recommender.recommend                             (P4)   │
-                 │       generate rotations → evaluator.evaluate (P3)         │
-                 │       → rank by priorities → explain → AnalysisResult      │
-                 └────────────────────────────────────────────────────────────┘
+PostgreSQL/Prisma: cache opțional de date publice, accesat numai prin Next.js.
 ```
 
-The three Python parts run in **one process**: no network calls between them, one thing to deploy. Only the backend and engine talk over HTTP. Formats: [contracts/](../contracts/README.md).
+Nu există conturi, sesiuni persistente, ferme salvate sau analize de recuperat din istoric.
+Nu există coadă de joburi în această versiune: calculul este request/response, cu timeout
+explicit și date reutilizabile în cache. O coadă poate fi adăugată dacă duratele reale o cer;
+nu persistăm datele fermierului anticipând un caz care nu a fost cerut.
 
-## Pipeline
+## Timpul agricol
 
-| Step | Owner | What happens |
-|---|---|---|
-| 1. Field input | P1 | Boundary, crop history (APIA / spray records / typed / satellite / none), current rotation, priorities, constraints, scenario |
-| 2. Field data | P2 | NASA POWER daily → yearly and monthly indicators (rain, ET₀, GDD, frost, heat, heavy rain); SRTM slope; SoilGrids; SMAP; CMIP6 deltas; later Sentinel-2 NDVI |
-| 3. Candidates | P4 | Sequences of `rotation_years` crops from the crop set, optional cover crops in bare windows, minus excluded crops |
-| 4. Rule filter | P3 | Return intervals, forbidden successors, maximum share. Alternatives that break a rule are dropped; the existing rotation is kept and its violations shown |
-| 5. Scoring | P3 | Nine criteria, 0–1, each with sources: suitability (EcoCrop), yield (GAEZ), water (FAO-56 Kc × ET₀ vs rain and soil moisture), soil, erosion (slope × bare months × heavy rain), pest break, succession (successor matrix), forage, income |
-| 6. Replay and scenarios | P3 | Each rotation is played over the observed weather years ("what would have happened") and under CMIP6 deltas + slider changes |
-| 7. Ranking | P4 | Normalised farmer weights × scores. Diverse alternatives are preferred over near-duplicates |
-| 8. Explanation and confidence | P4 | Template text built only from the evaluation's numbers and sources; confidence from four signals (history source, rotation evidence, satellite coverage, climate sensitivity); low confidence → questions for a local agronomist |
-| 9. Delivery | P1, P5 | Results page with season strips and what-if controls; SMS summary with a link |
+`crop_count=3` înseamnă trei culturi principale succesive, nu trei ani și nu trei recolte
+ale aceleiași culturi. O cultură de toamnă traversează anul calendaristic. Verificăm
+sfârșitul recoltării înainte de începutul semănatului următor. Nu presupunem repetabilitate
+C→A după ultimul pas. Culturile de acoperire și plantele multianuale sunt extensii ulterioare.
 
-## Decisions
+## Date și incertitudine
 
-- **Transparent scoring, not a trained model, decides.** There's no dataset of the "right" rotation, the answer depends on the farmer's priorities, and outcome data is confounded. Rules and weighted scores with sources can be explained and checked.
-- **ML only where labels exist:** the Sentinel-2 crop-history classifier (EuroCrops Romania), as a stretch goal. In v1 the farmer types the history.
-- **LLM only for wording, later.** Explanations start as templates. An LLM may rephrase them but must not add facts that aren't in the evaluation.
-- **Unknown is not neutral.** Missing data gives `null` scores and lowers confidence instead of defaulting to 0.5.
-- **The evaluator doesn't know the priorities; the recommender doesn't know crops.** That keeps P3 and P4 independently testable.
-- **Coarse data is used as context only.** SMAP, POWER, GRACE and CMIP6 describe the area, not the field; sub-field claims need Sentinel-2, Landsat or ECOSTRESS.
+Localizarea este un punct, deci nu pretindem măsurători pe parcelă sau analiză subparcelară.
+POWER este context regional. Datele zilnice și metadatele sunt păstrate pentru ferestre
+specifice culturilor; mediile anuale nu înlocuiesc expunerea din perioade sensibile.
+Solul introdus de utilizator își păstrează sursa. Istoricul absent duce la reguli neverificate,
+nu la presupunerea unui teren fără culturi anterioare.
 
-## Demo scope
+## Moduri
 
-The farmer enters the field, history and priorities. The app compares the existing rotation with two alternatives and shows, for each, what supports the evaluation, its benefits and what still needs local checking. Demo region: one county in southern Romania, 8–10 crops plus 1–2 cover crops, data precomputed for the demo field.
+- `NEXT_PUBLIC_USE_MOCK_API=true`: frontend independent cu fixture fix, vizibil demonstrativ.
+- `ENGINE_MODE=demo`: backend real și Python, dar planuri fictive etichetate explicit.
+- `ENGINE_MODE=computed`: contract pentru implementarea reală; P3/P4 sunt încă neimplementate
+  și răspund 503. Nu există fallback automat către rezultate fictive.
+
+## Date păstrate
+
+Prisma deține doar `DataCache`: cheie, namespace, payload public și expirare. Căutările
+geografice și seriile NASA pot fi reutilizate. Nu salvăm requesturi, rezultate, istorice,
+telefon, email sau identificatori de utilizatori. Nu logăm payloaduri sau tokenuri.
