@@ -28,9 +28,17 @@
   încredere și `local_checks`, `plan.scores` cu `null` pentru necunoscut. Comparația cu
   scenariul climatic folosește „clima de referință”, separat de rotația actuală.
   `pipeline.py` apelează din nou `recommend_rotations`, deci `tests/test_api.py` (P5) trece.
-  Verificat numai cu un evaluator SINTETIC de test: 120 teste pytest trec (2026-11-14);
-  nu este validare agronomică. `pnpm` nu a rulat (lipsă `node_modules`; contractele
-  neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
+  Integrare P3–P4 verificată cu modulele reale (`load_rules`, `evaluate`, pipeline) pe
+  fixture-ul NASA POWER istoric (Bărăgan, 2005–2025) în locul P2: 23 teste în
+  `test_p3_p4_integration.py` (contract, fezabilitate, scoruri P3 nemodificate, priorități,
+  scenariu vs. climă de referință, rotație actuală cu încălcări, excluderi/istoric, zone
+  neacoperite, date lipsă, repetabilitate). Cerere completă la rece: ~14–16 s, ~18% din
+  `ENGINE_TIMEOUT_MS` (90 s); >98% din timp e replay-ul P3. Testele au găsit și am corectat
+  5 erori P4 (scenariu dezactivat de o cultură necunoscută în rotația actuală, motivul P3
+  pierdut în afara zonei și la rezultate goale, ipotezele P3 nepreluate, text „sub mediană”
+  cu valori afișate egale). Suita Python: 162 teste trec, 0 eșuează (2026-11-14). Nu este
+  validare agronomică; HTTP `computed` rămâne 503 până la P2. `pnpm` nu a rulat (lipsă
+  `node_modules`; contractele neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## De validat/de implementat de echipă
 
@@ -129,3 +137,16 @@ nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
   sau alerte configurate; diagnosticarea implementată este locală, prin loguri.
 - Livrabilul P5 este pe branchul `mihail`. Fișierele de mediu și secretele locale sunt
   ignorate de Git. Containerele locale rămân pornite pentru revizuire.
+
+## Frontend
+
+The English dashboard retains its explicit demo indicators, local-only PDFs, and
+five preview-priority sliders. The full `/calculator` now supports optional current
+rotation, history sources, productivity priority, baseline/score comparison,
+local checks, shared crop timelines, and cancellable scenario recalculation.
+Both maps have capability-derived GIBS context, POWER-cell and rule-zone outlines.
+Replay and climate-trend charts are preview-only, waiting for future fields.
+TypeScript, 82 backend/data checks, 25 UI checks, and mock production build passed;
+Edge checks covered fixtures, 375/1440 px, keyboard interactions, light/dark, and
+tile failure isolation. No scientific or physical-touchscreen validation is
+claimed. See docs/frontend.md for exact identifiers, previews, and verification.

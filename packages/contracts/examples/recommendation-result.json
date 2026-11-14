@@ -5,19 +5,19 @@
   "generated_at": "2026-11-14T12:00:00Z",
   "status": "complete",
   "location": {
-    "name": "Fundulea, România — exemplu",
+    "name": "Fundulea, Romania — example",
     "latitude": 44.45,
     "longitude": 26.5
   },
   "plans": [
     {
       "id": "demo-1",
-      "label": "Plan demonstrativ 1",
+      "label": "Demo plan 1",
       "steps": [
         {
           "order": 1,
           "crop_id": "pea",
-          "crop_name": "Mazăre",
+          "crop_name": "Pea",
           "sowing_window": {
             "start": "2027-03-01",
             "end": "2027-03-31"
@@ -26,12 +26,12 @@
             "start": "2027-07-01",
             "end": "2027-07-31"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 2,
           "crop_id": "winter_wheat",
-          "crop_name": "Grâu de toamnă",
+          "crop_name": "Winter wheat",
           "sowing_window": {
             "start": "2027-10-01",
             "end": "2027-10-31"
@@ -40,12 +40,12 @@
             "start": "2028-07-01",
             "end": "2028-07-31"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 3,
           "crop_id": "maize",
-          "crop_name": "Porumb",
+          "crop_name": "Maize",
           "sowing_window": {
             "start": "2029-04-01",
             "end": "2029-04-30"
@@ -54,28 +54,28 @@
             "start": "2029-09-01",
             "end": "2029-09-30"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         }
       ],
       "benefits": [
-        "Ilustrează prezentarea unei succesiuni de trei culturi principale."
+        "Illustrates a sequence of three successive main crops."
       ],
       "tradeoffs": [
-        "Calendarul este fictiv și trebuie înlocuit cu ferestre locale documentate.",
-        "Apa, solul și clima nu sunt încă evaluate; planul nu are un scor agronomic."
+        "The calendar is fictional and must be replaced with documented local windows.",
+        "Water, soil, and climate are not yet evaluated; the plan has no agronomic score."
       ],
-      "explanation": "Exemplu pentru integrarea interfeței și a backendului. Prioritățile și scenariul nu generează predicții în acest mod.",
+      "explanation": "An example for frontend and backend integration. Priorities and the scenario do not generate predictions in this mode.",
       "confidence": "low",
       "source_ids": ["demo-fixture"]
     },
     {
       "id": "demo-2",
-      "label": "Plan demonstrativ 2",
+      "label": "Demo plan 2",
       "steps": [
         {
           "order": 1,
           "crop_id": "winter_wheat",
-          "crop_name": "Grâu de toamnă",
+          "crop_name": "Winter wheat",
           "sowing_window": {
             "start": "2027-10-01",
             "end": "2027-10-31"
@@ -84,12 +84,12 @@
             "start": "2028-07-01",
             "end": "2028-07-31"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 2,
           "crop_id": "sunflower",
-          "crop_name": "Floarea-soarelui",
+          "crop_name": "Sunflower",
           "sowing_window": {
             "start": "2029-04-01",
             "end": "2029-04-30"
@@ -98,12 +98,12 @@
             "start": "2029-09-01",
             "end": "2029-09-30"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 3,
           "crop_id": "winter_barley",
-          "crop_name": "Orz de toamnă",
+          "crop_name": "Winter barley",
           "sowing_window": {
             "start": "2029-10-30",
             "end": "2029-10-31"
@@ -112,28 +112,28 @@
             "start": "2030-06-01",
             "end": "2030-06-30"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         }
       ],
       "benefits": [
-        "Ilustrează prezentarea unei succesiuni de trei culturi principale."
+        "Illustrates a sequence of three successive main crops."
       ],
       "tradeoffs": [
-        "Calendarul este fictiv și trebuie înlocuit cu ferestre locale documentate.",
-        "Apa, solul și clima nu sunt încă evaluate; planul nu are un scor agronomic."
+        "The calendar is fictional and must be replaced with documented local windows.",
+        "Water, soil, and climate are not yet evaluated; the plan has no agronomic score."
       ],
-      "explanation": "Exemplu pentru integrarea interfeței și a backendului. Prioritățile și scenariul nu generează predicții în acest mod.",
+      "explanation": "An example for frontend and backend integration. Priorities and the scenario do not generate predictions in this mode.",
       "confidence": "low",
       "source_ids": ["demo-fixture"]
     },
     {
       "id": "demo-3",
-      "label": "Plan demonstrativ 3",
+      "label": "Demo plan 3",
       "steps": [
         {
           "order": 1,
           "crop_id": "winter_barley",
-          "crop_name": "Orz de toamnă",
+          "crop_name": "Winter barley",
           "sowing_window": {
             "start": "2027-10-01",
             "end": "2027-10-31"
@@ -142,12 +142,12 @@
             "start": "2028-06-01",
             "end": "2028-06-30"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 2,
           "crop_id": "pea",
-          "crop_name": "Mazăre",
+          "crop_name": "Pea",
           "sowing_window": {
             "start": "2029-03-01",
             "end": "2029-03-31"
@@ -156,12 +156,12 @@
             "start": "2029-07-01",
             "end": "2029-07-31"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         },
         {
           "order": 3,
           "crop_id": "winter_wheat",
-          "crop_name": "Grâu de toamnă",
+          "crop_name": "Winter wheat",
           "sowing_window": {
             "start": "2029-10-01",
             "end": "2029-10-31"
@@ -170,36 +170,36 @@
             "start": "2030-07-01",
             "end": "2030-07-31"
           },
-          "reason": "Poziție ilustrativă în plan; compatibilitatea agronomică nu este calculată."
+          "reason": "Illustrative position in the plan; agronomic compatibility is not calculated."
         }
       ],
       "benefits": [
-        "Ilustrează prezentarea unei succesiuni de trei culturi principale."
+        "Illustrates a sequence of three successive main crops."
       ],
       "tradeoffs": [
-        "Calendarul este fictiv și trebuie înlocuit cu ferestre locale documentate.",
-        "Apa, solul și clima nu sunt încă evaluate; planul nu are un scor agronomic."
+        "The calendar is fictional and must be replaced with documented local windows.",
+        "Water, soil, and climate are not yet evaluated; the plan has no agronomic score."
       ],
-      "explanation": "Exemplu pentru integrarea interfeței și a backendului. Prioritățile și scenariul nu generează predicții în acest mod.",
+      "explanation": "An example for frontend and backend integration. Priorities and the scenario do not generate predictions in this mode.",
       "confidence": "low",
       "source_ids": ["demo-fixture"]
     }
   ],
   "monthly_climate": [],
   "assumptions": [
-    "Rezultat fictiv pentru dezvoltare, nu recomandare agronomică.",
-    "Trei culturi principale succesive; nu presupune repetarea automată a planului.",
-    "Modul demo respectă data de pornire și excluderile, dar nu evaluează prioritățile, solul sau scenariul."
+    "A fictional result for development, not an agronomic recommendation.",
+    "Three successive main crops; the plan does not repeat automatically.",
+    "Demo mode respects the start date and exclusions, but does not evaluate priorities, soil, or the scenario."
   ],
   "data_gaps": [
-    "Motorul de evaluare și optimizare agronomică trebuie implementat de P3/P4.",
-    "Istoricul culturilor nu a fost completat."
+    "The agronomic evaluation and optimization engine still needs to be implemented by P3/P4.",
+    "Crop history has not been provided."
   ],
   "sources": [
     {
       "id": "demo-fixture",
-      "title": "Date fictive pentru dezvoltare — fără observații NASA"
+      "title": "Fictional development data — no NASA observations"
     }
   ],
-  "disclaimer": "Nu utiliza aceste exemple drept instrucțiuni de cultivare. Ferestrele și compatibilitățile necesită verificare locală."
+  "disclaimer": "Do not use these examples as cultivation instructions. Crop windows and compatibility require local verification."
 }

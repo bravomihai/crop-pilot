@@ -1,23 +1,25 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, CircleMarker, Polygon } from "leaflet";
 import type { Location } from "@fieldshift/contracts";
-
-type Position = [number, number];
-
+import RegionalMapContext from "./regional-map-context";
+import type { Coordinate } from "@/lib/parcel-geometry";
 export default function LocationMap({
   location,
   onSelect,
-  fieldBoundary,
+  fieldBoundary = [],
   onBoundaryChange,
-  drawingBoundary,
+  drawingBoundary = false,
+  disabled = false,
 }: {
   location?: Location;
   onSelect: (value: Location) => void;
-  fieldBoundary: Position[];
-  onBoundaryChange: (value: Position[]) => void;
-  drawingBoundary: boolean;
+  fieldBoundary?: Coordinate[];
+  onBoundaryChange?: (value: Coordinate[]) => void;
+  drawingBoundary?: boolean;
+  disabled?: boolean;
 }) {
+  const [ready, setReady] = useState(false);
   const container = useRef<HTMLDivElement>(null),
     map = useRef<LeafletMap | null>(null),
     marker = useRef<CircleMarker | null>(null),
@@ -30,6 +32,8 @@ export default function LocationMap({
   boundaryRef.current = fieldBoundary;
   const drawingRef = useRef(drawingBoundary);
   drawingRef.current = drawingBoundary;
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
   useEffect(() => {
     let disposed = false;
     void import("leaflet").then((L) => {
@@ -41,37 +45,36 @@ export default function LocationMap({
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map.current);
       map.current.on("click", (event) => {
+        if (disabledRef.current) return;
         const latitude = Number(event.latlng.lat.toFixed(6));
         const longitude = Number(event.latlng.lng.toFixed(6));
         if (drawingRef.current) {
-          const point: Position = [longitude, latitude];
-          boundaryCallback.current([
+          if (boundaryRef.current.length >= 100) return;
+          const point: Coordinate = [longitude, latitude];
+          boundaryCallback.current?.([
             ...boundaryRef.current,
             point,
           ]);
           return;
         }
         callback.current({
-          name: "Punct selectat pe hartă",
+          name: "Point selected on the map",
           latitude,
           longitude,
         });
       });
+      setReady(true);
     });
     return () => {
       disposed = true;
       map.current?.remove();
       map.current = null;
       marker.current = null;
-      polygon.current = null;
     };
   }, []);
   useEffect(() => {
     let disposed = false;
-    if (!location) {
-      marker.current?.remove();
-      marker.current = null;
-    } else {
+    if (location)
       void import("leaflet").then((L) => {
         if (disposed || !map.current) return;
         marker.current?.remove();
@@ -81,11 +84,14 @@ export default function LocationMap({
         ).addTo(map.current);
         map.current.setView([location.latitude, location.longitude], 10);
       });
+    else {
+      marker.current?.remove();
+      marker.current = null;
     }
     return () => {
       disposed = true;
     };
-  }, [location]);
+  }, [location, ready]);
   useEffect(() => {
     let disposed = false;
     if (fieldBoundary.length < 2) {
@@ -110,13 +116,20 @@ export default function LocationMap({
     return () => {
       disposed = true;
     };
-  }, [fieldBoundary]);
+  }, [fieldBoundary, ready]);
   return (
-    <div
-      ref={container}
-      className="map"
-      role="region"
-      aria-label="Hartă România: selectează un punct sau trasează conturul terenului"
-    />
+    <div className="location-map-wrap">
+      <div
+        ref={container}
+        className="map"
+        role="region"
+        aria-label="Map: select a point or draw a field boundary"
+        aria-disabled={disabled || undefined}
+      />
+      <RegionalMapContext
+        map={ready ? map.current : null}
+        location={location}
+      />
+    </div>
   );
 }

@@ -248,6 +248,7 @@ def recommend(
             for crop_id, crop in catalog.items()
             if crop_id in selected
         }
+    data_gaps.extend(g for g in (rules.get("data_gaps") or []) if isinstance(g, str))
     data_gaps.extend(catalog_issues)
     data_gaps.extend(history_issues(request, set(catalog)))
     diagnostics: dict = {
@@ -306,9 +307,9 @@ def recommend(
     # Climate scenario support and robustness (compared with the reference climate).
     if not scenario_requested:
         scenario_status = NOT_REQUESTED
-    elif not evaluated:
-        scenario_status = "not_evaluated"  # nothing reached P3; no claim either way
-    elif all(c.evaluation.scenario_applied for c in evaluated):
+    elif not [c for c in evaluated if c.evaluation.feasibility != UNKNOWN]:
+        scenario_status = "not_evaluated"  # P3 evaluated nothing; no claim either way
+    elif all(c.evaluation.scenario_applied for c in evaluated if c.evaluation.feasibility != UNKNOWN):
         scenario_status = COMPUTED
     else:
         scenario_status = UNSUPPORTED
@@ -397,6 +398,14 @@ def recommend(
             data_gaps.append(
                 f"Option {number}: the evaluator cited sources missing from the source list ({', '.join(cand.unresolved_ids)}); they were omitted."
             )
+    shown = [eligible[s.sequence].evaluation for s in selections] + ([current.evaluation] if baseline_plan is not None else [])
+    for evaluation in shown:
+        assumptions.extend(evaluation.assumptions)
+    if not plans and evaluated:
+        # Explain the empty result with what P3 reported for every evaluated sequence
+        # (environment-level reasons such as missing weather), not per-sequence noise.
+        common = [g for g in evaluated[0].evaluation.data_gaps if all(g in c.evaluation.data_gaps for c in evaluated)]
+        data_gaps.extend(common)
     cited = {i for p in plans for i in p["source_ids"]}
     if baseline_plan is not None:
         cited |= set(baseline_plan["source_ids"])
