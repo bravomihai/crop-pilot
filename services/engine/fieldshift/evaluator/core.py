@@ -328,7 +328,9 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     # 2. Soil (structure of the rotation; no weather needed).
     soil_in = _soil_inputs(request, environment, settings)
     soil = scoring.soil_index(steps, checked["classes"], crops, rules, _slope(environment))
-    if _slope(environment) is None:
+    if _slope(environment) is None and not any(
+        "srtm" in gap.lower() for gap in environment.get("data_gaps", [])
+    ):
         data_gaps.append("No slope data (SRTM): erosion risk is not part of the soil score.")
     comp = soil["components"]
     soil_summary = (
@@ -550,7 +552,7 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         "soil_inputs": soil_in,
         "soil_components": soil["components"],
         "details": details,
-        "replay": replay_rows,
+        "replay": sorted(replay_rows, key=lambda row: row["season_start_year"]),
     }
 
 

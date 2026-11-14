@@ -48,7 +48,18 @@ def demo_steps(sequence: tuple[str, ...], available: date) -> list[dict]:
 
 def recommend_demo(request: dict, request_id: str) -> dict:
     excluded = set(request["constraints"].get("excluded_crops", []))
-    sequences = [s for s in SEQUENCES if not excluded.intersection(s)]
+    constraints = request["constraints"]
+    selected = (
+        set(constraints.get("selected_crops", []))
+        if constraints.get("selected_crops_only", False)
+        else None
+    )
+    sequences = [
+        sequence
+        for sequence in SEQUENCES
+        if not excluded.intersection(sequence)
+        and (selected is None or set(sequence).issubset(selected))
+    ]
     plans = []
     for index, sequence in enumerate(sequences):
         plans.append(
@@ -82,6 +93,7 @@ def recommend_demo(request: dict, request_id: str) -> dict:
         else "insufficient_data",
         "location": request["location"],
         "plans": plans,
+        "monthly_climate": [],
         "assumptions": [
             "A fictional result for development, not an agronomic recommendation.",
             "Three successive main crops; the plan does not repeat automatically.",

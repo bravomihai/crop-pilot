@@ -12,7 +12,64 @@ import FormSection from "./ui/form-section";
 import Notice from "./ui/notice";
 import CurrentRotationInput from "./current-rotation-input";
 import { RULE_CROPS as CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
+import { createParcel, type Coordinate } from "@/lib/parcel-geometry";
 import { useRecommendations } from "@/lib/use-recommendations";
+
+function containsPoint(point: Coordinate, points: Coordinate[]): boolean {
+  const [longitude, latitude] = point;
+  let inside = false;
+  for (
+    let index = 0, previous = points.length - 1;
+    index < points.length;
+    previous = index, index += 1
+  ) {
+    const [x1, y1] = points[index];
+    const [x2, y2] = points[previous];
+    const cross = (longitude - x1) * (y2 - y1) - (latitude - y1) * (x2 - x1);
+    if (
+      Math.abs(cross) < 1e-10 &&
+      longitude >= Math.min(x1, x2) &&
+      longitude <= Math.max(x1, x2) &&
+      latitude >= Math.min(y1, y2) &&
+      latitude <= Math.max(y1, y2)
+    ) {
+      return true;
+    }
+    if ((y1 > latitude) !== (y2 > latitude)) {
+      const crossingLongitude =
+        x1 + ((latitude - y1) * (x2 - x1)) / (y2 - y1);
+      if (longitude < crossingLongitude) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function polygonCenter(points: Coordinate[]): Coordinate {
+  let twiceArea = 0;
+  let longitude = 0;
+  let latitude = 0;
+  const ring = [...points, points[0]];
+  for (let index = 0; index < points.length; index += 1) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[index + 1];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    longitude += (x1 + x2) * cross;
+    latitude += (y1 + y2) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-10) {
+    return [
+      points.reduce((sum, point) => sum + point[0], 0) / points.length,
+      points.reduce((sum, point) => sum + point[1], 0) / points.length,
+    ];
+  }
+  const center: Coordinate = [
+    longitude / (3 * twiceArea),
+    latitude / (3 * twiceArea),
+  ];
+  return containsPoint(center, points) ? center : points[0];
+}
+
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -27,6 +84,10 @@ export default function Calculator({
     [location, setLocation] = useState<Location | undefined>(
       initialRequest?.location,
     );
+  const [fieldBoundary, setFieldBoundary] = useState<Coordinate[]>(
+    () => initialRequest?.field_boundary?.coordinates[0]?.slice(0, -1) ?? [],
+  );
+  const [drawingBoundary, setDrawingBoundary] = useState(false);
   const [date, setDate] = useState(
       () => initialRequest?.available_from ?? today(),
     ),
@@ -70,6 +131,12 @@ export default function Calculator({
   const [excluded, setExcluded] = useState<string[]>(
       initialRequest?.constraints.excluded_crops ?? [],
     ),
+    [selectedCrops, setSelectedCrops] = useState<string[]>(
+      initialRequest?.constraints.selected_crops ?? [],
+    ),
+    [selectedCropsOnly, setSelectedCropsOnly] = useState(
+      initialRequest?.constraints.selected_crops_only ?? false,
+    ),
     [scenario, setScenario] = useState({
       temp_change_c: 0,
       rain_change_pct: 0,
@@ -105,6 +172,8 @@ export default function Calculator({
     setError("");
     clearResults();
     setLocation(value);
+    setFieldBoundary([]);
+    setDrawingBoundary(false);
   }
   async function search() {
     if (query.trim().length < 2 || busy) return;
@@ -141,10 +210,41 @@ export default function Calculator({
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (drawingBoundary) {
+      setError("Finish drawing the field boundary before calculating.");
+      return;
+    }
+    if (fieldBoundary.length > 0 && fieldBoundary.length < 3) {
+      setError("A field boundary needs at least three points.");
+      return;
+    }
+    if (fieldBoundary.length > 100) {
+      setError("A field boundary can contain at most 100 points.");
+      return;
+    }
+    if (selectedCropsOnly && selectedCrops.length < 3) {
+      setError("Select at least three crops to limit the recommendations.");
+      return;
+    }
     if (!location) {
       setError("Choose a location or a point on the map.");
       document.getElementById("location-query")?.focus();
       return;
+    }
+    let fieldBoundaryCoordinates: Coordinate[] | undefined;
+    if (fieldBoundary.length >= 3) {
+      try {
+        const parcel = createParcel(fieldBoundary);
+        if (!parcel.boundary) throw new Error("The field boundary is invalid.");
+        fieldBoundaryCoordinates = parcel.boundary;
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "The field boundary could not be validated.",
+        );
+        return;
+      }
     }
     searchControllerRef.current?.abort();
     ++searchRef.current;
@@ -153,6 +253,14 @@ export default function Calculator({
     const input: RecommendationRequest = {
       schema_version: "1.0",
       location,
+      ...(fieldBoundaryCoordinates
+        ? {
+            field_boundary: {
+              type: "Polygon" as const,
+              coordinates: [fieldBoundaryCoordinates],
+            },
+          }
+        : {}),
       available_from: date,
       crop_count: 3,
       history: history
@@ -182,6 +290,8 @@ export default function Calculator({
           ? { max_irrigation_mm: Number(irrigation) }
           : {}),
         excluded_crops: excluded,
+        selected_crops: selectedCrops,
+        selected_crops_only: selectedCropsOnly,
       },
       scenario,
     };
@@ -227,7 +337,7 @@ export default function Calculator({
               id="location"
               step="01"
               title="Where is your field?"
-              description="Choose a location or a point on the map. No account or field boundary is needed."
+              description="Choose a point, or optionally sketch your field boundary. Climate and soil are currently sampled at one representative point."
             >
               <label htmlFor="location-query">
                 Location{" "}
@@ -252,7 +362,7 @@ export default function Calculator({
                     }
                   }}
                   aria-describedby="location-search-status"
-                  placeholder="For example, Fundulea"
+                  placeholder="Search any Romanian locality"
                 />
                 <Button
                   variant="secondary"
@@ -290,10 +400,90 @@ export default function Calculator({
                   ))}
                 </ul>
               )}
+              <div className="inline">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy || drawingBoundary}
+                  onClick={() => {
+                    searchControllerRef.current?.abort();
+                    ++searchRef.current;
+                    setSearching(false);
+                    setLocations([]);
+                    setSearchError("");
+                    setLocation(undefined);
+                    setFieldBoundary([]);
+                    setDrawingBoundary(true);
+                    clearResults();
+                    setError("");
+                  }}
+                >
+                  Draw field boundary
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!drawingBoundary || fieldBoundary.length < 3}
+                  onClick={() => {
+                    try {
+                      const parcel = createParcel(fieldBoundary);
+                      if (!parcel.boundary) {
+                        throw new Error("The field boundary is invalid.");
+                      }
+                      const [longitude, latitude] = polygonCenter(fieldBoundary);
+                      setLocation({
+                        name: "Field representative point",
+                        latitude: Number(latitude.toFixed(6)),
+                        longitude: Number(longitude.toFixed(6)),
+                      });
+                      setFieldBoundary(parcel.boundary.slice(0, -1));
+                      setDrawingBoundary(false);
+                      setError("");
+                    } catch (error) {
+                      setError(
+                        error instanceof Error
+                          ? error.message
+                          : "The field boundary could not be validated.",
+                      );
+                    }
+                  }}
+                >
+                  Finish boundary
+                </Button>
+                {(fieldBoundary.length > 0 || drawingBoundary) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setLocation(undefined);
+                      setFieldBoundary([]);
+                      setDrawingBoundary(false);
+                      clearResults();
+                    }}
+                  >
+                    {drawingBoundary ? "Cancel drawing" : "Clear boundary"}
+                  </Button>
+                )}
+              </div>
+              <p className="field-hint" role="status">
+                {drawingBoundary
+                  ? fieldBoundary.length >= 100
+                    ? "The outline reached the 100-point limit. Finish it or clear it."
+                    : `Click the map to add boundary points (${fieldBoundary.length}); finish after at least three points (maximum 100).`
+                  : fieldBoundary.length >= 3
+                    ? "The outline is saved. Climate and soil are still sampled at its representative point, not aggregated across the parcel."
+                    : "The map and search accept locations throughout Romania."}
+              </p>
               <LocationMap
                 location={location}
                 onSelect={selectLocation}
                 disabled={busy}
+                fieldBoundary={fieldBoundary}
+                onBoundaryChange={(points) => {
+                  setFieldBoundary(points);
+                  clearResults();
+                }}
+                drawingBoundary={drawingBoundary}
               />
               {location && (
                 <p className="selected-location">
@@ -392,6 +582,43 @@ export default function Calculator({
                   setCurrentRotation(value);
                 }}
               />
+              <details>
+                <summary>Limit recommendations to selected crops</summary>
+                <p className="field-hint">
+                  Leave this off to compare the full available crop catalog.
+                </p>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedCropsOnly}
+                    onChange={(event) =>
+                      setSelectedCropsOnly(event.target.checked)
+                    }
+                  />
+                  Use only the crops I select
+                </label>
+                {CROPS.map(([id, name]) => (
+                  <label className="checkbox-label" key={id}>
+                    <input
+                      type="checkbox"
+                      checked={selectedCrops.includes(id)}
+                      onChange={(event) =>
+                        setSelectedCrops(
+                          event.target.checked
+                            ? [...selectedCrops, id]
+                            : selectedCrops.filter((crop) => crop !== id),
+                        )
+                      }
+                    />
+                    {name}
+                  </label>
+                ))}
+                {selectedCropsOnly && selectedCrops.length < 3 && (
+                  <p className="field-hint">
+                    Select at least three crops to build a rotation.
+                  </p>
+                )}
+              </details>
               <details>
                 <summary>Soil and irrigation — if known</summary>
                 <label>

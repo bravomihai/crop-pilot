@@ -8,6 +8,31 @@ export const locationSchema = z
     longitude: z.number().min(-180).max(180),
   })
   .strict();
+export const fieldBoundarySchema = z
+  .object({
+    type: z.literal("Polygon"),
+    coordinates: z
+      .array(
+        z
+          .array(
+            z.tuple([
+              z.number().min(-180).max(180),
+              z.number().min(-90).max(90),
+            ]),
+          )
+          .min(4)
+          .max(101),
+      )
+      .length(1),
+  })
+  .strict()
+  .refine(({ coordinates }) => {
+    const ring = coordinates[0];
+    return (
+      ring[0][0] === ring[ring.length - 1][0] &&
+      ring[0][1] === ring[ring.length - 1][1]
+    );
+  }, "The field boundary ring must be closed.");
 export const dateSchema = z.iso.date();
 export const cropIdSchema = z.string().regex(/^[a-z][a-z0-9_]*$/);
 // Where a history entry came from. Typed or documented history is stronger evidence than
@@ -38,6 +63,7 @@ export const requestSchema = z
   .object({
     schema_version: z.literal(CONTRACT_VERSION).default(CONTRACT_VERSION),
     location: locationSchema,
+    field_boundary: fieldBoundarySchema.optional(),
     available_from: dateSchema,
     crop_count: z.literal(3).default(3),
     history: z.array(cropHistorySchema).max(30).default([]),
@@ -64,6 +90,11 @@ export const requestSchema = z
           .array(z.string().regex(/^[a-z][a-z0-9_]*$/))
           .max(50)
           .default([]),
+        selected_crops: z
+          .array(z.string().regex(/^[a-z][a-z0-9_]*$/))
+          .max(50)
+          .optional(),
+        selected_crops_only: z.boolean().optional(),
       })
       .strict(),
     scenario: z
@@ -108,6 +139,67 @@ export const criterionScoresSchema = z
     productivity: scoreSchema.optional(),
   })
   .strict();
+const yearSchema = z.number().int().min(1950).max(2150);
+const dayOfYearSchema = z.number().int().min(1).max(366);
+// One crop of a plan in one replayed past season (FAO-56 water balance and crop hazards).
+export const replayStepSchema = z
+  .object({
+    crop_id: cropIdSchema,
+    // Share of the crop's water need that rain and stored soil water met (WRSI), percent.
+    wrsi_pct: z.number().min(0).max(100).nullable().optional(),
+    water_need_mm: z.number().min(0).nullable().optional(),
+    water_used_mm: z.number().min(0).nullable().optional(),
+    season_rain_mm: z.number().min(0).nullable().optional(),
+    // Combined weather risk for the crop that season, 0 = none, 1 = severe.
+    climate_risk: z.number().min(0).max(1).nullable().optional(),
+    // Hazard name → observed quantity (days above a threshold, mm of rain at sowing, ...).
+    hazards: z.record(z.string(), z.number()).optional(),
+  })
+  .strict();
+// The whole plan replayed over one past season, under the request's scenario.
+// `season_start_year` is the year the first crop would have been sown.
+export const replaySeasonSchema = z
+  .object({
+    season_start_year: yearSchema,
+    scores: criterionScoresSchema,
+    steps: z.array(replayStepSchema).max(3).optional(),
+  })
+  .strict();
+// Observed weather at the location, per calendar year. Never scenario-adjusted.
+export const climateYearSchema = z
+  .object({
+    year: yearSchema,
+    rain_mm: z.number().min(0).nullable().optional(),
+    et0_mm: z.number().min(0).nullable().optional(),
+    tmean_c: z.number().nullable().optional(),
+    hot_days_gt32: z.number().int().min(0).nullable().optional(),
+    frost_days: z.number().int().min(0).nullable().optional(),
+    heavy_rain_days_gt20mm: z.number().int().min(0).nullable().optional(),
+    // Longest run of days with less than 1 mm of rain between April and September.
+    dry_spell_max_days_apr_sep: z.number().int().min(0).nullable().optional(),
+    // Last frost (minimum ≤ 0 °C) before July, first frost from July; null = none that year.
+    last_spring_frost_doy: dayOfYearSchema.nullable().optional(),
+    first_autumn_frost_doy: dayOfYearSchema.nullable().optional(),
+  })
+  .strict();
+export const climateTrendSchema = z
+  .object({
+    mean: z.number(),
+    per_decade: z.number(),
+    unit: z.string(),
+  })
+  .strict();
+export const climateContextSchema = z
+  .object({
+    basis: z.literal("observed"),
+    period: z.object({ start_year: yearSchema, end_year: yearSchema }).strict(),
+    years: z.array(climateYearSchema).max(80),
+    // Linear trend per decade for each `years` field (key = field name), when ≥ 10 years.
+    trends: z.record(z.string(), climateTrendSchema).optional(),
+    source_ids: z.array(z.string()),
+    note: z.string().optional(),
+  })
+  .strict();
 export const planSchema = z
   .object({
     id: z.string(),
@@ -126,6 +218,19 @@ export const planSchema = z
     // Agronomic rules the sequence breaks. Recommended plans never break rules, so this is
     // only filled for `baseline`, where the farmer's current rotation is shown as it is.
     violations: z.array(z.string()).optional(),
+    // The plan replayed over past seasons at this location, oldest first.
+    replay: z.array(replaySeasonSchema).max(60).optional(),
+  })
+  .strict();
+export const monthlyClimateSchema = z
+  .object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+    mean_daily_max_c: z.number().nullable(),
+    max_daily_max_c: z.number().nullable(),
+    mean_daily_min_c: z.number().nullable(),
+    min_daily_min_c: z.number().nullable(),
+    max_temp_observations: z.number().int().min(0),
+    min_temp_observations: z.number().int().min(0),
   })
   .strict();
 export const resultSchema = z
@@ -141,6 +246,9 @@ export const resultSchema = z
     // way as the plans. Present only when the request has `current_rotation`. It is not
     // counted in `status` and may repeat a plan's sequence.
     baseline: planSchema.optional(),
+    monthly_climate: z.array(monthlyClimateSchema),
+    // Observed yearly climate at the location (from the data the plans were evaluated on).
+    climate_context: climateContextSchema.optional(),
     assumptions: z.array(z.string()),
     data_gaps: z.array(z.string()),
     sources: z.array(sourceSchema),
@@ -152,6 +260,9 @@ export type RecommendationResult = z.infer<typeof resultSchema>;
 export type RotationPlan = z.infer<typeof planSchema>;
 export type CriterionScores = z.infer<typeof criterionScoresSchema>;
 export type HistorySource = z.infer<typeof historySourceSchema>;
+export type ReplaySeason = z.infer<typeof replaySeasonSchema>;
+export type ClimateContext = z.infer<typeof climateContextSchema>;
+export type ClimateYear = z.infer<typeof climateYearSchema>;
 export type Location = z.infer<typeof locationSchema>;
 
 export function validateResultSemantics(
@@ -200,6 +311,31 @@ export function validateResultSemantics(
       if (step.order !== i + 1)
         errors.push("Baseline steps must be ordered 1, 2, 3.");
     });
+  }
+  for (const plan of [...result.plans, ...(result.baseline ? [result.baseline] : [])]) {
+    const years = (plan.replay ?? []).map((r) => r.season_start_year);
+    if (years.some((y, i) => i > 0 && y <= years[i - 1]))
+      errors.push("Replay seasons must be in increasing year order.");
+    const crops = plan.steps.map((s) => s.crop_id);
+    if (
+      (plan.replay ?? []).some((r) =>
+        (r.steps ?? []).some((s, i) => s.crop_id !== crops[i]),
+      )
+    )
+      errors.push("Replay steps must follow the plan's crops.");
+  }
+  const climate = result.climate_context;
+  if (climate) {
+    if (climate.source_ids.some((id) => !ids.has(id)))
+      errors.push("Unknown source reference in climate context.");
+    const years = climate.years.map((y) => y.year);
+    if (years.some((y, i) => i > 0 && y <= years[i - 1]))
+      errors.push("Climate years must be in increasing order.");
+    if (
+      climate.period.start_year > climate.period.end_year ||
+      years.some((y) => y < climate.period.start_year || y > climate.period.end_year)
+    )
+      errors.push("Climate years must lie inside the climate period.");
   }
   return errors;
 }

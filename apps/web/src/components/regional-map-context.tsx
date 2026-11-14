@@ -210,8 +210,9 @@ export default function RegionalMapContext({
       </p>
       {location && !isCovered(location) && (
         <p className="coverage-warning" role="status">
-          Plans are only computed inside the shaded zones. This point is outside
-          current crop-rule coverage.
+          This point is outside the locally documented crop-rule zones. Plans
+          use provisional Romania-wide temperature-profile rules here and need
+          local review.
         </p>
       )}
       <p className="context-line-legend">
