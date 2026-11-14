@@ -64,6 +64,9 @@ services:
       ENGINE_URL: http://engine:8000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
       ENGINE_TIMEOUT_MS: "90000"
+      # Optional AI summary (server-side only). Empty key: the page says it is not set up.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_SUMMARY_ENABLED: ${AI_SUMMARY_ENABLED:-true}
     ports: ["127.0.0.1:3000:3000"]
     depends_on:
       migrate: { condition: service_completed_successfully }

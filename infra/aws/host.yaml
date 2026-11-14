@@ -21,6 +21,13 @@ Parameters:
     Type: String
     Default: /fieldshift/production/database-password
     AllowedPattern: "/[a-zA-Z0-9_./-]+"
+  AiSummaryKeyParameterName:
+    Type: String
+    Default: ""
+    Description: Optional SecureString with an Anthropic API key for the AI summary. Leave empty to keep the summary off.
+    AllowedPattern: "(/[a-zA-Z0-9_./-]+)?"
+Conditions:
+  HasAiSummaryKey: !Not [!Equals [!Ref AiSummaryKeyParameterName, ""]]
 Resources:
   Ingress:
     Type: AWS::EC2::SecurityGroup
@@ -54,6 +61,10 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${TokenParameterName}
                   - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DatabasePasswordParameterName}
+                  - !If
+                    - HasAiSummaryKey
+                    - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${AiSummaryKeyParameterName}
+                    - !Ref AWS::NoValue
   HostProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:

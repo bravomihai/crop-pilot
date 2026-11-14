@@ -15,6 +15,11 @@ Choose the region, VPC, public subnet, and domain when deploying. Create SecureS
 SSM parameters with the default AWS SSM key:
 `/fieldshift/production/internal-token` (at least 32 random URL-safe characters) and
 `/fieldshift/production/database-password` (at least 24). Do not reuse local values.
+The AI summary is optional. To enable it, also create a SecureString such as
+`/fieldshift/production/anthropic-api-key`, pass its name as the template parameter
+`AiSummaryKeyParameterName` (the host role can then read it), and run the configure
+script with `--ai-summary-key-parameter <name>`. Without it the summary stays off and
+the page says it is not set up; the calculated results are unaffected.
 If using a custom KMS key, grant decryption permission only for that key.
 
 Validate and apply `host.yaml` through CloudFormation with `CAPABILITY_IAM` after
