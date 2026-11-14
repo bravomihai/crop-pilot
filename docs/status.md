@@ -13,12 +13,32 @@
 - Adaptor NASA POWER pentru descărcarea datelor zilnice; nu a fost verificat live în refacere.
 - Generator demonstrativ, care respectă ordinea temporală și excluderile, fără scoruri fictive.
 - Configurație Compose, instrucțiuni AWS și model de verificări CI neactivat.
+- P4 (branch `alexia`): motor de recomandare determinist în `recommender/` — generare
+  limitată a secvențelor din regulile P3, clasificare fezabil/nefezabil/necunoscut,
+  verificarea calendarului (inclusiv culturi de toamnă și `available_from`), ponderi
+  normalizate, intervale pentru scoruri lipsă, analiză Pareto, selecție diversă cu
+  dezvăluirea compromisurilor, comparație scenariu–referință când P3 o confirmă,
+  explicații și încredere calitativă din dovezi. Integrat în `pipeline.py` fără fallback.
+  Ieșirea P4 pentru utilizatori este în engleză. Adaptat contractului extins din `main`:
+  criteriul opțional `productivity`, `current_rotation` → `baseline` evaluat prin P3 (cu
+  `violations`, omis cu explicație dacă P3 nu dă calendar/surse), `history[].source` în
+  încredere și `local_checks`, `plan.scores` cu `null` pentru necunoscut. Comparația cu
+  scenariul climatic folosește „clima de referință”, separat de rotația actuală.
+  `pipeline.py` apelează din nou `recommend_rotations`, deci `tests/test_api.py` (P5) trece.
+  Verificat numai cu un evaluator SINTETIC de test: 120 teste pytest trec (2026-11-14);
+  nu este validare agronomică. `pnpm` nu a rulat (lipsă `node_modules`; contractele
+  neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## De implementat de echipă
 
 - P2: verificare live POWER, indicatori și control de calitate, integrarea altor surse justificată.
 - P3: reguli regionale citate, praguri, bilanț hidric, compatibilitate și calendare validate.
-- P4: generare și selecție reală, compromisuri, robustețe la scenarii, explicații din dovezi.
+- P3/P4: acord asupra contractului intermediar de evaluare propus în raportul P4
+  (`criteria` 0–1 cu proveniență, inclusiv `productivity`, `calendar`, `scenario_applied`,
+  `sources`, `local_checks`; calendar și surse și pentru secvențe nefezabile, ca rotația
+  actuală să poată fi afișată cu încălcările ei).
+- P4: test de integrare cu evaluatorul real P3 (Fundulea), calibrarea pragurilor de
+  selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
 - P5: publicarea efectivă pe AWS și configurarea secretelor reale la deployment; pregătirea locală este descrisă mai jos.
 
