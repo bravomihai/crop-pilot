@@ -357,10 +357,23 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     elif previous is None:
         data_gaps.append("The history does not say which crop was harvested right before the plan.")
 
+    # A check may apply only after certain crops ({"text": ..., "after": [...]}), for
+    # example the Fusarium check only when wheat follows maize.
+    history_ids = [h["crop_id"] for h in schedule.ordered_history(request)]
+    sequence = history_ids + rotation
+    offset = len(history_ids)
     for cid in dict.fromkeys(rotation):
-        text = (rules.get("local_checks") or {}).get(cid)
-        if text:
-            local_checks.append(text)
+        entry = (rules.get("local_checks") or {}).get(cid)
+        if isinstance(entry, dict):
+            after = set(entry.get("after") or [])
+            follows = any(
+                sequence[i] == cid and i > 0 and sequence[i - 1] in after
+                for i in range(offset, len(sequence))
+            )
+            if entry.get("text") and (not after or follows):
+                local_checks.append(entry["text"])
+        elif entry:
+            local_checks.append(entry)
 
     # 2. Soil (structure of the rotation; no weather needed).
     soil_in = _soil_inputs(request, environment, settings)
@@ -370,11 +383,18 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     ):
         data_gaps.append("No slope data (SRTM): erosion risk is not part of the soil score.")
     comp = soil["components"]
+    succession = comp["succession"]
+    succession_text = (
+        "crop order unknown for the first crop" if succession is None
+        else "good crop order" if succession >= 0.8
+        else "acceptable crop order" if succession >= 0.5
+        else "weak crop order (similar crops follow each other)"
+    )
     soil_summary = (
-        f"Rotation soil index from succession ({_fmt(comp['succession'])}), crop diversity ({_fmt(comp['diversity'])}: "
-        f"{len(soil['families'])} plant families{', with a legume' if soil['legume'] else ', no legume'}), "
-        f"soil cover ({_fmt(comp['cover'])}: about {round(soil['bare_days'] / 30)} months without a main crop "
-        f"in {round(soil['total_days'] / 30)} months) and crop residues ({_fmt(comp['residue'])})."
+        f"{succession_text[0].upper()}{succession_text[1:]}; {len(soil['families'])} plant families"
+        f"{', including a legume that adds nitrogen' if soil['legume'] else ', no legume'}; "
+        f"bare soil about {round(soil['bare_days'] / 30)} of {round(soil['total_days'] / 30)} months"
+        f"{'; erosion risk from the slope included' if comp.get('erosion') is not None else ''}."
     )
     if soil["bare_days"] > 0.3 * soil["total_days"]:
         local_checks.append("Consider a cover crop in the long gaps between main crops to protect the soil.")
@@ -536,9 +556,9 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         mean_wrsi = sum(d["wrsi_mean_pct"] for d in details) / len(details)
         wd = weakest_water[0]
         water_summary = (
-            f"Rain and stored soil water met on average {mean_wrsi:.0f}% of the crops' water need over {n} past seasons "
-            f"(FAO-56 balance, {weather.et0_method}). Most exposed: {wd['crop_name'].lower()}, "
-            f"{wd['wrsi_mean_pct']:.0f}% on average and {wd['wrsi_worst_pct']:.0f}% in the worst season."
+            f"In the past {n} seasons, rain and water stored in the soil covered {mean_wrsi:.0f}% of what these crops "
+            f"need in an average season. Most exposed: {wd['crop_name'].lower()}, with {wd['wrsi_mean_pct']:.0f}% "
+            f"on average and {wd['wrsi_worst_pct']:.0f}% in its driest season."
         )
         if irrigated:
             total_irr = sum(d.get("irrigation_mm_mean", 0) for d in details)
@@ -546,13 +566,13 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
             assumptions.append("The water score is the rainfed result; irrigation enters the productivity score.")
         cd = weakest_climate[0]
         climate_summary = (
-            f"Weather risk from heat, frost and sowing conditions over {n} past seasons, with the EcoCrop temperature fit. "
-            f"Most exposed: {cd['crop_name'].lower()} (risk {cd['climate_risk_mean']:.2f} on a 0–1 scale)."
+            f"Heat, frost and dry sowing conditions in the past {n} seasons, and how well temperatures suit each crop. "
+            f"Most exposed: {cd['crop_name'].lower()}."
         )
         product_summary = (
-            "Relative production potential: water-limited yield (FAO-33 Ky), weather risk, previous-crop effect, sowing date"
-            + (" and soil pH fit (EcoCrop)." if soil_in["ph"] is not None else ".")
-            + " Not a yield forecast; attainable yields (FAO GAEZ) are not integrated yet."
+            "Relative growing potential from water, weather risk, the previous crop and the sowing date"
+            + (", plus how well the soil pH suits each crop." if soil_in["ph"] is not None else ".")
+            + " Not a yield forecast."
         )
         criteria["water"] = _criterion(_robust(season_water), "derived", water_summary, water_ids)
         criteria["climate"] = _criterion(_robust(season_climate), "derived", climate_summary, climate_ids)
@@ -560,9 +580,9 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
             _robust(season_product), "estimated", product_summary, ["fao56", "ecocrop", "ro-agronomy"] + env_ids
         )
         winter = [crops[c]["name"].lower() for c in dict.fromkeys(rotation) if "winterkill" in crops[c].get("hazards", {})]
-        if winter:
+        for name in winter:  # one note per crop, so the same text dedupes across plans
             data_gaps.append(
-                f"Winterkill risk for {', '.join(winter)} ignores snow cover, which protects winter crops; "
+                f"Winterkill risk for {name} ignores snow cover, which protects winter crops; "
                 "check winter hardiness locally."
             )
     else:
