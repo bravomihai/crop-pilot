@@ -46,8 +46,16 @@ export async function getRecommendations(
     body: JSON.stringify(request),
     signal,
   });
-  const body = await response.json();
-  if (!response.ok)
-    throw new Error(body.error ?? "The analysis could not be completed.");
+  // A gateway can answer with a non-JSON error page (e.g. 502/504 HTML).
+  const body: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    const message =
+      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+        ? body.error
+        : "The analysis could not be completed. Please try again later.";
+    throw new Error(message);
+  }
+  if (body === undefined)
+    throw new Error("The analysis service returned an unreadable response.");
   return resultSchema.parse(body);
 }

@@ -75,10 +75,21 @@ def load_provisional_romania_rules(location: dict, environment: dict) -> dict:
     for entry in environment.get("daily", []):
         try:
             day = date.fromisoformat(entry["date"])
-            temperature = float(entry["values"]["T2M"])
         except (KeyError, TypeError, ValueError):
             continue
-        if day.month in range(4, 10) and math.isfinite(temperature):
+        if day.month not in range(4, 10):
+            continue
+        # The data service's cleaned daily value (`tmean`), or the raw NASA POWER record.
+        value = entry.get("tmean")
+        if value is None:
+            value = (entry.get("values") or {}).get("T2M")
+        if value is None and entry.get("tmin") is not None and entry.get("tmax") is not None:
+            value = (entry["tmin"] + entry["tmax"]) / 2
+        try:
+            temperature = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(temperature) and temperature > -900:
             temperatures.append(temperature)
     if not temperatures:
         return {
@@ -120,6 +131,9 @@ def load_provisional_romania_rules(location: dict, environment: dict) -> dict:
         "thermal_band": zone["name"],
         "mean_apr_sep_t2m_c": round(mean_temperature, 1),
         "boxes": [],
+        # Explicit marker for consumers (P4 caps confidence): calendars are shifted by a
+        # project thermal band, not validated regional rules.
+        "provisional": True,
     }
     rules.setdefault("assumptions", []).append(
         "Outside the locally described southern zone, crop rules use provisional project thermal-band calendar shifts; they are not validated Romanian regional recommendations."

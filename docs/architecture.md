@@ -1,83 +1,91 @@
-# Arhitectura curentă
+# Current architecture
 
 ```text
-Browser (React în Next.js)
+Browser (React in Next.js)
   POST /api/recommendations
-        │ validează cererea și generează request_id
+        │ validates the request and generates request_id
         ▼
-Backend Next.js ── HTTP + token intern ──► FastAPI
-        │                                  pipeline
-        │                       data_service → evaluator → recommender
-        ◄──────── rezultat JSON validat ────────┘
+Next.js backend ── HTTP + internal token ──► FastAPI
+        │                                    pipeline
+        │                         data_service → evaluator → recommender
+        ◄──────── validated JSON result ─────────┘
         │
         ▼
-Trei planuri + calendare + compromisuri + surse + lipsuri
+Three plans + calendars + trade-offs + sources + data gaps
 
-PostgreSQL/Prisma: cache opțional de date publice, accesat numai prin Next.js.
+PostgreSQL/Prisma: optional public-data cache, accessed only through Next.js.
 ```
 
-Nu există conturi, sesiuni persistente, ferme salvate sau analize de recuperat din istoric.
-Nu există coadă de joburi în această versiune: calculul este request/response, cu timeout
-explicit și date reutilizabile în cache. O coadă poate fi adăugată dacă duratele reale o cer;
-nu persistăm datele fermierului anticipând un caz care nu a fost cerut.
+There are no accounts, persistent sessions, saved farms, or historical analyses to retrieve.
+This version has no job queue: calculation uses request/response, an explicit timeout,
+and reusable cached data. Add a queue only if actual execution times require it;
+do not persist farmer data in anticipation of an unrequested use case.
 
-## Timpul agricol
+## Agricultural time
 
-`crop_count=3` înseamnă trei culturi principale succesive, nu trei ani și nu trei recolte
-ale aceleiași culturi. O cultură de toamnă traversează anul calendaristic. Verificăm
-sfârșitul recoltării înainte de începutul semănatului următor. Nu presupunem repetabilitate
-C→A după ultimul pas. Culturile de acoperire și plantele multianuale sunt extensii ulterioare.
+`crop_count=3` means three successive main crops, not three years or three harvests
+of the same crop. An autumn crop crosses calendar years. Check the end of harvest
+before the next sowing starts. Do not assume a repeating C→A transition after the last
+step. Cover crops and perennial crops are future extensions.
 
-## Date și incertitudine
+## Data and uncertainty
 
-Fermierul poate trimite un contur GeoJSON de tip Polygon; limita este verificată să rămână
-în România. Sistemul acceptă puncte din întreaga țară. NASA POWER oferă context regional
-din celula din jurul punctului reprezentativ. Pentru un contur, SoilGrids și SRTM sunt
-eșantionate în maximum trei puncte distribuite în interior, iar valorile disponibile sunt
-mediate. Aceasta este o eșantionare rară, nu o statistică raster zonală pentru întreaga parcelă;
-răspunsul semnalează limitarea.
-POWER este context regional. Datele zilnice și metadatele sunt păstrate pentru ferestre
-specifice culturilor; mediile anuale nu înlocuiesc expunerea din perioade sensibile.
-Solul introdus de utilizator își păstrează sursa. Istoricul absent duce la reguli neverificate,
-nu la presupunerea unui teren fără culturi anterioare.
-Panta este estimată dintr-un vecin de 3×3 puncte SRTM de aproximativ 30 m, prin OpenTopoData;
-API-ul primește coordonatele, are limite publice de utilizare și nu reprezintă panta întregii parcele.
+The current map interface submits a point; the API can also validate an optional GeoJSON
+field boundary against Romania. NASA POWER remains regional context from the representative
+point's grid cell. For a boundary, SoilGrids and SRTM use up to three distributed interior
+samples and average available values. This sparse sampling is not parcel-wide raster zonal
+statistics, and the response reports the limitation.
 
-## Moduri
+Daily POWER data and metadata are retained for crop-specific windows; annual averages do
+not replace exposure during sensitive periods. User-entered soil retains its source.
+Missing crop history leaves predecessor rules unverified; it does not imply that the field
+had no previous crops. Slope is estimated from a roughly 30 m SRTM 3×3 neighborhood at
+each sampled point through OpenTopoData; it is not the slope of the entire parcel.
 
-- `NEXT_PUBLIC_USE_MOCK_API=true`: frontend independent cu fixture fix, vizibil demonstrativ.
-- `ENGINE_MODE=demo`: backend real și Python, dar planuri fictive etichetate explicit.
-- `ENGINE_MODE=computed`: folosește NASA POWER, ET0 FAO-56, reguli regionale și clasare
-  transparentă; cere `ENABLE_NASA_POWER=true`. Fără fallback automat către rezultate demo.
+## Modes
 
-## Screening-ul rotațiilor
+- `NEXT_PUBLIC_USE_MOCK_API=true`: independent frontend using a fixed, visibly labelled fixture.
+- `ENGINE_MODE=demo`: real backend and Python service, but explicitly labelled fictional plans.
+- `ENGINE_MODE=computed`: real-data integration; returns 503 when required data/modules
+  are unavailable. It never falls back automatically to fictional results.
 
-Modelul transparent, fără ML, acoperă România și verifică coordonatele cu limita
-geoBoundaries ADM0.
-Un profil termic cald, temperat sau răcoros este ales din media NASA POWER aprilie–septembrie;
-aceste benzi și ajustările lunilor de semănat/fazelor sensibile sunt estimări de proiect,
-nu zonare oficială sau calendare validate local. Păstrează cele cinci culturi inițiale și
-coeficienți FAO-56 generali. Clasarea combină adecvarea istorică precipitații/ETc, percentila 10 a
-observațiilor pe sezoane și un proxy structural pentru diversitatea familiilor/faza de
-leguminoase. Ultimele două scoruri de apă/climă sunt corelate, nu predicții independente.
-Răspunsul calculat include rezumate lunare ale temperaturilor zilnice maxime și minime;
-pentru culturile selectate, adaugă și numărul istoric al zilelor peste pragurile de screening
-din lunile sensibile estimate, cu numărul anilor observați. Pragurile sunt literatură generală,
-ferestrele sunt estimări provizorii pentru profilul termic selectat; aceste avertismente explicative nu schimbă
-clasarea și nu reprezintă predicții validate ale vătămării termice.
-SoilGrids oferă estimări modelate pentru profilul 0–30 cm. Textura și capacitatea de apă
-disponibilă estimată intră în bilanțul hidric, iar pH-ul în potențialul relativ de producție;
-carbonul organic influențează estimarea capacității de apă, nu un scor al schimbării
-fertilității. Valorile SoilGrids nu înlocuiesc analiza de laborator. Nu se estimează producția
-sau profitul; precipitația efectivă și scurgerea nu sunt încă modelate.
-SRTMGL1 v003 acoperă latitudinile 60°S–60°N, inclusiv toată România. Panta folosește
-media estimărilor Horn 3×3 din maximum trei puncte ale parcelei, nu panta întregii parcele.
-Accesul public OpenTopoData este limitat la 1 cerere/secundă și 1000 cereri/zi; punctele
-parcelei sunt grupate într-o singură cerere, dar pentru trafic mai mare va fi necesară o
-strategie de date cu capacitate potrivită.
+## Retained data
 
-## Date păstrate
+Prisma contains only `DataCache`: key, namespace, public payload, and expiration.
+Geographic search results and NASA series may be reused. Do not save requests,
+results, crop histories, phone numbers, email addresses, or user identifiers.
+Do not log payloads or tokens.
 
-Prisma deține doar `DataCache`: cheie, namespace, payload public și expirare. Căutările
-geografice și seriile NASA pot fi reutilizate. Nu salvăm requesturi, rezultate, istorice,
-telefon, email sau identificatori de utilizatori. Nu logăm payloaduri sau tokenuri.
+The transparent, non-ML screening covers Romania and validates coordinates against the
+geoBoundaries ADM0 boundary. Outside the locally described southern/south-eastern plains,
+it selects a warm, temperate, or cool thermal band using April–September NASA POWER
+temperatures and shifts calendars provisionally. These bands and adjustments are project
+estimates, not official zoning or locally validated crop calendars.
+
+The rules currently include 15 crops. General FAO-56 parameters feed the water balance;
+Romanian calendars, crop suitability ranges, hazards, and rotation guidance remain
+estimates requiring agronomist validation. Ranking combines historical precipitation/ETc
+suitability, a lower-tail seasonal score, and a structural proxy for family diversity and
+legume presence. Water and climate scores are correlated, not independent predictions.
+
+Computed responses include monthly daily-temperature summaries and, for selected crops,
+historical counts of days above screening thresholds during estimated sensitive months,
+along with the number of observed years. These explanatory thresholds do not change
+ranking and are not validated damage predictions.
+
+SoilGrids provides modeled 0–30 cm profile estimates. Texture and estimated available
+water inform the water balance; pH informs relative production potential. Organic carbon
+influences the available-water estimate, not a soil-fertility-change score. SoilGrids does
+not replace laboratory analysis. Yield and profit are not predicted, and effective rainfall
+and runoff are not yet modeled.
+
+SRTMGL1 v003 covers 60°S–60°N, including Romania. Slope uses the mean Horn 3×3 estimate
+at up to three field samples, not the slope of the whole parcel. Public OpenTopoData has
+published limits of one request per second and 1,000 per day; field samples are batched
+into one request, but higher traffic will require a suitably scaled data strategy.
+
+## Language
+
+Project documentation, interface text, and generated explanations use English.
+Localized provider responses use English and language-specific cache keys.
+Geographic proper names and original source identifiers retain their spelling.

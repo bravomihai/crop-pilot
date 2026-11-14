@@ -23,9 +23,17 @@ result = evaluate(rotation, request, environment, rules)
    or exclusion makes the plan `infeasible`, and the reason is listed in `violations`.
 3. **Replay.** The whole plan is moved back over every past season that fits in the
    weather record (18 seasons with 21 years of data). For each one:
-   - **FAO-56 daily soil water balance:** Kc curve by growth stage, roots that deepen,
-     the p depletion fraction, and a stress coefficient Ks. One 1.5 m profile carries water
-     from crop to crop, so a crop that dries the soil affects the next one.
+   - **FAO-56 daily soil water balance:** Kc curve by growth stage, the p depletion
+     fraction and a stress coefficient Ks. A 1.5 m profile carries water from crop to crop,
+     so a crop that dries the soil affects the next one. It has two layers:
+     - **the root zone:** the only water the crop can use; stress comes from this layer
+       alone. It deepens from 0.3 m at sowing to the crop's rooting depth (FAO-56 Table 22)
+       by mid-season, taking in the water of the soil it grows into;
+     - **the soil below:** stores water and is recharged by rain that drains through the
+       root zone.
+
+     So a seedling depends on the topsoil, and a deep-rooted crop can use water stored over
+     winter. Between crops, the top 0.3 m dries by evaporation and rain refills it first.
    - **Crop hazards:** heat in flowering and grain fill, winterkill, frost at flowering or
      on seedlings, drought at sowing, and maize degree days.
    - **EcoCrop temperature fit.**

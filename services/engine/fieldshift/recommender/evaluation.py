@@ -93,8 +93,8 @@ class Evaluation:
     warnings: tuple[EvalWarning, ...] = ()
     data_gaps: tuple[str, ...] = ()
     local_checks: tuple[str, ...] = ()
-    replay: tuple[dict, ...] = ()
     assumptions: tuple[str, ...] = ()
+    replay: tuple[dict, ...] = ()
     source_ids: tuple[str, ...] = ()
     sources: tuple[dict, ...] = ()
     scenario_applied: bool = False
@@ -331,8 +331,8 @@ def parse_evaluation(raw, rotation) -> Evaluation:
         warnings=_warnings(raw.get("warnings"), errors),
         data_gaps=_strings(raw.get("data_gaps"), errors, "data_gaps"),
         local_checks=_strings(raw.get("local_checks"), errors, "local_checks"),
-        replay=_replay(raw.get("replay"), rotation, errors),
         assumptions=_strings(raw.get("assumptions"), errors, "assumptions"),
+        replay=_replay(raw.get("replay"), rotation, errors),
         source_ids=_strings(raw.get("source_ids"), errors, "source_ids"),
         sources=tuple(sources),
         scenario_applied=raw.get("scenario_applied") is True,

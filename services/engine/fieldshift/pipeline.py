@@ -70,7 +70,8 @@ def computed_result(
     )
     if request.get("field_boundary"):
         data_gaps.append(FIELD_DATA_GAP)
-    if not plans:
+    if not plans and outcome is None:
+        # The P4 outcome already explains an empty result; only plain-list callers need this.
         data_gaps.append(
             "No feasible rotation could be scored from the available observations and constraints."
         )
