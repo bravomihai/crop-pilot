@@ -13,8 +13,9 @@ culturilor dacă există, solul cunoscut, irigații, excluderi, priorități și
 ipotetic opțional. Nu cerem poligon de parcelă.
 
 Ieșire: trei planuri alternative, fiecare cu TREI culturi principale succesive, ferestre
-de semănat/recoltare, avantaje și compromisuri. Nu există o rotație actuală obligatorie
-în rezultate. Trei culturi nu înseamnă automat trei ani. Planul nu se repetă automat.
+de semănat/recoltare, avantaje și compromisuri. Rotația actuală este opțională: dacă
+fermierul o dă (`current_rotation`), rezultatul conține și `baseline`, evaluat la fel ca
+planurile, pentru comparație. Câmpurile opționale sunt descrise în `docs/api.md`. Trei culturi nu înseamnă automat trei ani. Planul nu se repetă automat.
 Dacă nu există trei variante valide, întoarce limited/insufficient_data; nu inventa opțiuni.
 
 ## Stack și directoare
@@ -36,7 +37,8 @@ Dacă nu există trei variante valide, întoarce limited/insufficient_data; nu i
 - `packages/contracts/schemas/`: JSON Schema GENERAT pentru Python; nu modifica manual.
 - `packages/contracts/examples/`: cerere și rezultat fictive pentru lucru independent.
 - `docs/`: arhitectură, API, starea implementării și împărțirea muncii.
-- `infra/`: instrucțiuni AWS, reverse proxy și model CI în `infra/ci/checks.yml.example` (neactivat).
+- `infra/`: instrucțiuni AWS, reverse proxy și configurație de publicare și copia CI din `infra/ci/checks.yml.example`.
+- `.github/workflows/checks.yml`: verificări backend, contracte, PostgreSQL și builduri Docker, pregătite pentru push/PR.
 - `compose.yaml`: mediu local PostgreSQL, migrare, motor și web.
 
 ## Cine lucrează unde

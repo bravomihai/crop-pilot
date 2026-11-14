@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: FieldShift single-host prototype. Creates EC2, IAM and HTTPS ingress only; deploy the application separately.
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public subnet with an internet-gateway route and outbound access.
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large]
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  TokenParameterName:
+    Type: String
+    Default: /fieldshift/production/internal-token
+    AllowedPattern: "/[a-zA-Z0-9_./-]+"
+  DatabasePasswordParameterName:
+    Type: String
+    Default: /fieldshift/production/database-password
+    AllowedPattern: "/[a-zA-Z0-9_./-]+"
+Resources:
+  Ingress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS and ACME only. Admin access through Systems Manager, no SSH.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+        - { IpProtocol: udp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0 }
+      SecurityGroupEgress:
+        - { IpProtocol: "-1", CidrIp: 0.0.0.0/0 }
+  HostRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: ReadApplicationParameters
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${TokenParameterName}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${DatabasePasswordParameterName}
+  HostProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref HostRole]
+  Host:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref HostProfile
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref PublicSubnetId
+          GroupSet: [!Ref Ingress]
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            {
+              VolumeSize: 30,
+              VolumeType: gp3,
+              Encrypted: true,
+              DeleteOnTermination: true,
+            }
+      Tags:
+        - { Key: Name, Value: fieldshift }
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          set -euo pipefail
+          dnf install -y docker git python3 awscli2
+          systemctl enable --now docker
+          mkdir -p /usr/local/lib/docker/cli-plugins /opt/fieldshift
+          workdir=$(mktemp -d)
+          cd "$workdir"
+          curl -fsSLO https://github.com/docker/compose/releases/download/v2.39.4/docker-compose-linux-x86_64
+          curl -fsSLO https://github.com/docker/compose/releases/download/v2.39.4/docker-compose-linux-x86_64.sha256
+          sha256sum -c docker-compose-linux-x86_64.sha256
+          install -m 0755 docker-compose-linux-x86_64 /usr/local/lib/docker/cli-plugins/docker-compose
+          # Application source and secrets are deliberately absent from EC2 UserData.
+Outputs:
+  InstanceId:
+    Value: !Ref Host
+  PublicIp:
+    Value: !GetAtt Host.PublicIp
+  Administration:
+    Value: !Sub aws ssm start-session --target ${Host}

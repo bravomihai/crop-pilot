@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "location": {
+    "name": "Example field, Romanian Plain",
+    "latitude": 44.56,
+    "longitude": 27.36
+  },
+  "available_from": "2026-10-01",
+  "crop_count": 3,
+  "history": [
+    { "crop_id": "maize", "harvest_year": 2024, "source": "apia" },
+    { "crop_id": "winter_wheat", "harvest_year": 2025, "source": "apia" },
+    { "crop_id": "maize", "harvest_year": 2026, "source": "typed" }
+  ],
+  "current_rotation": ["maize", "winter_wheat"],
+  "soil": { "texture": "loamy", "ph": 7.2, "source": "farmer_estimate" },
+  "priorities": { "water": 4, "soil": 3, "climate": 2, "productivity": 3 },
+  "constraints": { "irrigated": false, "excluded_crops": [] },
+  "scenario": { "temp_change_c": 1.5, "rain_change_pct": -10 }
+}

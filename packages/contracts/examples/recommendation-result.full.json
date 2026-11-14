@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "request_id": "example-full",
+  "mode": "demo",
+  "generated_at": "2026-11-14T12:00:00Z",
+  "status": "limited",
+  "location": {
+    "name": "Example field, Romanian Plain",
+    "latitude": 44.56,
+    "longitude": 27.36
+  },
+  "plans": [
+    {
+      "id": "plan-1",
+      "label": "Legume break before wheat",
+      "steps": [
+        {
+          "order": 1,
+          "crop_id": "winter_wheat",
+          "crop_name": "Winter wheat",
+          "sowing_window": { "start": "2026-10-01", "end": "2026-10-20" },
+          "harvest_window": { "start": "2027-07-01", "end": "2027-07-20" },
+          "reason": "Illustrative step; not computed."
+        },
+        {
+          "order": 2,
+          "crop_id": "pea",
+          "crop_name": "Pea",
+          "sowing_window": { "start": "2028-03-01", "end": "2028-03-31" },
+          "harvest_window": { "start": "2028-06-25", "end": "2028-07-15" },
+          "reason": "Illustrative step; not computed."
+        },
+        {
+          "order": 3,
+          "crop_id": "winter_wheat",
+          "crop_name": "Winter wheat",
+          "sowing_window": { "start": "2028-10-01", "end": "2028-10-20" },
+          "harvest_window": { "start": "2029-07-01", "end": "2029-07-20" },
+          "reason": "Illustrative step; not computed."
+        }
+      ],
+      "benefits": ["Illustrative: a legume breaks the cereal sequence."],
+      "tradeoffs": ["Illustrative: the field is bare from July 2027 to March 2028."],
+      "explanation": "Example showing the optional fields of the contract. All values are invented.",
+      "confidence": "low",
+      "source_ids": ["demo-fixture"],
+      "scores": { "water": 0.61, "soil": 0.68, "climate": 0.55, "productivity": null },
+      "local_checks": ["Illustrative: check pea root diseases in recent seasons on this field."]
+    }
+  ],
+  "baseline": {
+    "id": "baseline",
+    "label": "Current rotation continued",
+    "steps": [
+      {
+        "order": 1,
+        "crop_id": "winter_wheat",
+        "crop_name": "Winter wheat",
+        "sowing_window": { "start": "2026-10-01", "end": "2026-10-20" },
+        "harvest_window": { "start": "2027-07-01", "end": "2027-07-20" },
+        "reason": "Next crop in the farmer's current rotation."
+      },
+      {
+        "order": 2,
+        "crop_id": "maize",
+        "crop_name": "Maize",
+        "sowing_window": { "start": "2028-04-10", "end": "2028-05-05" },
+        "harvest_window": { "start": "2028-09-15", "end": "2028-10-05" },
+        "reason": "Next crop in the farmer's current rotation."
+      },
+      {
+        "order": 3,
+        "crop_id": "winter_wheat",
+        "crop_name": "Winter wheat",
+        "sowing_window": { "start": "2028-10-10", "end": "2028-10-25" },
+        "harvest_window": { "start": "2029-07-01", "end": "2029-07-20" },
+        "reason": "Next crop in the farmer's current rotation."
+      }
+    ],
+    "benefits": ["Illustrative: no change in equipment or markets."],
+    "tradeoffs": ["Illustrative: wheat after maize has a higher Fusarium risk."],
+    "explanation": "The farmer's current rotation, evaluated the same way as the plans. All values are invented.",
+    "confidence": "low",
+    "source_ids": ["demo-fixture"],
+    "scores": { "water": 0.48, "soil": 0.35, "climate": 0.52, "productivity": 0.7 },
+    "local_checks": ["Illustrative: check maize residue management before sowing wheat."],
+    "violations": []
+  },
+  "assumptions": ["Example only: no data was fetched and no rules were applied."],
+  "data_gaps": ["Example only."],
+  "sources": [{ "id": "demo-fixture", "title": "Invented example for integration" }],
+  "disclaimer": "Invented example values. Not a recommendation."
+}
