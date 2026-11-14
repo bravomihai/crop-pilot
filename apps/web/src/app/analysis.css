@@ -224,6 +224,34 @@
   box-shadow: 0 0 0 3px var(--surface);
 }
 
+.scenario-controls label > span:first-child,
+.compatibility-empty h3,
+.language-selector button[aria-pressed="true"] {
+  color: var(--ink);
+}
+.scenario-controls .range-limits,
+.compatibility-empty,
+.compatibility-empty p,
+.drop-zone > span,
+.drop-zone small,
+.file-status,
+.selected-file,
+.upload-heading > span,
+.compatibility-score p,
+.text-button,
+.session-note,
+.region-shortcuts > span,
+.breadcrumb {
+  color: var(--muted);
+}
+.scenario-legend .scenario-state,
+.priority-results-heading > span {
+  background: var(--surface-muted);
+  color: var(--ink);
+}
+.priority-crop-score { color: var(--blue); }
+.dashboard-brand > span { background: #2563eb; color: #fff; }
+
 .analysis-page-header {
   display: flex;
   align-items: center;

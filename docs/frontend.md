@@ -202,3 +202,51 @@ The weather-cell rectangle snaps to 0.5° latitude / 0.625° longitude and exten
 comment. An outside-zone point displays the coverage warning; it does not claim
 that the engine can compute a plan there. Capabilities, legend, and tile failures
 are isolated from the base map and form.
+
+## Future chart components — not wired to result fields
+
+`ReplayChart` takes plain display series (`id`, `label`, optional `baseline`,
+and `{year,value}` points on a 0–100 scale). It has labelled lines, a dashed
+baseline, gaps for unknown values, a crosshair/readout, a keyboard year selector,
+and a text data table. It is waiting for the engine team's optional `plan.replay`.
+
+`ClimateTrendChart` takes plain yearly `{year,value}` points, a title, and unit.
+It displays bars, hatched unknowns, and a simple least-squares trend computed
+only from known observations. The year readout and data table provide text
+alternatives. It is waiting for `result.climate_context` and agreed series units.
+
+Preview both at `/chart-previews`. This route uses hard-coded, visibly labelled
+sample data. These components do not inspect plans or results, do not infer
+missing fields, and are not connected to recommendation results. No contract
+fields or chart-library dependencies were added.
+
+## Verification for this update
+
+- Before feature work, the separate `Merge main into andrei` commit passed frozen
+  install, contract generation, Prisma generation, TypeScript, and 75 backend
+  checks. The three conflicted server files were kept exactly from main.
+- The feature work passed the production mock-mode build, 82 backend/pure-data
+  checks, and 25 UI/component checks. No protected contract, engine, API route,
+  or server implementation was edited after the merge.
+- Headless installed Edge exercised both basic and full mock fixtures; the full
+  calculator and future preview pages were checked at 1440 px and 375 px in
+  Light and Dark themes. No page-wide horizontal overflow was found. Timeline
+  overflow is contained in its explicitly labelled scroll region.
+- Browser keyboard interactions checked rotation move/remove, the five-crop
+  limit, source choices (without satellite), productivity default 0, all-zero
+  priority validation, local-check disclosure, and chart year inspection.
+- Recalculation checks confirmed old results remain rendered and dimmed, a newer
+  scenario cancels the earlier pending calculation, and both temperature and
+  rainfall settings survive the successful response. The basic fixture renders
+  three alternatives without optional score UI or a fabricated baseline; the
+  full fixture renders exactly one alternative plus its separate baseline.
+- Browser checks read the live GIBS capabilities and official legend URLs,
+  verified the POWER cell and four rule-zone outlines, observed HTTP 200 snapshot
+  tiles for all three advertised layers and NASA attribution, and tested month
+  playback. Simulated tile and capabilities failures did not break the base map,
+  form, or dashboard drawing. All three toggles issue capability-derived URLs.
+- Screenshots of the narrow dark calculator and narrow dark future-chart page
+  and the narrow dark dashboard were visually inspected. The pointer/mouse/keyboard tests were automated;
+  physical touchscreen and screen-reader testing were not performed. NASA pixel
+  values, full spatial/temporal coverage, and agronomic correctness were not
+  validated. Demo scores and fixture responses are never scientific validation.

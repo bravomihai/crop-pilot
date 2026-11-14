@@ -8,6 +8,12 @@ import FieldDashboard from "../src/components/field-dashboard";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
 import RecommendationResults from "../src/components/recommendation-results";
 import PriorityPanel from "../src/components/dashboard/priority-panel";
+import PlanCard from "../src/components/plan-card";
+import Calculator from "../src/components/calculator";
+import CurrentRotationInput from "../src/components/current-rotation-input";
+import ReplayChart from "../src/components/charts/replay-chart";
+import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
+import { fullExampleRequest } from "../src/lib/api";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
@@ -168,4 +174,111 @@ test("excluded selections and zero eligible crops never render fabricated altern
   assert.match(card, /Outside your current settings/);
   assert.match(card, /No alternative crop matches/);
   assert.equal((card.match(/<button/g) || []).length, 0);
+});
+
+const fullFixture = resultSchema.parse(
+  JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../packages/contracts/examples/recommendation-result.full.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+);
+
+test("full optional result has a separate baseline, shared timeline, unknown productivity, and local checks", () => {
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, {
+      result: fullFixture,
+      busy: false,
+      error: "",
+      request: fullExampleRequest,
+      onRecalculate: () => {},
+    }),
+  );
+  assert.equal((html.match(/class="plan"/g) || []).length, 1);
+  assert.match(html, /class="plan baseline-plan"/);
+  assert.match(html, /1 \/ 3 plans/);
+  assert.match(html, /Compare criterion scores/);
+  assert.match(html, /Bare soil, consider a cover crop/);
+  assert.match(html, /Productivity: Unknown/);
+  assert.match(html, /Check locally before you decide/);
+  assert.match(html, /not a forecast/);
+  assert.match(html, /min="-3" max="5" step="0.5"/);
+});
+
+test("baseline rule violations are shown without changing the alternative count", () => {
+  const baseline = {
+    ...fullFixture.baseline!,
+    violations: ["Example rotation rule violation."],
+  };
+  const html = renderToStaticMarkup(
+    createElement(PlanCard, { plan: baseline, baseline: true }),
+  );
+  assert.match(html, /Rules your current rotation breaks/);
+  assert.match(html, /Example rotation rule violation/);
+  const unknown = renderToStaticMarkup(
+    createElement(PlanCard, {
+      plan: { ...baseline, scores: { water: null, soil: 0 } },
+      baseline: true,
+    }),
+  );
+  assert.match(unknown, /Water: Unknown/);
+  assert.match(unknown, /Soil: 0 out of 100/);
+});
+
+test("calculator exposes supported crops, ordered rotation, documentary sources and productivity helper", () => {
+  const html = renderToStaticMarkup(
+    createElement(Calculator, { initialRequest: fullExampleRequest }),
+  );
+  assert.match(html, /winter_rapeseed/);
+  assert.match(html, /soybean/);
+  assert.match(html, /Your current rotation/);
+  assert.match(html, /APIA application/);
+  assert.doesNotMatch(html, /value="satellite"/);
+  assert.match(html, /Relative potential, not a yield or profit forecast/);
+  const rotation = renderToStaticMarkup(
+    createElement(CurrentRotationInput, {
+      value: ["maize", "winter_wheat", "pea", "soybean", "winter_barley"],
+      onChange: () => {},
+    }),
+  );
+  assert.equal((rotation.match(/<select/g) || []).length, 5);
+  assert.match(rotation, /disabled=""[^>]*>Add crop \(5\/5\)/);
+});
+
+test("future charts accept plain display props and expose text tables instead of inventing result fields", () => {
+  const replay = renderToStaticMarkup(
+    createElement(ReplayChart, {
+      series: [
+        {
+          id: "b",
+          label: "Baseline example",
+          baseline: true,
+          points: [
+            { year: 2020, value: null },
+            { year: 2021, value: 0 },
+          ],
+        },
+      ],
+    }),
+  );
+  assert.match(replay, /stroke-dasharray="7 5"/);
+  assert.match(replay, /Read replay values as a table/);
+  assert.match(replay, /Unknown/);
+  const climate = renderToStaticMarkup(
+    createElement(ClimateTrendChart, {
+      title: "Example rain",
+      unit: "mm",
+      points: [
+        { year: 2020, value: 10 },
+        { year: 2021, value: null },
+        { year: 2022, value: 14 },
+      ],
+    }),
+  );
+  assert.match(climate, /2.00 mm\/year/);
+  assert.match(climate, /Read yearly values as a table/);
 });

@@ -668,8 +668,8 @@ export default function FieldDashboard() {
                   Soil moisture context <Icon name="arrow" size={16} />
                 </strong>
                 <span>
-                  Soil Moisture Active Passive mission. Integration with this
-                  dashboard is planned.
+                  Regional soil-moisture imagery is available through the map's
+                  NASA GIBS layers. The indicator card remains a fictional example.
                 </span>
               </a>
               <a
@@ -682,8 +682,8 @@ export default function FieldDashboard() {
                   Vegetation context <Icon name="arrow" size={16} />
                 </strong>
                 <span>
-                  Vegetation index products. The NDVI card is an example, not a
-                  retrieved observation.
+                  Vegetation index products. The NDVI card remains an example;
+                  regional daytime temperature imagery is available through GIBS.
                 </span>
               </a>
             </div>
