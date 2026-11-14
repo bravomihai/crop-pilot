@@ -190,7 +190,6 @@ def _replay(
         return cached
     weather = entry.weather
     settings = rules["settings"]
-    taw_profile = awc * 1000 * settings["profile_depth_m"]
     crop = crops[prefix[-1]]
     if len(prefix) == 1:
         parent = None
@@ -198,8 +197,9 @@ def _replay(
         steps = [step]
         start = available_from
         runs = {}
+        initial = water.initial_state(awc, settings)
         for k in _windows(weather, available_from, step.harvest_end, 10**6):
-            runs[k] = {"depletion": settings["initial_depletion_fraction"] * taw_profile, "seasons": [], "cursor": start}
+            runs[k] = {"soil": initial, "seasons": [], "cursor": start}
     else:
         parent = _replay(prefix[:-1], crops, rules, entry, available_from, awc, irrigated, budget)
         step = schedule.place_next(crop, parent["steps"][-1], available_from, settings)
@@ -213,11 +213,11 @@ def _replay(
         cursor = weather.index(schedule.shift_years(run["cursor"], k))
         sow = weather.index(schedule.shift_years(step.sow_date, k))
         harvest = weather.index(schedule.shift_years(step.harvest_date, k))
-        depletion = water.run_fallow(weather, cursor, sow, run["depletion"], taw_profile, settings)
-        depletion, season = water.run_crop(
-            weather, sow, harvest, depletion, crop, awc, settings, irrigated=irrigated, irrigation_budget=budget
+        soil = water.run_fallow(weather, cursor, sow, run["soil"], awc, settings)
+        soil, season = water.run_crop(
+            weather, sow, harvest, soil, crop, awc, settings, irrigated=irrigated, irrigation_budget=budget
         )
-        new_runs[k] = {"depletion": depletion, "seasons": run["seasons"] + [season], "cursor": step.harvest_date}
+        new_runs[k] = {"soil": soil, "seasons": run["seasons"] + [season], "cursor": step.harvest_date}
     result = {"steps": steps, "runs": new_runs, "rules": rules}
     entry.replay[key] = result
     return result
@@ -333,7 +333,7 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
 
     assumptions = [
         "Weather is replayed from past seasons at this point; it is regional context (NASA POWER grid), not a field measurement.",
-        "Water: FAO-56 daily soil water balance with one 1.5 m profile carried from crop to crop; no runoff or capillary rise.",
+        "Water: FAO-56 daily soil water balance over a 1.5 m profile carried from crop to crop; crops draw only on their root zone, which deepens from 0.3 m to the crop's rooting depth; no runoff or capillary rise.",
         "Scores compare options with each other; they are not yields, profits or probabilities.",
     ]
     data_gaps: list[str] = []
