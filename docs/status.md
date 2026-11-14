@@ -28,7 +28,9 @@
 ## Intenționat în afara versiunii
 
 Conturi, email/login, sesiuni persistente, profiluri de fermieri, analize salvate, SMS,
-WhatsApp, contur de parcelă, predicții exacte de producție/profit, ML antrenat și CMIP6.
+WhatsApp, predicții exacte de producție/profit, ML antrenat și CMIP6.
+Parcel drawing was subsequently requested explicitly and is now implemented
+as local interface geometry, without changing the engine request contract.
 
 ## Limitele verificării acestei refaceri
 
@@ -73,3 +75,41 @@ responses. The full Python pytest suite could not run because pytest is not
 installed in the available interpreter.
 No Next.js/FastAPI server, browser preview, Docker, database migration, live
 external-service verification, or deployment was run for this update.
+
+## Satellite dashboard update — 2026-11-14
+
+The requested dashboard replaces the standalone calculator on the home page.
+It uses a fixed desktop sidebar, location search, field metadata and regional
+shortcuts, a satellite-map/planning grid, blue actions, white cards, and responsive
+layouts. English remains the interface language.
+
+Implemented:
+
+- Leaflet satellite basemap using Esri World Imagery and road/place reference layers,
+  with an OpenStreetMap street-layer alternative and visible attribution.
+- Hybrid click/freehand drawing with straight guides, anchor points, per-stroke
+  simplification, finish/undo/cancel/clear/redraw controls, keyboard shortcuts,
+  approximate hectares, and centre coordinates. Invalid outlines are rejected.
+  A point-only alternative remains available. Geometry is held in tab memory.
+- Hypothetical temperature/rainfall controls that update polygon style, four
+  example KPI values, and local crop-preview scores. The dashboard explicitly
+  labels all such values as fictional, rather than NASA measurements or a
+  validated agronomic model. No actual 75% water saving is claimed.
+- Optional PDF selection/removal for history and soil, with size/header checks.
+  Files stay local and are not parsed, sent to services, or used for calibration.
+- Existing adapter-based rotation request from the field centre, available date,
+  scenario, irrigation flag, and manual soil/history. Shared contracts are
+  unchanged; polygon, selected preview crop, and PDF content are not submitted.
+- In-page engine responses with three successive crops per plan; limited,
+  insufficient-data, demo, and error handling remain explicit. Input changes
+  cancel pending requests and clear stale results.
+- NASA documentation links and an informational voice-assistant dialog. Phone
+  service and Romanian translation are not connected.
+
+Verification: 10 automated checks passed for geometry, curve/corner preservation,
+invalid polygons, illustrative scenario changes, PDF selection, and component
+rendering including limited/insufficient-data responses. TypeScript checks passed
+for contracts and web, CSS syntax parsed successfully, and frozen-lockfile
+installation completed. No application server, browser preview, live tile/NASA
+verification, database migration, or deployment was run. Mouse/touch gestures,
+imagery availability, and visual layout still need manual browser review.

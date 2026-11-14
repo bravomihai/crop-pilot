@@ -59,10 +59,10 @@ export default function RecommendationResults({
           </h3>
           <p>
             {busy
-              ? "Please wait for the response before changing your form entries."
+              ? "Your form entries are retained while the planner responds."
               : error
                 ? "Check the message above and try again. Your entries are still in the form."
-                : "Complete the form and select “Compare plans” to see the available alternatives."}
+                : "Submit the planning form to see the available rotation alternatives."}
           </p>
         </div>
       )}
