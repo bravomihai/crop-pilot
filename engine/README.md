@@ -6,6 +6,11 @@ The active engine implementation, dependencies, and tests are in [`services/engi
 
 From the repository root, synchronize the pinned development dependencies and run the canonical engine test suite:
 
+The legacy `engine/fieldshift/data` module fetches NASA POWER and SoilGrids data and
+calculates reference ET₀, but its `FieldData`/`quality` shape is not used by the active
+recommendation pipeline. New data integrations belong in `services/engine`; its response
+uses titled `sources` and top-level `data_gaps`.
+
 ```sh
 uv sync --project services/engine --frozen --extra dev
 uv run --project services/engine --frozen --extra dev python -m pytest services/engine/tests
