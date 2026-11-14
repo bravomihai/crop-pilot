@@ -9,7 +9,9 @@ One Python service with three packages that run in the same process. The Next.js
 | [`fieldshift/recommender`](fieldshift/recommender/__init__.py) | P4: recommendation engine | `FarmRequest` + evaluator → `AnalysisResult` |
 | [`rules/`](rules/README.md) | P3 | crop tables, rules, successor matrix (`CropRules` JSON) |
 
-**Every function currently returns the contract example**, so the whole flow works from the start. Replace the `TODO` in your package with real code and keep the tests green.
+The data service fetches daily weather from NASA POWER and topsoil pH / organic carbon from SoilGrids, then normalizes them into `FieldData`. NASA POWER's daily weather is also used to calculate FAO-56 reference evapotranspiration. SoilGrids is optional: if its service or a point's values are unavailable, the response records the missing data in `quality` rather than inventing values.
+
+SRTM slope, SMAP root-zone soil moisture and NEX-GDDP-CMIP6 scenario deltas are not integrated yet; they are explicitly listed as missing. The evaluator and recommender still return their contract examples.
 
 ## Run
 
