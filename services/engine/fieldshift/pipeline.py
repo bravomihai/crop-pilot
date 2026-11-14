@@ -16,8 +16,9 @@ DISCLAIMER = (
     "and the assumptions locally before applying any plan."
 )
 FIELD_DATA_GAP = (
-    "The field boundary is included in the request, but climate and soil data "
-    "are sampled at its representative point rather than aggregated across the field."
+    "NASA POWER weather remains regional grid-cell data sampled at the representative point. "
+    "Soil and SRTM slope are sparse arithmetic means from up to three distributed field points, "
+    "not full-area raster statistics."
 )
 
 

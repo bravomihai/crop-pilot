@@ -122,7 +122,7 @@ layout, tile services, or external integrations.
 
 ## Optional rotation comparison and full fixture
 
-Open `/calculator` for the complete form. It offers the seven rule-supported crop
+Open `/calculator` for the complete form. It offers the fifteen rule-supported crop
 IDs from `src/lib/crop-options.ts`, an optional ordered current rotation (1–5 crops,
 add/remove/move up/move down), a documentary source on each history row, and four
 0–5 engine priorities. Productivity defaults to 0 and means **Relative potential,

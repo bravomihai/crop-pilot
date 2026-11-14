@@ -31,9 +31,11 @@ C→A după ultimul pas. Culturile de acoperire și plantele multianuale sunt ex
 ## Date și incertitudine
 
 Fermierul poate trimite un contur GeoJSON de tip Polygon; limita este verificată să rămână
-în România. Sistemul acceptă puncte din întreaga țară. NASA POWER, SoilGrids și SRTM sunt
-interogate pentru punctul reprezentativ, nu agregate pe întreaga parcelă; răspunsul semnalează
-această limitare.
+în România. Sistemul acceptă puncte din întreaga țară. NASA POWER oferă context regional
+din celula din jurul punctului reprezentativ. Pentru un contur, SoilGrids și SRTM sunt
+eșantionate în maximum trei puncte distribuite în interior, iar valorile disponibile sunt
+mediate. Aceasta este o eșantionare rară, nu o statistică raster zonală pentru întreaga parcelă;
+răspunsul semnalează limitarea.
 POWER este context regional. Datele zilnice și metadatele sunt păstrate pentru ferestre
 specifice culturilor; mediile anuale nu înlocuiesc expunerea din perioade sensibile.
 Solul introdus de utilizator își păstrează sursa. Istoricul absent duce la reguli neverificate,
@@ -68,9 +70,11 @@ disponibilă estimată intră în bilanțul hidric, iar pH-ul în potențialul r
 carbonul organic influențează estimarea capacității de apă, nu un scor al schimbării
 fertilității. Valorile SoilGrids nu înlocuiesc analiza de laborator. Nu se estimează producția
 sau profitul; precipitația efectivă și scurgerea nu sunt încă modelate.
-SRTMGL1 v003 acoperă latitudinile 60°S–60°N, inclusiv toată România. Accesul public
-OpenTopoData este limitat la 1 cerere/secundă și 1000 cereri/zi; pentru trafic mai mare
-va fi necesară o strategie de date cu capacitate potrivită.
+SRTMGL1 v003 acoperă latitudinile 60°S–60°N, inclusiv toată România. Panta folosește
+media estimărilor Horn 3×3 din maximum trei puncte ale parcelei, nu panta întregii parcele.
+Accesul public OpenTopoData este limitat la 1 cerere/secundă și 1000 cereri/zi; punctele
+parcelei sunt grupate într-o singură cerere, dar pentru trafic mai mare va fi necesară o
+strategie de date cu capacitate potrivită.
 
 ## Date păstrate
 

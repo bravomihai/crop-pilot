@@ -39,10 +39,46 @@ def rules():
 
 def test_rules_cover_the_southern_plains_only():
     inside = load_rules({"latitude": 44.45, "longitude": 26.5})
-    assert {c["id"] for c in inside["crops"]} >= {"winter_wheat", "maize", "sunflower", "pea", "winter_barley"}
+    assert {c["id"] for c in inside["crops"]} >= {
+        "winter_wheat", "winter_barley", "winter_rapeseed", "maize", "sunflower",
+        "soybean", "pea", "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    }
     assert all(c["name"] for c in inside["crops"])
     outside = load_rules({"latitude": 46.77, "longitude": 23.6})  # Cluj, Transylvania
     assert outside["crops"] == [] and "outside" in outside["data_gaps"][0]
+
+
+def test_new_crop_rules_and_successor_matrix_are_complete(rules):
+    crops = {crop["id"]: crop for crop in rules["crops"]}
+    new_ids = {
+        "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    }
+    assert new_ids <= crops.keys()
+    assert all(crops[crop_id]["family"] and crops[crop_id]["ecocrop"] for crop_id in new_ids)
+    assert crops["dry_beans"]["legume"] is True
+    assert crops["sugar_beet"]["legume"] is False
+    expected_successors = set(crops)
+    assert set(rules["successor"]) == expected_successors
+    assert all(set(row) == expected_successors for row in rules["successor"].values())
+    assert any("provisional" in gap and "agronomist" in gap for gap in rules["data_gaps"])
+
+
+@pytest.mark.parametrize(
+    "rotation",
+    [
+        ["oats", "dry_beans", "sorghum"],
+        ["sugar_beet", "oats", "dry_beans"],
+        ["potato", "spring_barley", "dry_beans"],
+        ["triticale", "potato", "winter_rye"],
+    ],
+)
+def test_new_crop_rotations_are_evaluable(rotation, request_, environment, rules):
+    out = evaluate(rotation, request_, environment, rules)
+    assert out["feasibility"] == "feasible"
+    assert [step["crop_id"] for step in out["calendar"]] == rotation
+    assert out["criteria"]["water"]["score"] is not None
 
 
 def test_every_cited_source_is_listed(rules):

@@ -114,6 +114,14 @@ test("supported form crops and documentary history sources match the merged requ
       "sunflower",
       "soybean",
       "pea",
+      "oats",
+      "sorghum",
+      "dry_beans",
+      "sugar_beet",
+      "spring_barley",
+      "triticale",
+      "winter_rye",
+      "potato",
     ],
   );
   assert.ok(

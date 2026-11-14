@@ -235,6 +235,37 @@ def test_fetch_slope_queries_and_caches_a_srtm30m_neighborhood(monkeypatch):
     assert len(writes) == 1
 
 
+def test_fetch_slopes_batches_field_samples_and_caches_each_neighborhood(monkeypatch):
+    rising = [
+        {"dataset": "srtm30m", "elevation": value}
+        for value in (0, 3, 6, 0, 3, 6, 0, 3, 6)
+    ]
+    flat = [{"dataset": "srtm30m", "elevation": 100} for _ in range(9)]
+    requests = []
+    writes = []
+    monkeypatch.setattr(terrain.cache, "read", lambda key: None)
+    monkeypatch.setattr(terrain.cache, "write", lambda key, value: writes.append(value))
+    monkeypatch.setattr(terrain.cache, "key_for", lambda value: str(value["lat"]))
+
+    def mock_get(url, params, timeout):
+        requests.append(params)
+        return httpx.Response(
+            200,
+            json={"status": "OK", "results": rising + flat},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr(terrain.httpx, "get", mock_get)
+
+    slopes, sources, gaps = terrain.fetch_slopes([(45.0, 25.0), (45.1, 25.1)])
+
+    assert slopes == [pytest.approx(13.73, abs=0.1), 0]
+    assert sources[0]["id"] == "srtm30m-opentopodata"
+    assert gaps == []
+    assert requests[0]["locations"].count("|") == 17
+    assert len(writes) == 2
+
+
 def test_fetch_slope_reports_missing_samples_and_provider_errors(monkeypatch):
     monkeypatch.setattr(terrain.cache, "read", lambda key: None)
     monkeypatch.setattr(terrain.cache, "write", lambda key, value: None)
@@ -362,35 +393,53 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
             "data_gaps": [],
         },
     )
-    monkeypatch.setattr(
-        data_service,
-        "fetch_soil",
-        lambda lat, lon: (
+    soil_calls = []
+
+    def fake_soil(lat, lon):
+        index = len(soil_calls)
+        soil_calls.append((lat, lon))
+        return (
             {
-                "clay_pct": 30,
-                "sand_pct": 30,
-                "silt_pct": 40,
-                "ph": 7.0,
+                "clay_pct": 30 + index * 2,
+                "sand_pct": 40 - index * 2,
+                "silt_pct": 30,
+                "ph": 7.0 + index * 0.1,
+                "organic_carbon_pct": 1.0,
                 "texture": "loamy",
                 "awc_m3_m3": 0.15,
                 "source": "soilgrids",
             },
             [{"id": "soilgrids", "title": "ISRIC SoilGrids"}],
             [],
-        ),
-    )
-    monkeypatch.setattr(
-        data_service,
-        "fetch_slope",
-        lambda lat, lon: (
-            2.5,
+        )
+
+    monkeypatch.setattr(data_service.soil_service, "fetch_soil", fake_soil)
+    slope_calls = []
+
+    def fake_slopes(points):
+        slope_calls.append(points)
+        return (
+            [2.0, 3.0, 4.0],
             [{"id": "srtm30m-opentopodata", "title": "SRTM"}],
             [],
-        ),
-    )
+        )
+
+    monkeypatch.setattr(data_service, "fetch_slopes", fake_slopes)
 
     request = {
         "location": {"latitude": 44.45, "longitude": 26.5},
+        "field_boundary": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [26.4, 44.4],
+                    [26.5, 44.4],
+                    [26.5, 44.5],
+                    [26.4, 44.5],
+                    [26.4, 44.4],
+                ]
+            ],
+        },
         "available_from": f"{end_year + 1}-10-01",
         "history": [],
         "constraints": {"irrigated": False, "excluded_crops": []},
@@ -403,8 +452,12 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
     assert len(environment["monthly_climate"]) == 11 * 12
     assert environment["daily"][0]["tmin"] == -5.0
     assert environment["static"]["elevation_m"] == 70
-    assert environment["static"]["soil"]["awc_m3_m3"] == 0.15
-    assert environment["static"]["slope_pct"] == 2.5
+    assert len(soil_calls) == 3
+    assert len(slope_calls[0]) == 3
+    assert environment["static"]["soil"]["clay_pct"] == 32
+    assert environment["static"]["soil"]["ph"] == 7.1
+    assert environment["static"]["slope_pct"] == 3.0
+    assert any("sparse" in item.lower() for item in environment["assumptions"])
     assert environment["climate_context"]["period"] == {
         "start_year": first_year,
         "end_year": end_year,
@@ -415,4 +468,4 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
     result = evaluate(["pea", "winter_wheat", "maize"], request, environment, rules)
     assert result["criteria"]["water"]["score"] is not None
     assert result["soil_inputs"]["texture_from"] == "regional"
-    assert result["soil_inputs"]["awc"] == 0.15
+    assert result["soil_inputs"]["awc"] == environment["static"]["soil"]["awc_m3_m3"]

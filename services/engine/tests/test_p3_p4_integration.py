@@ -25,7 +25,8 @@ from fieldshift import pipeline
 from fieldshift.contracts import validate
 from fieldshift.evaluator import evaluate, load_rules
 from fieldshift.recommender import recommend
-from fieldshift.recommender.config import CRITERIA
+from fieldshift.recommender.config import CRITERIA, RecommenderConfig
+from fieldshift.recommender.generation import generate_candidates
 from fieldshift.recommender.ranking import normalize_priorities
 from fieldshift.recommender.validation import validate_result_semantics
 from test_p4_english import romanian_hits
@@ -153,15 +154,16 @@ def test_single_priority_picks_the_best_p3_score_for_that_criterion(criterion):
     request = make_request(priorities=priorities)
     result = cached_run(request)
     best = sequences(result["plans"])[0]
-    # Every feasible sequence P3 can evaluate, scored on the single criterion.
+    # Compare against every feasible sequence in the deterministic search set.
     crops = [c["id"] for c in load_rules(BARAGAN)["crops"]]
+    candidates = generate_candidates(crops, max_candidates=RecommenderConfig().max_candidates)
+    if candidates.truncated:
+        assert any("deterministic sample" in gap for gap in result["data_gaps"])
     scores = {}
-    for a in crops:
-        for b in crops:
-            for c in crops:
-                ev = p3((a, b, c), request)
-                if ev["feasibility"] == "feasible" and ev["criteria"][criterion]["score"] is not None:
-                    scores[(a, b, c)] = ev["criteria"][criterion]["score"]
+    for rotation in candidates.candidates:
+        ev = p3(rotation, request)
+        if ev["feasibility"] == "feasible" and ev["criteria"][criterion]["score"] is not None:
+            scores[rotation] = ev["criteria"][criterion]["score"]
     assert scores[best] == max(scores.values())
 
 

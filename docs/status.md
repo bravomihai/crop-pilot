@@ -13,7 +13,7 @@
 - P2: date NASA POWER normalizate pe zile, rezumate lunare și anuale, ET0 FAO-56, profil SoilGrids 0–30 cm, capacitate de apă estimată, proveniență, lipsuri și contoare de calitate.
 - P3/P4: filtrare și clasare transparentă a rotațiilor, cu ponderi de apă/sol/climă și explicații.
 - Verificare a coordonatelor pe limita României; în afara sudului/sud-estului, profilul folosește benzi termice NASA POWER și calendare provizorii ajustate.
-- Cereri cu contur de teren GeoJSON și shortlist opțional de culturi; clima și solul rămân eșantionate la un punct reprezentativ.
+- Cereri cu contur de teren GeoJSON și shortlist opțional de culturi; NASA POWER rămâne contextul regional al punctului reprezentativ, iar SoilGrids/SRTM folosesc până la trei puncte distribuite în parcelă.
 - Generator demonstrativ, care respectă ordinea temporală și excluderile, fără scoruri fictive.
 - Configurație Compose, instrucțiuni AWS și model de verificări CI neactivat.
 - P4 (branch `alexia`): motor de recomandare determinist în `recommender/` — generare
@@ -50,7 +50,7 @@
 - Validare locală a pragurilor termice și a calendarelor de cultură; benzile curente sunt estimări de proiect, nu zonare oficială.
 - Extinderea și validarea catalogului regional de culturi de către agronomi români.
 - Reprezentarea rotației curente ca strategie de bază alături de cel puțin două alternative; istoricul actual doar constrânge secvențele recomandate.
-- Agregare zonală în interiorul conturului; în prezent datele de climă și sol nu sunt calculate pentru întreaga parcelă.
+- Statistici raster zonale pe întreaga parcelă; eșantionarea SoilGrids/SRTM în maximum trei puncte nu înlocuiește agregarea densă a rasterelor.
 - Bilanț hidric mai realist (precipitație efectivă, scurgere și drenaj); capacitatea de apă din SoilGrids este o estimare de pedotransfer, nu măsurare locală.
 - Validare a clasamentelor, scenariilor și pragurilor cu fermieri/date de teren; scorurile actuale sunt doar pentru screening.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
@@ -160,7 +160,11 @@ nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
   SRTM elevations. The dataset covers 60°S–60°N, so its coverage includes Romania.
 - The engine requests one 3×3 neighborhood around each submitted point, calculates a
   Horn slope estimate in percent, caches the response, and passes `static.slope_pct` to
-  the existing erosion component. It does not calculate parcel-wide slope from a polygon.
+  the existing erosion component. For a field boundary, it samples up to three
+  distributed points in one batched elevation request and averages available slopes.
+  SoilGrids is sampled at the same points and its numeric properties are averaged before
+  deriving texture and available water. These are sparse point samples, not parcel-wide
+  raster statistics; NASA POWER remains at the representative regional grid cell.
 - OpenTopoData receives the point coordinates. Its published public API limits are
   1 request/second and 1000 requests/day; this is suitable for a prototype, not a
   confirmed production-scale service.

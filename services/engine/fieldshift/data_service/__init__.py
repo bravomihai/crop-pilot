@@ -3,12 +3,87 @@
 import os
 from datetime import datetime, timezone
 
+from ..geography import field_sample_points
+from . import soil as soil_service
 from .climate import climate_context
 from .daily import clean_daily
 from .indicators import monthly_temperature_summary
 from .power import fetch_power
-from .soil import fetch_soil
-from .terrain import fetch_slope
+from .terrain import fetch_slopes
+
+
+SOIL_NUMERIC_FIELDS = (
+    "clay_pct",
+    "sand_pct",
+    "silt_pct",
+    "ph",
+    "organic_carbon_pct",
+)
+
+
+def _mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 2) if values else None
+
+
+def _aggregate_soil(
+    observations: list[tuple[dict | None, list[dict], list[str]]],
+) -> tuple[dict | None, list[dict], list[str]]:
+    available = [soil for soil, _, _ in observations if soil is not None]
+    sources = []
+    seen_sources = set()
+    gaps = []
+    for _, soil_sources, soil_gaps in observations:
+        for source in soil_sources:
+            if source.get("id") not in seen_sources:
+                sources.append(source)
+                seen_sources.add(source.get("id"))
+        gaps.extend(soil_gaps)
+    if not available:
+        return None, sources, list(dict.fromkeys(gaps))
+    if len(available) < len(observations):
+        gaps.append(
+            f"SoilGrids estimates were available at {len(available)} of "
+            f"{len(observations)} field sample points; averages use available samples."
+        )
+
+    soil = {"depth": "0-30 cm", "source": "soilgrids"}
+    for field in SOIL_NUMERIC_FIELDS:
+        values = [
+            row[field]
+            for row in available
+            if isinstance(row.get(field), (int, float))
+            and not isinstance(row.get(field), bool)
+        ]
+        mean = _mean(values)
+        if mean is not None:
+            soil[field] = mean
+
+    if all(field in soil for field in ("clay_pct", "sand_pct", "silt_pct")):
+        soil["texture"] = soil_service.texture_class(
+            soil["clay_pct"], soil["sand_pct"], soil["silt_pct"]
+        )
+        soil["awc_m3_m3"] = soil_service.available_water(
+            soil["clay_pct"],
+            soil["sand_pct"],
+            soil.get("organic_carbon_pct"),
+        )
+    else:
+        awc_values = [
+            row["awc_m3_m3"]
+            for row in available
+            if isinstance(row.get("awc_m3_m3"), (int, float))
+            and not isinstance(row.get("awc_m3_m3"), bool)
+        ]
+        mean_awc = _mean(awc_values)
+        if mean_awc is not None:
+            soil["awc_m3_m3"] = mean_awc
+        textures = [row["texture"] for row in available if row.get("texture")]
+        if textures:
+            soil["texture"] = max(
+                textures,
+                key=lambda value: (textures.count(value), -textures.index(value)),
+            )
+    return soil, sources, list(dict.fromkeys(gaps))
 
 
 def build_environment(request: dict) -> dict:
@@ -30,8 +105,10 @@ def build_environment(request: dict) -> dict:
     data_gaps = list(power.get("data_gaps", []))
     sources = list(power["sources"])
     assumptions = [
-        "Weather is NASA POWER daily data for the grid cell around the point, not field measurements.",
-        "Reference evapotranspiration uses FAO-56 Penman-Monteith when inputs are available and Hargreaves otherwise.",
+        "Weather is NASA POWER daily data for the grid cell around the point, "
+        "not field measurements.",
+        "Reference evapotranspiration uses FAO-56 Penman-Monteith when inputs "
+        "are available and Hargreaves otherwise.",
     ]
     if elevation is None:
         data_gaps.append(
@@ -55,7 +132,17 @@ def build_environment(request: dict) -> dict:
             "in the NASA POWER record."
         )
 
-    soil, soil_sources, soil_gaps = fetch_soil(latitude, longitude)
+    field_boundary = request.get("field_boundary")
+    sample_points = (
+        field_sample_points(field_boundary, location)
+        if field_boundary
+        else [{"latitude": latitude, "longitude": longitude}]
+    )
+    soil_observations = [
+        soil_service.fetch_soil(point["latitude"], point["longitude"])
+        for point in sample_points
+    ]
+    soil, soil_sources, soil_gaps = _aggregate_soil(soil_observations)
     sources.extend(soil_sources)
     data_gaps.extend(soil_gaps)
     static = {}
@@ -64,17 +151,38 @@ def build_environment(request: dict) -> dict:
     if soil is not None:
         static["soil"] = soil
         assumptions.append(
-            "Soil is the ISRIC SoilGrids 0–30 cm modelled estimate at 250 m, not a field analysis."
+            "Soil is the ISRIC SoilGrids 0–30 cm modelled estimate at 250 m, "
+            "not a field analysis."
         )
-    slope_pct, terrain_sources, terrain_gaps = fetch_slope(latitude, longitude)
+    slope_values, terrain_sources, terrain_gaps = fetch_slopes(
+        [(point["latitude"], point["longitude"]) for point in sample_points]
+    )
     sources.extend(terrain_sources)
     data_gaps.extend(terrain_gaps)
+    valid_slopes = [slope for slope in slope_values if slope is not None]
+    slope_pct = _mean(valid_slopes)
     if slope_pct is not None:
         static["slope_pct"] = slope_pct
-    assumptions.append(
-        "SRTM slope is estimated from a 3×3 elevation neighborhood around the submitted point, "
-        "not across the whole field; the public OpenTopoData API receives the point coordinates."
-    )
+    if field_boundary:
+        if len(valid_slopes) < len(sample_points):
+            data_gaps.append(
+                f"SRTM slope was available at {len(valid_slopes)} of "
+                f"{len(sample_points)} field sample points; the mean uses available samples."
+            )
+        assumptions.append(
+            "Sparse SoilGrids and SRTM samples are arithmetic means from up to three "
+            "distributed points inside the field boundary, not full-area raster statistics."
+        )
+        assumptions.append(
+            "NASA POWER weather remains regional grid-cell data sampled at the "
+            "representative point."
+        )
+    else:
+        assumptions.append(
+            "SRTM slope is estimated from a 3×3 elevation neighborhood around the "
+            "submitted point, not across the whole field; the public OpenTopoData "
+            "API receives the point coordinates."
+        )
 
     environment = {
         "location": {"latitude": latitude, "longitude": longitude},

@@ -8,6 +8,14 @@ export const RULE_CROPS = [
   ["sunflower", "Sunflower"],
   ["soybean", "Soybean"],
   ["pea", "Pea"],
+  ["oats", "Oats"],
+  ["sorghum", "Grain sorghum"],
+  ["dry_beans", "Dry beans"],
+  ["sugar_beet", "Sugar beet"],
+  ["spring_barley", "Spring barley"],
+  ["triticale", "Triticale"],
+  ["winter_rye", "Winter rye"],
+  ["potato", "Potato"],
 ] as const;
 
 export const HISTORY_SOURCES = [

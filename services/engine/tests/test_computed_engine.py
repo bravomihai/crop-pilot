@@ -5,6 +5,7 @@ from fieldshift.contracts import example, validate
 from fieldshift.evaluator.rules import load_provisional_romania_rules
 from fieldshift.geography import (
     UnsupportedLocationError,
+    field_sample_points,
     validate_field_boundary,
     validate_location,
 )
@@ -28,8 +29,14 @@ def test_provisional_romania_rules_shift_cool_zone_calendar():
     assert rules["region"]["id"] == "ro-romania-provisional-cool"
     assert pea["sowing"]["start"] == "04-01"
     assert pea["harvest"]["start"] == "07-15"
+    assert {
+        "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    } <= {
+        crop["id"] for crop in rules["crops"]
+    }
     assert "ro-thermal-bands" in {source["id"] for source in rules["sources"]}
-    assert rules["data_gaps"]
+    assert any("provisional" in gap and "agronomist" in gap for gap in rules["data_gaps"])
 
 
 def test_romania_location_and_field_boundary_validation():
@@ -65,6 +72,30 @@ def test_romania_location_and_field_boundary_validation():
                 ],
             }
         )
+
+
+def test_field_sample_points_are_deterministic_and_inside_the_boundary():
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [26.4, 44.4],
+                [26.5, 44.4],
+                [26.5, 44.5],
+                [26.4, 44.5],
+                [26.4, 44.4],
+            ]
+        ],
+    }
+    location = {"latitude": 44.45, "longitude": 26.45}
+
+    samples = field_sample_points(boundary, location)
+
+    assert len(samples) == 3
+    assert samples[0] == location
+    assert samples == field_sample_points(boundary, location)
+    for sample in samples:
+        validate_field_boundary(boundary, sample)
 
 
 def test_computed_result_keeps_monthly_climate_and_field_data_gap(monkeypatch):
