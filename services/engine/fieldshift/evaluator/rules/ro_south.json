@@ -48,7 +48,6 @@
     {
       "id": "winter_wheat",
       "name": "Winter wheat",
-      "name_ro": "Grâu de toamnă",
       "family": "Poaceae",
       "legume": false,
       "winter": true,
@@ -71,7 +70,6 @@
     {
       "id": "winter_barley",
       "name": "Winter barley",
-      "name_ro": "Orz de toamnă",
       "family": "Poaceae",
       "legume": false,
       "winter": true,
@@ -94,7 +92,6 @@
     {
       "id": "winter_rapeseed",
       "name": "Winter rapeseed",
-      "name_ro": "Rapiță de toamnă",
       "family": "Brassicaceae",
       "legume": false,
       "winter": true,
@@ -119,7 +116,6 @@
     {
       "id": "maize",
       "name": "Maize",
-      "name_ro": "Porumb",
       "family": "Poaceae",
       "legume": false,
       "winter": false,
@@ -142,7 +138,6 @@
     {
       "id": "sunflower",
       "name": "Sunflower",
-      "name_ro": "Floarea-soarelui",
       "family": "Asteraceae",
       "legume": false,
       "winter": false,
@@ -165,7 +160,6 @@
     {
       "id": "soybean",
       "name": "Soybean",
-      "name_ro": "Soia",
       "family": "Fabaceae",
       "legume": true,
       "winter": false,
@@ -188,7 +182,6 @@
     {
       "id": "pea",
       "name": "Pea",
-      "name_ro": "Mazăre",
       "family": "Fabaceae",
       "legume": true,
       "winter": false,

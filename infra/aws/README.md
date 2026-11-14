@@ -1,71 +1,71 @@
-# AWS — configurație pregătită, fără publicare automată
+# AWS — prepared configuration, no automatic deployment
 
-Varianta de prototip folosește un singur EC2: Caddy pentru HTTPS, NGINX pentru limite,
-Next.js, Python și PostgreSQL pentru cache. Nu este o configurație cu disponibilitate
-ridicată. Cache-ul poate fi reconstruit. Nu conține date de fermieri.
+The prototype uses a single EC2 host: Caddy for HTTPS, NGINX for request limits,
+Next.js, Python, and PostgreSQL for caching. This is not a highly available setup.
+The cache can be rebuilt and contains no farmer data.
 
-`host.yaml` creează gazda Amazon Linux 2023 într-un VPC/subnet public existente, un rol
-pentru administrare SSM și citirea a două secrete, un disc criptat și intrări numai pe
-80/443. Nu creează domeniu, certificat, parametri SSM, RDS sau aplicație. Crearea resurselor
-AWS implică costuri; nu a fost executată în această sarcină.
+`host.yaml` creates an Amazon Linux 2023 host in an existing public VPC/subnet, a role
+for SSM administration and reading two secrets, an encrypted disk, and ingress on
+ports 80/443 only. It does not create a domain, certificate, SSM parameters, RDS, or
+the application. Creating AWS resources incurs costs; it was not performed in this task.
 
-## Pregătirea pentru o publicare viitoare
+## Preparing a future deployment
 
-La momentul publicării trebuie alese regiunea, VPC-ul, subnetul public și domeniul.
-Creează parametri SSM de tip SecureString, cu cheia AWS implicită pentru SSM:
-`/fieldshift/production/internal-token` (cel puțin 32 caractere URL-safe aleatoare) și
-`/fieldshift/production/database-password` (cel puțin 24). Nu reutiliza valorile locale.
-Dacă alegi o cheie KMS proprie, adaugă permisiunea de decriptare strict pentru acea cheie.
+Choose the region, VPC, public subnet, and domain when deploying. Create SecureString
+SSM parameters with the default AWS SSM key:
+`/fieldshift/production/internal-token` (at least 32 random URL-safe characters) and
+`/fieldshift/production/database-password` (at least 24). Do not reuse local values.
+If using a custom KMS key, grant decryption permission only for that key.
 
-Validează și aplică `host.yaml` prin CloudFormation cu `CAPABILITY_IAM`, după revizuirea
-parametrilor și costurilor. Administrarea este prin SSM, nu SSH. Hostul instalează Docker
-și Compose 2.39.4, verificând suma SHA-256 publicată. Așteaptă finalizarea bootstrapului
-înainte să rulezi Docker. Copiază o versiune revizuită a surselor în `/opt/fieldshift`,
-fără `.env*`, dependențe sau artefacte locale. Pentru repo privat folosește un acces Git
-separat; nu include credențiale în UserData. Nu este automatizat transferul surselor.
+Validate and apply `host.yaml` through CloudFormation with `CAPABILITY_IAM` after
+reviewing parameters and costs. Administration uses SSM, not SSH. The host installs
+Docker and Compose 2.39.4, checking the published SHA-256 checksum. Wait for bootstrap
+to finish before running Docker. Copy a reviewed source version to `/opt/fieldshift`,
+excluding `.env*`, dependencies, and local artifacts. For a private repository, use
+separate Git access; never put credentials in UserData. Source transfer is not automated.
 
-Din rădăcina surselor de pe host, cu permisiuni de scriere și acces Docker, configurează:
+From the source root on the host, with write permissions and Docker access, configure:
 
 ```sh
-python3 infra/aws/configure.py --region <regiune> --domain <domeniu> --email <email>
+python3 infra/aws/configure.py --region <region> --domain <domain> --email <email>
 ```
 
-Scriptul citește secretele folosind rolul hostului și creează `.env.production`, cu
-permisiuni 0600. Refuză suprascrierea unui fișier existent. Nu afișează secretele. Ambele
-servicii primesc același token din această configurație. Nu rula `docker compose config`
-fără `--quiet`, deoarece poate afișa valori de mediu.
+The script reads secrets using the host role and creates `.env.production` with 0600
+permissions. It refuses to overwrite an existing file and does not print secrets.
+Both services receive the same token from this configuration. Do not run
+`docker compose config` without `--quiet`: it may print environment values.
 
-După ce DNS-ul A al domeniului indică IP-ul gazdei și porturile 80/443 sunt accesibile:
+After the domain's DNS A record points to the host IP and ports 80/443 are accessible:
 
 ```sh
 docker compose -p fieldshift-production --env-file .env.production -f compose.yaml -f infra/compose.production.yaml config --quiet
 docker compose -p fieldshift-production --env-file .env.production -f compose.yaml -f infra/compose.production.yaml up -d --build --wait
 ```
 
-Caddy obține și reînnoiește certificatul. În acest profil nu sunt publicate porturi
-pentru web, engine, gateway sau PostgreSQL. Rutele `/api/internal/*` sunt blocate de
-NGINX, iar Python le accesează direct prin rețeaua Compose. Limitele se aplică per IP:
-5 calcule/minut, 60 căutări/minut, 30 verificări engine/minut, cu burst-uri documentate
-în `infra/nginx.conf`. Nu publica separat gateway-ul și nu adăuga CDN/proxy în fața
-Caddy fără să configurezi explicit sursele de IP de încredere.
+Caddy obtains and renews the certificate. This profile publishes no ports for web,
+engine, gateway, or PostgreSQL. NGINX blocks `/api/internal/*`; Python reaches those
+routes directly through the Compose network. Limits are per IP: 5 calculations/minute,
+60 searches/minute, and 30 engine checks/minute, with bursts documented in
+`infra/nginx.conf`. Do not expose the gateway separately or place a CDN/proxy before
+Caddy without explicitly configuring trusted IP sources.
 
-Verifică `/api/health`, `/api/engine/status` și o cerere demo. `computed` rămâne o
-integrare ulterioară, când P2/P3/P4 sunt gata și verificate. Schimbarea modului în sine
-nu validează modelele. IP-ul public se poate schimba la stop/start; actualizează DNS
-sau alocă separat un Elastic IP dacă este necesar.
+Check `/api/health`, `/api/engine/status`, and a demo request. `computed` remains a
+separate integration step when P2/P3/P4 are ready and verified. Changing the mode
+does not validate the models. The public IP may change after stop/start; update DNS
+or allocate an Elastic IP separately if needed.
 
-## Limite de operare
+## Operational limits
 
-Logurile aplicației au ID, operație, status, cod de eroare și durată. Nu au formulare,
-coordonate, query-uri sau tokenuri. Logurile HTTP de acces ale proxy-ului sunt dezactivate.
-Logurile Docker au rotație. Curățarea cache-ului rulează la pornirea serviciului de
-mentenanță și apoi la fiecare oră, în loturi limitate. Nu este stocare persistentă de
-analize. Pierderea hostului poate pierde cache-ul; nu se promite recuperare sau HA.
+Application logs contain an ID, operation, status, error code, and duration. They
+contain no forms, coordinates, queries, or tokens. Proxy HTTP access logs are disabled.
+Docker logs rotate. Cache cleanup runs at maintenance-service startup and hourly in
+bounded batches. This is not persistent analysis storage. Losing the host may lose
+the cache; no recovery or high-availability guarantee is made.
 
-CloudFormation și sintaxa locală pot fi validate fără crearea unei resurse. Configurația
-AWS și obținerea certificatului trebuie verificate separat la deployment.
+CloudFormation and local syntax can be validated without creating resources. AWS
+configuration and certificate issuance require separate verification at deployment.
 
-Surse primare: [EC2 CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ec2-instance.html),
+Primary references: [EC2 CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ec2-instance.html),
 [SSM Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html),
 [Compose merge](https://docs.docker.com/reference/compose-file/merge/),
 [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy),

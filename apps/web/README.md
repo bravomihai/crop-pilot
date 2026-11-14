@@ -1,15 +1,18 @@
 # Web — P1/P5
 
-Next.js App Router conține atât React cât și endpointurile backend. Nu există frontend
-Vite separat, CORS între două aplicații, conturi, sesiuni persistente sau stocare de ferme.
+Next.js App Router contains both React and the backend endpoints. There is no separate
+Vite frontend, cross-application CORS setup, account system, persistent session, or farm storage.
 
-P1 lucrează în `src/components`, `src/app/page.tsx`, `src/app/globals.css` și `src/lib/api.ts`.
-P5 lucrează în `src/app/api`, `src/lib/server`, `prisma` și configurarea deploymentului.
+P1 works in `src/components`, `src/app/page.tsx`, `src/app/globals.css`, and `src/lib/api.ts`.
+P5 works in `src/app/api`, `src/lib/server`, `prisma`, and deployment configuration.
 
-`NEXT_PUBLIC_USE_MOCK_API=true` permite dezvoltarea interfeței fără Python. Datele sunt
-fictive și marcate. În modul normal, `POST /api/recommendations` transmite formularul
-validat către engine și returnează rezultatul, fără a-l salva.
+`NEXT_PUBLIC_USE_MOCK_API=true` enables interface development without Python. Its data
+is fictional and labelled. In normal mode, `POST /api/recommendations` forwards the
+validated form to the engine and returns the result without saving it.
 
-Prisma CLI citește `.env` prin `prisma.config.ts`. Next.js citește `.env.local`.
-Schema/migrația păstrează doar cache public. `CACHE_ENABLED=false` dezactivează cache-ul.
-Comenzile pnpm se execută de la rădăcină; vezi README și AGENTS.md.
+Prisma CLI reads `.env` through `prisma.config.ts`. Next.js reads `.env.local`.
+The schema/migration stores only public cache data. `CACHE_ENABLED=false` disables caching.
+Run pnpm commands from the repository root; see the root README and `AGENTS.md`.
+
+The main page contains the complete map-and-planner workflow. Interface text and
+location-search display text use English. Geographic proper names retain their spelling.

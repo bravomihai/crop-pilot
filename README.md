@@ -142,7 +142,7 @@ pnpm contracts:generate
 pnpm db:generate
 pnpm typecheck
 pnpm test:backend
-# Cu PostgreSQL local și DATABASE_URL configurat:
+# With local PostgreSQL and DATABASE_URL configured:
 pnpm test:cache
 services/engine/.venv/bin/python -m pytest services/engine/tests
 ```
@@ -157,13 +157,18 @@ Planned: SMAP, SRTM, NEX-GDDP-CMIP6, Sentinel-2.
 
 ## Working together
 
-Dependențele sunt fixate în `pnpm-lock.yaml` și `services/engine/uv.lock`.
-Instalarea uv: https://docs.astral.sh/uv/getting-started/installation/ .
+Dependencies are locked in `pnpm-lock.yaml` and `services/engine/uv.lock`.
+Install uv: https://docs.astral.sh/uv/getting-started/installation/ .
 
 ## Backend P5
 
-Intrarea locală cu limite de cereri este `http://localhost:8080` când pornești întregul
-Compose. Cache-ul public se curăță automat. Verificările de integrare și profilul HTTPS
-sunt în [infra/README.md](infra/README.md); configurația pentru publicarea ulterioară este
-în [infra/aws/README.md](infra/aws/README.md). Workflow-ul pregătit în
-`.github/workflows/checks.yml` va rula după publicarea modificărilor pe GitHub.
+The local entry point with request limits is `http://localhost:8080` when running
+the full Compose stack. Public cache cleanup is automatic. Integration checks and the
+HTTPS profile are documented in [infra/README.md](infra/README.md); future deployment
+configuration is in [infra/aws/README.md](infra/aws/README.md). The prepared workflow in
+`.github/workflows/checks.yml` runs after the changes are published to GitHub.
+
+
+Project documentation, code comments, interface text, and generated explanations use
+English. Geographic proper names and intentional language-detection test samples retain
+their original spelling. See `AGENTS.md` for the language policy.

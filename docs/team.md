@@ -1,33 +1,34 @@
-# Împărțirea echipei
+# Team responsibilities
 
-| Rol            | Fișiere principale                                                             | Livrabil                                                                      |
-| -------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| P1 frontend    | `apps/web/src/components`, `src/app/page.tsx`, `globals.css`, `src/lib/api.ts` | Formular, localitate/punct, stare de așteptare și cele trei planuri           |
-| P2 date        | `services/engine/fieldshift/data_service`                                      | Date zilnice, unități, calitate, surse, cache public                          |
-| P3 agronomie   | `services/engine/fieldshift/evaluator`                                         | Reguli locale, calendar, verificări după istoricul real, evaluare pe criterii |
-| P4 recomandări | `services/engine/fieldshift/recommender`, `pipeline.py`                        | Generarea și compararea a trei planuri cu câte trei culturi                   |
-| P5 backend     | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra`    | Validare, integrare HTTP Python, cache Prisma/PostgreSQL, AWS                 |
+| Role | Main files | Deliverable |
+| --- | --- | --- |
+| P1 frontend | `apps/web/src/components`, `src/app/page.tsx`, `globals.css`, `src/lib/api.ts` | Form, locality/point selection, loading state, and three plans |
+| P2 data | `services/engine/fieldshift/data_service` | Daily data, units, quality, sources, and public-data cache |
+| P3 agronomy | `services/engine/fieldshift/evaluator` | Regional rules, calendar, checks against actual history, and criterion evaluation |
+| P4 recommendations | `services/engine/fieldshift/recommender`, `pipeline.py` | Generation and comparison of three plans containing three crops each |
+| P5 backend | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra` | Validation, Python HTTP integration, Prisma/PostgreSQL cache, and AWS |
 
-## Lucru în paralel
+## Parallel development
 
-P1 poate seta `NEXT_PUBLIC_USE_MOCK_API=true` și lucra pe exemplul comun. Nu implementează
-formule agronomice în componente. P2/P3/P4 lucrează în module, cu aceleași date și funcții
-de schimb, nu cu servere individuale. P5 păstrează serviciul Python în afara browserului.
+P1 can set `NEXT_PUBLIC_USE_MOCK_API=true` and use the shared example. Do not implement
+agronomic formulas in UI components. P2/P3/P4 work in modules with shared data and
+exchange functions, not separate servers. P5 keeps the Python service outside the browser.
 
-P2: `build_environment(request) -> dict` cu date zilnice, surse și lipsuri.
-P3: `load_rules(location) -> dict` și `evaluate(rotation,request,environment,rules) -> dict`;
-pentru locațiile românești fără reguli locale, pipeline-ul apelează profilul termic provizoriu.
+P2: `build_environment(request) -> dict` with daily data, sources, and gaps.
+P3: `load_rules(location) -> dict` and `evaluate(rotation,request,environment,rules) -> dict`.
 P4: `recommend_rotations(request,environment,rules,evaluate) -> list[plan]`.
-P3/P4 trebuie să convină un contract intermediar de evaluare înainte de implementare.
-Contractul public request/result este deja comun și verificat în ambele limbaje.
+P3/P4 must agree on an intermediate evaluation contract before implementing changes.
+The public request/result contract is already shared and checked in both languages.
 
-Zona cu reguli locale descrise este sudul și sud-estul României (Câmpia Română, Bărăgan,
-Dobrogea). În restul țării, codul folosește un profil termic și calendare ajustate provizoriu;
-acestea nu sunt recomandări validate local. Limita țării este verificată înaintea calculului.
-Fundulea rămâne un punct de exemplu, nu dovadă de validare agronomică.
+The first coverage area is the southern and south-eastern plains (Romanian Plain,
+Bărăgan, Dobrogea), using the main field crops. Fundulea is only the example test
+point. Return `insufficient_data` outside covered zones. An example locality does not
+establish agronomic validation.
 
-Contractul include `current_rotation`/`baseline`, `plan.scores`, `local_checks`,
-`history[].source`, `priorities.productivity`, contur de teren, shortlist de culturi și
-rezumate climatice lunare. Datele de vreme și sol folosesc punctul reprezentativ, nu
-statistici agregate pentru întregul contur. Scorurile și calendarele necesită validare
-agronomică locală; modul demo declară explicit că nu le calculează.
+The new optional contract fields (`current_rotation`/`baseline`, `plan.scores`,
+`local_checks`, `history[].source`, `priorities.productivity`) are described in `docs/api.md`.
+Existing consumers remain compatible without adopting them immediately. Priorities
+and scenarios must affect real evaluation only after the corresponding models are
+implemented; demo mode explicitly states that it does not calculate them.
+
+Use English for shared documentation, code comments, interface text, and explanations.
