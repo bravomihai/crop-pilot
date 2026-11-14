@@ -1,0 +1,20 @@
+{
+	email {$ACME_EMAIL}
+	log default {
+		exclude http.log.access http.log.error
+	}
+}
+{$DOMAIN} {
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	reverse_proxy gateway:80 {
+		# Override any client-supplied IP header before the rate limiter sees it.
+		header_up X-Real-IP {remote_host}
+		transport http {
+			response_header_timeout 115s
+		}
+	}
+}

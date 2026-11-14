@@ -83,6 +83,9 @@ Nu folosi credențialele demonstrative pe un deployment comun.
 pnpm contracts:generate
 pnpm db:generate
 pnpm typecheck
+pnpm test:backend
+# Cu PostgreSQL local și DATABASE_URL configurat:
+pnpm test:cache
 services/engine/.venv/bin/python -m pytest services/engine/tests
 ```
 
@@ -91,3 +94,11 @@ services/engine/.venv/bin/python -m pytest services/engine/tests
 
 Dependențele sunt fixate în `pnpm-lock.yaml` și `services/engine/uv.lock`.
 Instalarea uv: https://docs.astral.sh/uv/getting-started/installation/ .
+
+## Backend P5
+
+Intrarea locală cu limite de cereri este `http://localhost:8080` când pornești întregul
+Compose. Cache-ul public se curăță automat. Verificările de integrare și profilul HTTPS
+sunt în [infra/README.md](infra/README.md); configurația pentru publicarea ulterioară este
+în [infra/aws/README.md](infra/aws/README.md). Workflow-ul pregătit în
+`.github/workflows/checks.yml` va rula după publicarea modificărilor pe GitHub.

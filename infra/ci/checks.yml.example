@@ -1,10 +1,28 @@
-name: Static and contract checks
+name: Backend, contracts and containers
 on: [push, pull_request]
 permissions:
   contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  contracts-and-types:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fieldshift
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: fieldshift
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fieldshift -d fieldshift"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgresql://fieldshift:ci-only-password@localhost:5432/fieldshift
+      CACHE_ENABLED: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -19,6 +37,10 @@ jobs:
       - run: git diff --exit-code -- packages/contracts/schemas
       - run: pnpm db:generate
       - run: pnpm typecheck
+      - run: pnpm test:backend
+      - run: pnpm db:deploy
+      - run: pnpm test:cache
+      - run: pnpm build
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -27,3 +49,20 @@ jobs:
           version: "0.9.5"
       - run: uv sync --project services/engine --frozen --extra dev
       - run: services/engine/.venv/bin/python -m pytest services/engine/tests
+      - run: uvx --from cfn-lint==1.60.1 cfn-lint infra/aws/host.yaml
+      - run: python -m py_compile infra/aws/configure.py infra/cache-maintenance.py infra/check-local.py
+      - name: Validate ingress configuration
+        run: |
+          docker run --rm --add-host web:127.0.0.1 -v "$PWD/infra/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.28-alpine nginx -t
+          docker run --rm -e DOMAIN=fieldshift.example.com -e ACME_EMAIL=operations@example.com -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Validate Compose without real secrets
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+          INTERNAL_API_TOKEN: ci-only-token-at-least-32-characters
+          DOMAIN: fieldshift.example.com
+          ACME_EMAIL: operations@example.com
+        run: |
+          docker compose config --quiet
+          docker compose -f compose.yaml -f infra/compose.production.yaml config --quiet
+      - run: docker build -f apps/web/Dockerfile -t fieldshift-web:ci .
+      - run: docker build -f services/engine/Dockerfile -t fieldshift-engine:ci .
