@@ -508,20 +508,29 @@ def test_no_scenario_means_single_pass():
 
 
 def test_unimplemented_evaluator_propagates():
-    from fieldshift.evaluator import evaluate as real_evaluate
+    def unavailable(rotation, request, environment, rules):
+        raise NotImplementedError("evaluator unavailable")
 
     with pytest.raises(NotImplementedError):
-        recommend_rotations(make_request(), ENV, fake_rules(), real_evaluate)
+        recommend_rotations(make_request(), ENV, fake_rules(), unavailable)
 
 
-def test_computed_mode_is_unavailable_until_p2_p3_exist(monkeypatch):
+def test_computed_mode_is_unavailable_until_p2_exists(monkeypatch):
     monkeypatch.setenv("ENGINE_MODE", "computed")
     monkeypatch.delenv("ENABLE_NASA_POWER", raising=False)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(NotImplementedError):  # P2 build_environment is still disabled
         pipeline.recommend(make_request(), "req-1")
+
+
+def test_computed_mode_without_weather_never_invents_plans(monkeypatch):
+    # Real P3 rules and evaluator, but an environment with no daily weather: water,
+    # climate and productivity are unknown, so no plan has enough evidence.
+    monkeypatch.setenv("ENGINE_MODE", "computed")
     monkeypatch.setattr(pipeline, "build_environment", lambda request: ENV)
-    with pytest.raises(NotImplementedError):  # P3 load_rules is still a stub
-        pipeline.recommend(make_request(), "req-1")
+    result = pipeline.recommend(make_request(), "req-1")
+    assert not validate("recommendation-result", result)
+    assert result["mode"] == "computed"
+    assert result["status"] == "insufficient_data" and result["plans"] == []
 
 
 def test_api_returns_503_in_computed_mode(monkeypatch):
