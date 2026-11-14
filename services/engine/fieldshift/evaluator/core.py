@@ -357,10 +357,23 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     elif previous is None:
         data_gaps.append("The history does not say which crop was harvested right before the plan.")
 
+    # A check may apply only after certain crops ({"text": ..., "after": [...]}), for
+    # example the Fusarium check only when wheat follows maize.
+    history_ids = [h["crop_id"] for h in schedule.ordered_history(request)]
+    sequence = history_ids + rotation
+    offset = len(history_ids)
     for cid in dict.fromkeys(rotation):
-        text = (rules.get("local_checks") or {}).get(cid)
-        if text:
-            local_checks.append(text)
+        entry = (rules.get("local_checks") or {}).get(cid)
+        if isinstance(entry, dict):
+            after = set(entry.get("after") or [])
+            follows = any(
+                sequence[i] == cid and i > 0 and sequence[i - 1] in after
+                for i in range(offset, len(sequence))
+            )
+            if entry.get("text") and (not after or follows):
+                local_checks.append(entry["text"])
+        elif entry:
+            local_checks.append(entry)
 
     # 2. Soil (structure of the rotation; no weather needed).
     soil_in = _soil_inputs(request, environment, settings)
