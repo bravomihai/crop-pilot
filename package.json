@@ -12,6 +12,8 @@
     "contracts:generate": "pnpm --filter @fieldshift/contracts generate",
     "db:generate": "pnpm --filter @fieldshift/web db:generate",
     "db:migrate": "pnpm --filter @fieldshift/web db:migrate",
-    "db:deploy": "pnpm --filter @fieldshift/web db:deploy"
+    "db:deploy": "pnpm --filter @fieldshift/web db:deploy",
+    "test:backend": "pnpm --filter @fieldshift/web test:backend",
+    "test:cache": "pnpm --filter @fieldshift/web test:cache"
   }
 }

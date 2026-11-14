@@ -37,7 +37,8 @@ Dacă nu există trei variante valide, întoarce limited/insufficient_data; nu i
 - `packages/contracts/schemas/`: JSON Schema GENERAT pentru Python; nu modifica manual.
 - `packages/contracts/examples/`: cerere și rezultat fictive pentru lucru independent.
 - `docs/`: arhitectură, API, starea implementării și împărțirea muncii.
-- `infra/`: instrucțiuni AWS, reverse proxy și model CI în `infra/ci/checks.yml.example` (neactivat).
+- `infra/`: instrucțiuni AWS, reverse proxy și configurație de publicare și copia CI din `infra/ci/checks.yml.example`.
+- `.github/workflows/checks.yml`: verificări backend, contracte, PostgreSQL și builduri Docker, pregătite pentru push/PR.
 - `compose.yaml`: mediu local PostgreSQL, migrare, motor și web.
 
 ## Cine lucrează unde
