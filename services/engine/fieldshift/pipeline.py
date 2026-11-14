@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from .data_service import build_environment
 from .demo import recommend_demo
-from .evaluator import evaluate, load_rules
+from .evaluator import climate_context, evaluate, load_rules
 from .evaluator.rules import load_provisional_romania_rules
 from .geography import validate_field_boundary, validate_location
 from .recommender import recommend_rotations
@@ -97,6 +97,11 @@ def computed_result(
     }
     if outcome is not None and outcome.baseline is not None:
         result["baseline"] = outcome.baseline
+    climate = climate_context(environment, request["location"])
+    if climate is not None:
+        listed = {source["id"] for source in result["sources"]}
+        climate["source_ids"] = [i for i in climate["source_ids"] if i in listed]
+        result["climate_context"] = climate
     errors = validate_result_semantics(result)
     if errors:
         raise RuntimeError(

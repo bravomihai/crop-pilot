@@ -458,6 +458,7 @@ def _build_current_baseline(continuation, current: Candidate, weights, known_ids
         "scores": plan_scores(evaluation),
         "local_checks": texts["local_checks"],
         "violations": texts["violations"],
+        **_replay_field(evaluation),
     }
 
 
@@ -477,4 +478,10 @@ def _build_plan(number, selection, cand: Candidate, pareto: ParetoInfo, robustne
         "source_ids": list(cand.source_ids),
         "scores": plan_scores(evaluation),
         "local_checks": checks,
+        **_replay_field(evaluation),
     }
+
+
+def _replay_field(evaluation: Evaluation) -> dict:
+    """Contract `plan.replay`: P3's per-season results, passed through unchanged."""
+    return {"replay": [dict(season) for season in evaluation.replay]} if evaluation.replay else {}

@@ -92,6 +92,7 @@ class Evaluation:
     warnings: tuple[EvalWarning, ...] = ()
     data_gaps: tuple[str, ...] = ()
     local_checks: tuple[str, ...] = ()
+    replay: tuple[dict, ...] = ()
     source_ids: tuple[str, ...] = ()
     sources: tuple[dict, ...] = ()
     scenario_applied: bool = False
@@ -115,6 +116,66 @@ def _strings(value, errors: list[str], label: str) -> tuple[str, ...]:
         errors.append(f"{label} must be a list of strings")
         return ()
     return tuple(v for v in value if v.strip())
+
+
+_REPLAY_STEP_NUMBERS = ("wrsi_pct", "water_need_mm", "water_used_mm", "season_rain_mm", "climate_risk")
+_REPLAY_SCORES = ("water", "soil", "climate", "productivity")
+
+
+def _number(value) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value)
+
+
+def _replay(raw, rotation: tuple[str, ...], errors: list[str]) -> tuple[dict, ...]:
+    """Contract-shaped copy of P3's per-season replay (`plan.replay`), oldest first.
+
+    Malformed seasons are dropped with a contract error, never repaired with guesses.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        errors.append("replay must be a list")
+        return ()
+    seasons = []
+    for entry in raw:
+        try:
+            year = entry["season_start_year"]
+            if isinstance(year, bool) or not isinstance(year, int):
+                raise ValueError("season_start_year must be an integer")
+            scores = {}
+            for name in _REPLAY_SCORES:
+                if name in (entry.get("scores") or {}):
+                    value = entry["scores"][name]
+                    if value is not None and not (_number(value) and 0 <= value <= 1):
+                        raise ValueError(f"score {name} outside [0, 1]")
+                    scores[name] = None if value is None else float(value)
+            season = {"season_start_year": year, "scores": scores}
+            steps = entry.get("steps")
+            if steps is not None:
+                if not isinstance(steps, list) or len(steps) > len(rotation):
+                    raise ValueError("steps must be a list no longer than the rotation")
+                clean_steps = []
+                for index, step in enumerate(steps):
+                    if step.get("crop_id") != rotation[index]:
+                        raise ValueError("replay step crop does not follow the rotation")
+                    clean = {"crop_id": step["crop_id"]}
+                    for key in _REPLAY_STEP_NUMBERS:
+                        if key in step and (step[key] is None or (_number(step[key]) and step[key] >= 0)):
+                            clean[key] = step[key]
+                    hazards = step.get("hazards")
+                    if isinstance(hazards, dict):
+                        clean["hazards"] = {str(k): v for k, v in hazards.items() if _number(v)}
+                    clean_steps.append(clean)
+                season["steps"] = clean_steps
+            seasons.append(season)
+        except (KeyError, TypeError, AttributeError, ValueError) as error:
+            errors.append(f"replay season dropped: {error}")
+    seasons.sort(key=lambda s: s["season_start_year"])
+    unique = []
+    for season in seasons:
+        if not unique or season["season_start_year"] != unique[-1]["season_start_year"]:
+            unique.append(season)
+    return tuple(unique)
 
 
 def _score(value, errors: list[str], label: str) -> float | None:
@@ -268,6 +329,7 @@ def parse_evaluation(raw, rotation) -> Evaluation:
         warnings=_warnings(raw.get("warnings"), errors),
         data_gaps=_strings(raw.get("data_gaps"), errors, "data_gaps"),
         local_checks=_strings(raw.get("local_checks"), errors, "local_checks"),
+        replay=_replay(raw.get("replay"), rotation, errors),
         source_ids=_strings(raw.get("source_ids"), errors, "source_ids"),
         sources=tuple(sources),
         scenario_applied=raw.get("scenario_applied") is True,

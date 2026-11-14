@@ -550,7 +550,7 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         "soil_inputs": soil_in,
         "soil_components": soil["components"],
         "details": details,
-        "replay": replay_rows,
+        "replay": sorted(replay_rows, key=lambda row: row["season_start_year"]),
     }
 
 
