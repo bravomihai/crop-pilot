@@ -16,7 +16,9 @@ in bad years score lower than their average suggests.
 
 from __future__ import annotations
 
+import threading
 from collections import OrderedDict
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 
 from . import schedule, scoring, water
@@ -27,8 +29,26 @@ ROBUST_LOW_WEIGHT = 0.3
 LOW_PERCENTILE = 0.2
 CACHE_SIZE = 8
 
-_weather_cache: "OrderedDict[tuple, tuple]" = OrderedDict()
-_replay_cache: "OrderedDict[tuple, dict]" = OrderedDict()
+
+@dataclass
+class _WeatherEntry:
+    """Everything computed from one environment object under one scenario.
+
+    `environment` is a strong reference: while the entry is cached, no other object can
+    get the same id(), and every lookup also checks identity, so a new request can never
+    be served another request's weather. Replay and hazard results live inside the entry
+    and are evicted with it.
+    """
+
+    environment: dict
+    weather: Weather | None
+    months: list[int] | None
+    replay: dict = field(default_factory=dict)
+    hazards: dict = field(default_factory=dict)
+
+
+_weather_cache: "OrderedDict[tuple, _WeatherEntry]" = OrderedDict()
+_cache_lock = threading.Lock()
 
 
 # ---------------------------------------------------------------- environment adapters
@@ -118,21 +138,24 @@ def _env_sources(environment: dict) -> list[dict]:
     return found
 
 
-def _weather(environment: dict, latitude: float, elevation: float, temp: float, rain: float):
-    daily = environment.get("daily") if isinstance(environment, dict) else None
-    marker = (daily[0].get("date"), daily[-1].get("date")) if isinstance(daily, list) and daily else None
-    key = (id(environment), len(daily) if isinstance(daily, list) else 0, marker, latitude, elevation, temp, rain)
-    if key in _weather_cache:
-        _weather_cache.move_to_end(key)
-        return _weather_cache[key]
+def _weather(environment: dict, latitude: float, elevation: float, temp: float, rain: float) -> _WeatherEntry:
+    key = (id(environment), latitude, elevation, temp, rain)
+    with _cache_lock:
+        entry = _weather_cache.get(key)
+        if entry is not None and entry.environment is environment:
+            _weather_cache.move_to_end(key)
+            return entry
     weather = build_weather(environment, latitude, elevation, temp, rain)
     months = None
     if weather is not None:
         months = [(weather.start + timedelta(days=i)).month for i in range(len(weather))]
-    _weather_cache[key] = (weather, months)
-    while len(_weather_cache) > CACHE_SIZE:
-        _weather_cache.popitem(last=False)
-    return weather, months
+    entry = _WeatherEntry(environment, weather, months)
+    with _cache_lock:
+        _weather_cache[key] = entry
+        _weather_cache.move_to_end(key)
+        while len(_weather_cache) > CACHE_SIZE:
+            _weather_cache.popitem(last=False)
+    return entry
 
 
 # ---------------------------------------------------------------- replay
@@ -151,8 +174,7 @@ def _replay(
     prefix: tuple[str, ...],
     crops: dict,
     rules: dict,
-    weather: Weather,
-    weather_key: tuple,
+    entry: _WeatherEntry,
     available_from: date,
     awc: float,
     irrigated: bool,
@@ -162,9 +184,11 @@ def _replay(
 
     Plans that share their first crops share that part of the computation.
     """
-    key = (weather_key, available_from, awc, irrigated, budget, prefix)
-    if key in _replay_cache:
-        return _replay_cache[key]
+    key = (id(rules), available_from, awc, irrigated, budget, prefix)
+    cached = entry.replay.get(key)
+    if cached is not None and cached["rules"] is rules:
+        return cached
+    weather = entry.weather
     settings = rules["settings"]
     taw_profile = awc * 1000 * settings["profile_depth_m"]
     crop = crops[prefix[-1]]
@@ -177,7 +201,7 @@ def _replay(
         for k in _windows(weather, available_from, step.harvest_end, 10**6):
             runs[k] = {"depletion": settings["initial_depletion_fraction"] * taw_profile, "seasons": [], "cursor": start}
     else:
-        parent = _replay(prefix[:-1], crops, rules, weather, weather_key, available_from, awc, irrigated, budget)
+        parent = _replay(prefix[:-1], crops, rules, entry, available_from, awc, irrigated, budget)
         step = schedule.place_next(crop, parent["steps"][-1], available_from, settings)
         steps = parent["steps"] + [step]
         runs = {}
@@ -194,11 +218,24 @@ def _replay(
             weather, sow, harvest, depletion, crop, awc, settings, irrigated=irrigated, irrigation_budget=budget
         )
         new_runs[k] = {"depletion": depletion, "seasons": run["seasons"] + [season], "cursor": step.harvest_date}
-    result = {"steps": steps, "runs": new_runs}
-    _replay_cache[key] = result
-    while len(_replay_cache) > 4000:
-        _replay_cache.popitem(last=False)
+    result = {"steps": steps, "runs": new_runs, "rules": rules}
+    entry.replay[key] = result
     return result
+
+
+def _season_hazards(entry: _WeatherEntry, crop: dict, bounds) -> tuple[dict, float, float]:
+    """Hazards, combined risk and EcoCrop temperature fit for one crop season, memoised.
+
+    The same crop in the same season window recurs across many rotations.
+    """
+    key = (crop["id"], bounds)
+    cached = entry.hazards.get(key)
+    if cached is None:
+        found = scoring.hazards(entry.weather, entry.months, crop, bounds)
+        temp_suit, _ = scoring.temperature_suitability(entry.weather, crop, bounds)
+        cached = (found, scoring.combined_risk(found), temp_suit)
+        entry.hazards[key] = cached
+    return cached
 
 
 # ---------------------------------------------------------------- helpers
@@ -344,7 +381,8 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     elevation = _elevation(environment)
     if elevation is None:
         elevation = 0.0
-    weather, months = _weather(environment, latitude, elevation, temp, rain)
+    entry = _weather(environment, latitude, elevation, temp, rain)
+    weather = entry.weather
     rainfed = irrigated_runs = None
     shifts: list[int] = []
     if weather is None:
@@ -353,11 +391,10 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         data_gaps += weather.notes
         if _elevation(environment) is None:
             data_gaps.append("Elevation is missing; reference evapotranspiration assumes sea-level air pressure.")
-        wkey = (id(weather), len(weather), weather.start, temp, rain, latitude)
         prefix = tuple(rotation)
-        rainfed = _replay(prefix, crops, rules, weather, wkey, available_from, soil_in["awc"], False, None)
+        rainfed = _replay(prefix, crops, rules, entry, available_from, soil_in["awc"], False, None)
         if irrigated:
-            irrigated_runs = _replay(prefix, crops, rules, weather, wkey, available_from, soil_in["awc"], True, budget)
+            irrigated_runs = _replay(prefix, crops, rules, entry, available_from, soil_in["awc"], True, budget)
         shifts = sorted(rainfed["runs"])[-settings["max_replay_years"]:]
         if len(shifts) < settings["min_replay_years"]:
             data_gaps.append(
@@ -403,9 +440,7 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
                 crop = crops[step.crop_id]
                 ky = crop.get("ky", 1.0)
                 water_y = _clamp(1 - ky * (1 - season.eta_mm / season.etc_mm)) if season.etc_mm > 0 else 1.0
-                found = scoring.hazards(weather, months, crop, season.bounds)
-                risk = scoring.combined_risk(found)
-                temp_suit, _ = scoring.temperature_suitability(weather, crop, season.bounds)
+                found, risk, temp_suit = _season_hazards(entry, crop, season.bounds)
                 climate_value = (1 - risk) * (0.5 + 0.5 * temp_suit)
                 grow_y = water_y
                 if irr_seasons:
@@ -520,7 +555,12 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         criteria["productivity"] = _criterion(
             _robust(season_product), "estimated", product_summary, ["fao56", "ecocrop", "ro-agronomy"] + env_ids
         )
-        data_gaps.append("Winterkill ignores snow cover, which protects winter crops; check winter hardiness locally.")
+        winter = [crops[c]["name"].lower() for c in dict.fromkeys(rotation) if "winterkill" in crops[c].get("hazards", {})]
+        if winter:
+            data_gaps.append(
+                f"Winterkill risk for {', '.join(winter)} ignores snow cover, which protects winter crops; "
+                "check winter hardiness locally."
+            )
     else:
         for name in ("water", "climate", "productivity"):
             criteria[name] = _criterion(None, "assumed", "Not computed: not enough daily weather data.", [])

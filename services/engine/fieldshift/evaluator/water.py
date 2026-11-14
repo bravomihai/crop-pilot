@@ -46,11 +46,14 @@ def stage_bounds(sow: int, harvest: int, fractions) -> tuple[int, int, int, int,
 def run_fallow(weather: Weather, start: int, end: int, depletion: float, taw_profile: float, settings: dict) -> float:
     kc, min_fraction = settings["kc_bare_soil"], settings["min_effective_rain_et0_fraction"]
     et0, precip = weather.et0, weather.precip
+    inverse_taw = 1.0 / taw_profile
     for i in range(start, end):
         rain = precip[i]
-        if rain < min_fraction * et0[i]:
+        day_et0 = et0[i]
+        if rain < min_fraction * day_et0:
             rain = 0.0
-        depletion += kc * et0[i] * max(0.0, 1.0 - depletion / taw_profile) - rain
+        dryness = 1.0 - depletion * inverse_taw
+        depletion += (kc * day_et0 * dryness if dryness > 0.0 else 0.0) - rain
         if depletion < 0.0:
             depletion = 0.0  # surplus drains below the profile
         elif depletion > taw_profile:
@@ -81,36 +84,47 @@ def run_crop(
     budget = float("inf") if irrigation_budget is None else irrigation_budget
     et0, precip = weather.et0, weather.precip
     etc_sum = eta_sum = rain_sum = irrigation_sum = 0.0
+    # Depletion is uniform with depth, so the root-zone share cancels out of the stress test:
+    # depletion·share > p·TAW·share  ⇔  depletion > p·TAW. It only sets how much water
+    # irrigation adds (the depletion of the explored root zone).
+    dev_slope = (kc_mid - kc_ini) / (b2 - b1)
+    late_slope = (kc_end - kc_mid) / max(end - b3, 1)
+    root_span = root_max - INITIAL_ROOT_DEPTH_M
+    root_days = max(b2 - sow, 1)
     for i in range(sow, end):
         if i < b1:
             kc = kc_ini
         elif i < b2:
-            kc = kc_ini + (kc_mid - kc_ini) * (i - b1) / (b2 - b1)
+            kc = kc_ini + dev_slope * (i - b1)
         elif i < b3:
             kc = kc_mid
         else:
-            kc = kc_mid + (kc_end - kc_mid) * (i - b3) / max(end - b3, 1)
-        root = INITIAL_ROOT_DEPTH_M + (root_max - INITIAL_ROOT_DEPTH_M) * min(1.0, (i - sow) / max(b2 - sow, 1))
-        share = root / profile_depth
-        taw_root = taw_profile * share
-        etc = kc * et0[i]
-        p = min(0.8, max(0.1, p_table + 0.04 * (5.0 - etc)))  # FAO-56 Table 22, footnote 2
-        raw = p * taw_root
-        root_depletion = depletion * share
-        if irrigated and root_depletion > raw and budget > 0 and i < b3:
-            amount = min(root_depletion, budget)
+            kc = kc_mid + late_slope * (i - b3)
+        day_et0 = et0[i]
+        etc = kc * day_et0
+        p = p_table + 0.04 * (5.0 - etc)  # FAO-56 Table 22, footnote 2
+        if p < 0.1:
+            p = 0.1
+        elif p > 0.8:
+            p = 0.8
+        raw = p * taw_profile
+        if irrigated and depletion > raw and budget > 0 and i < b3:
+            grown = (i - sow) / root_days
+            share = (INITIAL_ROOT_DEPTH_M + root_span * (grown if grown < 1.0 else 1.0)) / profile_depth
+            amount = depletion * share
+            if amount > budget:
+                amount = budget
             depletion -= amount
             budget -= amount
             irrigation_sum += amount
-            root_depletion = depletion * share
-        if root_depletion <= raw:
-            ks = 1.0
+        if depletion <= raw:
+            eta = etc
         else:
-            ks = max(0.0, (taw_root - root_depletion) / ((1.0 - p) * taw_root))
-        eta = ks * etc
+            ks = (taw_profile - depletion) / ((1.0 - p) * taw_profile)
+            eta = ks * etc if ks > 0.0 else 0.0
         rain = precip[i]
         rain_sum += rain
-        if rain < min_fraction * et0[i]:
+        if rain < min_fraction * day_et0:
             rain = 0.0
         depletion += eta - rain
         if depletion < 0.0:
