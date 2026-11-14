@@ -49,6 +49,8 @@ folosește încă nu trebuie să schimbe nimic. Exemple complete:
 | `plan.scores: {water, soil, climate, productivity}` | rezultat | P3 calculează 0–1 sau `null` (necunoscut); P4 le transmite; P1 le afișează |
 | `plan.local_checks: string[]` | rezultat | P3/P4 scriu ce trebuie verificat local; P1 le afișează |
 | `plan.violations: string[]` | rezultat | Numai pentru `baseline`: regulile încălcate de rotația actuală |
+| `plan.replay: season[]` | rezultat | P3 rejoacă planul pe fiecare sezon trecut (cu scenariul cererii); P4 îl transmite; P1 desenează graficul „cum ar fi mers în 2012”. Sezoanele sunt în ordine crescătoare; fiecare are `scores` și, per cultură, apă (WRSI %, mm), ploaie, risc climatic și hazarde |
+| `climate_context` | rezultat | Clima observată pe ani la locație (ploaie, ET0, temperatură, zile > 32 °C, îngheț, secetă apr.–sept., ploi torențiale) și tendințe pe deceniu. Fără scenariu. Calculat în pipeline din aceleași date ca evaluarea |
 
 `productivity` este potențial relativ (EcoCrop, FAO GAEZ), nu prognoză de producție sau profit.
 

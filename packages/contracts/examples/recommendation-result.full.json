@@ -18,34 +18,196 @@
           "order": 1,
           "crop_id": "winter_wheat",
           "crop_name": "Winter wheat",
-          "sowing_window": { "start": "2026-10-01", "end": "2026-10-20" },
-          "harvest_window": { "start": "2027-07-01", "end": "2027-07-20" },
+          "sowing_window": {
+            "start": "2026-10-01",
+            "end": "2026-10-20"
+          },
+          "harvest_window": {
+            "start": "2027-07-01",
+            "end": "2027-07-20"
+          },
           "reason": "Illustrative step; not computed."
         },
         {
           "order": 2,
           "crop_id": "pea",
           "crop_name": "Pea",
-          "sowing_window": { "start": "2028-03-01", "end": "2028-03-31" },
-          "harvest_window": { "start": "2028-06-25", "end": "2028-07-15" },
+          "sowing_window": {
+            "start": "2028-03-01",
+            "end": "2028-03-31"
+          },
+          "harvest_window": {
+            "start": "2028-06-25",
+            "end": "2028-07-15"
+          },
           "reason": "Illustrative step; not computed."
         },
         {
           "order": 3,
           "crop_id": "winter_wheat",
           "crop_name": "Winter wheat",
-          "sowing_window": { "start": "2028-10-01", "end": "2028-10-20" },
-          "harvest_window": { "start": "2029-07-01", "end": "2029-07-20" },
+          "sowing_window": {
+            "start": "2028-10-01",
+            "end": "2028-10-20"
+          },
+          "harvest_window": {
+            "start": "2029-07-01",
+            "end": "2029-07-20"
+          },
           "reason": "Illustrative step; not computed."
         }
       ],
-      "benefits": ["Illustrative: a legume breaks the cereal sequence."],
-      "tradeoffs": ["Illustrative: the field is bare from July 2027 to March 2028."],
+      "benefits": [
+        "Illustrative: a legume breaks the cereal sequence."
+      ],
+      "tradeoffs": [
+        "Illustrative: the field is bare from July 2027 to March 2028."
+      ],
       "explanation": "Example showing the optional fields of the contract. All values are invented.",
       "confidence": "low",
-      "source_ids": ["demo-fixture"],
-      "scores": { "water": 0.61, "soil": 0.68, "climate": 0.55, "productivity": null },
-      "local_checks": ["Illustrative: check pea root diseases in recent seasons on this field."]
+      "source_ids": [
+        "demo-fixture"
+      ],
+      "scores": {
+        "water": 0.61,
+        "soil": 0.68,
+        "climate": 0.55,
+        "productivity": null
+      },
+      "local_checks": [
+        "Illustrative: check pea root diseases in recent seasons on this field."
+      ],
+      "replay": [
+        {
+          "season_start_year": 2010,
+          "scores": {
+            "water": 0.81,
+            "climate": 0.55,
+            "productivity": 0.36
+          },
+          "steps": [
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 84,
+              "water_need_mm": 450,
+              "water_used_mm": 378,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "pea",
+              "wrsi_pct": 79,
+              "water_need_mm": 450,
+              "water_used_mm": 356,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 86,
+              "water_need_mm": 450,
+              "water_used_mm": 387,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            }
+          ]
+        },
+        {
+          "season_start_year": 2011,
+          "scores": {
+            "water": 0.74,
+            "climate": 0.5,
+            "productivity": 0.31
+          },
+          "steps": [
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 77,
+              "water_need_mm": 450,
+              "water_used_mm": 346,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "pea",
+              "wrsi_pct": 70,
+              "water_need_mm": 450,
+              "water_used_mm": 315,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 80,
+              "water_need_mm": 450,
+              "water_used_mm": 360,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            }
+          ]
+        },
+        {
+          "season_start_year": 2012,
+          "scores": {
+            "water": 0.62,
+            "climate": 0.41,
+            "productivity": 0.24
+          },
+          "steps": [
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 64,
+              "water_need_mm": 450,
+              "water_used_mm": 288,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "pea",
+              "wrsi_pct": 58,
+              "water_need_mm": 450,
+              "water_used_mm": 261,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            },
+            {
+              "crop_id": "winter_wheat",
+              "wrsi_pct": 70,
+              "water_need_mm": 450,
+              "water_used_mm": 315,
+              "season_rain_mm": 210,
+              "climate_risk": 0.3,
+              "hazards": {
+                "heat": 6
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "baseline": {
@@ -56,38 +218,265 @@
         "order": 1,
         "crop_id": "winter_wheat",
         "crop_name": "Winter wheat",
-        "sowing_window": { "start": "2026-10-01", "end": "2026-10-20" },
-        "harvest_window": { "start": "2027-07-01", "end": "2027-07-20" },
+        "sowing_window": {
+          "start": "2026-10-01",
+          "end": "2026-10-20"
+        },
+        "harvest_window": {
+          "start": "2027-07-01",
+          "end": "2027-07-20"
+        },
         "reason": "Next crop in the farmer's current rotation."
       },
       {
         "order": 2,
         "crop_id": "maize",
         "crop_name": "Maize",
-        "sowing_window": { "start": "2028-04-10", "end": "2028-05-05" },
-        "harvest_window": { "start": "2028-09-15", "end": "2028-10-05" },
+        "sowing_window": {
+          "start": "2028-04-10",
+          "end": "2028-05-05"
+        },
+        "harvest_window": {
+          "start": "2028-09-15",
+          "end": "2028-10-05"
+        },
         "reason": "Next crop in the farmer's current rotation."
       },
       {
         "order": 3,
         "crop_id": "winter_wheat",
         "crop_name": "Winter wheat",
-        "sowing_window": { "start": "2028-10-10", "end": "2028-10-25" },
-        "harvest_window": { "start": "2029-07-01", "end": "2029-07-20" },
+        "sowing_window": {
+          "start": "2028-10-10",
+          "end": "2028-10-25"
+        },
+        "harvest_window": {
+          "start": "2029-07-01",
+          "end": "2029-07-20"
+        },
         "reason": "Next crop in the farmer's current rotation."
       }
     ],
-    "benefits": ["Illustrative: no change in equipment or markets."],
-    "tradeoffs": ["Illustrative: wheat after maize has a higher Fusarium risk."],
+    "benefits": [
+      "Illustrative: no change in equipment or markets."
+    ],
+    "tradeoffs": [
+      "Illustrative: wheat after maize has a higher Fusarium risk."
+    ],
     "explanation": "The farmer's current rotation, evaluated the same way as the plans. All values are invented.",
     "confidence": "low",
-    "source_ids": ["demo-fixture"],
-    "scores": { "water": 0.48, "soil": 0.35, "climate": 0.52, "productivity": 0.7 },
-    "local_checks": ["Illustrative: check maize residue management before sowing wheat."],
-    "violations": []
+    "source_ids": [
+      "demo-fixture"
+    ],
+    "scores": {
+      "water": 0.48,
+      "soil": 0.35,
+      "climate": 0.52,
+      "productivity": 0.7
+    },
+    "local_checks": [
+      "Illustrative: check maize residue management before sowing wheat."
+    ],
+    "violations": [],
+    "replay": [
+      {
+        "season_start_year": 2010,
+        "scores": {
+          "water": 0.66,
+          "climate": 0.52,
+          "productivity": 0.27
+        },
+        "steps": [
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 72,
+            "water_need_mm": 450,
+            "water_used_mm": 324,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "maize",
+            "wrsi_pct": 55,
+            "water_need_mm": 450,
+            "water_used_mm": 248,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 70,
+            "water_need_mm": 450,
+            "water_used_mm": 315,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          }
+        ]
+      },
+      {
+        "season_start_year": 2011,
+        "scores": {
+          "water": 0.58,
+          "climate": 0.47,
+          "productivity": 0.22
+        },
+        "steps": [
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 66,
+            "water_need_mm": 450,
+            "water_used_mm": 297,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "maize",
+            "wrsi_pct": 47,
+            "water_need_mm": 450,
+            "water_used_mm": 212,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 63,
+            "water_need_mm": 450,
+            "water_used_mm": 284,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          }
+        ]
+      },
+      {
+        "season_start_year": 2012,
+        "scores": {
+          "water": 0.44,
+          "climate": 0.38,
+          "productivity": 0.15
+        },
+        "steps": [
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 55,
+            "water_need_mm": 450,
+            "water_used_mm": 248,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "maize",
+            "wrsi_pct": 38,
+            "water_need_mm": 450,
+            "water_used_mm": 171,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          },
+          {
+            "crop_id": "winter_wheat",
+            "wrsi_pct": 52,
+            "water_need_mm": 450,
+            "water_used_mm": 234,
+            "season_rain_mm": 210,
+            "climate_risk": 0.3,
+            "hazards": {
+              "heat": 6
+            }
+          }
+        ]
+      }
+    ]
   },
-  "assumptions": ["Example only: no data was fetched and no rules were applied."],
-  "data_gaps": ["Example only."],
-  "sources": [{ "id": "demo-fixture", "title": "Invented example for integration" }],
-  "disclaimer": "Invented example values. Not a recommendation."
+  "assumptions": [
+    "Example only: no data was fetched and no rules were applied."
+  ],
+  "data_gaps": [
+    "Example only."
+  ],
+  "sources": [
+    {
+      "id": "demo-fixture",
+      "title": "Invented example for integration"
+    }
+  ],
+  "disclaimer": "Invented example values. Not a recommendation.",
+  "climate_context": {
+    "basis": "observed",
+    "period": {
+      "start_year": 2010,
+      "end_year": 2012
+    },
+    "years": [
+      {
+        "year": 2010,
+        "rain_mm": 700,
+        "et0_mm": 1050,
+        "tmean_c": 12.4,
+        "hot_days_gt32": 30,
+        "frost_days": 90,
+        "heavy_rain_days_gt20mm": 4,
+        "dry_spell_max_days_apr_sep": 14,
+        "last_spring_frost_doy": 95,
+        "first_autumn_frost_doy": 300
+      },
+      {
+        "year": 2011,
+        "rain_mm": 450,
+        "et0_mm": 1100,
+        "tmean_c": 12.1,
+        "hot_days_gt32": 40,
+        "frost_days": 95,
+        "heavy_rain_days_gt20mm": 2,
+        "dry_spell_max_days_apr_sep": 22,
+        "last_spring_frost_doy": 100,
+        "first_autumn_frost_doy": 295
+      },
+      {
+        "year": 2012,
+        "rain_mm": 520,
+        "et0_mm": 1180,
+        "tmean_c": 13.0,
+        "hot_days_gt32": 60,
+        "frost_days": 85,
+        "heavy_rain_days_gt20mm": 3,
+        "dry_spell_max_days_apr_sep": 30,
+        "last_spring_frost_doy": 88,
+        "first_autumn_frost_doy": null
+      }
+    ],
+    "trends": {
+      "hot_days_gt32": {
+        "mean": 43.3,
+        "per_decade": 150.0,
+        "unit": "days per year"
+      }
+    },
+    "source_ids": [
+      "demo-fixture"
+    ],
+    "note": "Example only: invented values to show the shape. Real results need at least 10 years for trends."
+  }
 }

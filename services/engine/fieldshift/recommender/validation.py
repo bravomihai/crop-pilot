@@ -99,6 +99,26 @@ def validate_result_semantics(result: dict) -> list[str]:
         for i, step in enumerate(baseline["steps"]):
             if step["order"] != i + 1:
                 errors.append("Baseline steps must be ordered 1, 2, 3.")
+    for plan in list(result["plans"]) + ([baseline] if baseline else []):
+        replay = plan.get("replay") or []
+        years = [season["season_start_year"] for season in replay]
+        if any(later <= earlier for earlier, later in zip(years, years[1:])):
+            errors.append("Replay seasons must be in increasing year order.")
+        crops = [step["crop_id"] for step in plan["steps"]]
+        if any(s["crop_id"] != crops[i] for season in replay for i, s in enumerate(season.get("steps") or [])):
+            errors.append("Replay steps must follow the plan's crops.")
+    climate = result.get("climate_context")
+    if climate:
+        if any(i not in ids for i in climate["source_ids"]):
+            errors.append("Unknown source reference in climate context.")
+        years = [y["year"] for y in climate["years"]]
+        if any(later <= earlier for earlier, later in zip(years, years[1:])):
+            errors.append("Climate years must be in increasing order.")
+        period = climate["period"]
+        if period["start_year"] > period["end_year"] or any(
+            y < period["start_year"] or y > period["end_year"] for y in years
+        ):
+            errors.append("Climate years must lie inside the climate period.")
     return errors
 
 

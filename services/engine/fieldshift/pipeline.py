@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from .demo import recommend_demo
 from .data_service import build_environment
-from .evaluator import load_rules, evaluate
+from .evaluator import climate_context, load_rules, evaluate
 from .recommender import recommend_rotations
 from .recommender.validation import validate_result_semantics
 
@@ -45,12 +45,19 @@ def computed_result(request: dict, request_id: str, environment: dict, rules: di
         "location": request["location"],
         "plans": plans,
         "assumptions": list(environment.get("assumptions", [])) + (outcome.assumptions if outcome else []),
-        "data_gaps": list(environment.get("data_gaps", [])) + (outcome.data_gaps if outcome else []),
+        "data_gaps": list(environment.get("data_gaps", []))
+        + list(rules.get("data_gaps", []))
+        + (outcome.data_gaps if outcome else []),
         "sources": outcome.sources if outcome else list(environment.get("sources", [])) + list(rules.get("sources", [])),
         "disclaimer": DISCLAIMER,
     }
     if outcome is not None and outcome.baseline is not None:
         result["baseline"] = outcome.baseline
+    climate = climate_context(environment, request["location"])
+    if climate is not None:
+        listed = {source["id"] for source in result["sources"]}
+        climate["source_ids"] = [i for i in climate["source_ids"] if i in listed]
+        result["climate_context"] = climate
     errors = validate_result_semantics(result)
     if errors:
         raise RuntimeError("Recommendation result failed semantic checks: " + "; ".join(errors))
