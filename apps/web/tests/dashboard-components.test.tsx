@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { resultSchema } from "@fieldshift/contracts";
 import FieldDashboard from "../src/components/field-dashboard";
+import FieldMap from "../src/components/dashboard/field-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
 import RecommendationResults from "../src/components/recommendation-results";
 import PriorityPanel from "../src/components/dashboard/priority-panel";
@@ -19,27 +20,34 @@ import {
   rankDemoCrops,
 } from "../src/lib/demo-priorities";
 
-test("dashboard labels sample data and exposes map, planning, sources, and local-only PDFs", () => {
+test("main page starts with location search and a point map without dashboard clutter", () => {
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
     "FieldShift",
-    "NASA SOURCES",
-    "DEMO",
-    "not live NASA measurements",
-    "Your field, from above",
-    "What would you like to plant?",
-    "Soil analysis report",
+    "Prototype",
+    "Pick your field.",
+    "Search for a place or click the map.",
+    "Use map centre",
     "stays in this tab",
-    "not read",
-    "COMING SOON",
   ])
     assert.ok(textContent.includes(text), text);
-  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:/);
+  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Draw field|Draw a field|COMING SOON|KPI|href="\/calculator"|dashboard-sidebar/);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(ids.length, new Set(ids).size);
   for (const match of html.matchAll(/href="#([^"]+)"/g))
     assert.ok(ids.includes(match[1]), match[1]);
+});
+
+test("field map offers point relocation and clear controls without polygon drawing", () => {
+  const html = renderToStaticMarkup(createElement(FieldMap, {
+    view: { latitude: 44.56, longitude: 27.35 },
+    selection: { latitude: 44.56, longitude: 27.35 },
+    onSelect: () => {},
+  }));
+  assert.match(html, /Click anywhere to move your pin/);
+  assert.match(html, /Clear field location/);
+  assert.doesNotMatch(html, /Draw|Finish outline|hectares|polygon/);
 });
 
 test("compatibility cards show three interactive alternatives with explicit demo qualifications", () => {

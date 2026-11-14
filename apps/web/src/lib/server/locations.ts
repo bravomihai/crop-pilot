@@ -44,14 +44,14 @@ export async function findLocations(query: string) {
       "validation_error",
       "Enter between 2 and 100 characters for the location.",
     );
-  const key = cacheKey("geocoding", q.toLowerCase());
+  const key = cacheKey("geocoding", { query: q.toLowerCase(), language: "en" });
   const cached = outputSchema.safeParse(await readCache(key));
   if (cached.success) return cached.data;
   const url = new URL("https://geocoding-api.open-meteo.com/v1/search");
   url.search = new URLSearchParams({
     name: q,
     count: "8",
-    language: "ro",
+    language: "en",
     format: "json",
   }).toString();
   const data = providerSchema.safeParse(

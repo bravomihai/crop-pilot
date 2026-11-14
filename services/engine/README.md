@@ -1,21 +1,25 @@
-# Motor Python — P2/P3/P4
+# Python engine — P2/P3/P4
 
-Un singur serviciu FastAPI, cu trei module. Browserul vorbește cu Next.js; Next.js transmite
-cererea către Python cu un token intern. Fermierul nu are cont și motorul nu persistă cererea.
+One FastAPI service contains three modules. The browser communicates with Next.js,
+which forwards requests to Python using an internal token. Farmers do not have
+accounts, and the engine does not persist requests.
 
-- P2: `fieldshift/data_service` — adaptor POWER și cache public.
-- P3: `fieldshift/evaluator` — reguli, calendar, evaluare fără ponderile fermierului.
-- P4: `fieldshift/recommender` — generare, comparație, ponderi și explicații.
-- Integrare: `fieldshift/pipeline.py` și `fieldshift/api.py`.
-- Demo fictiv: `fieldshift/demo.py`; nu utiliza funcția de calendar demo în motorul real.
+- P2: `fieldshift/data_service` — POWER adapter and public-data cache.
+- P3: `fieldshift/evaluator` — rules, calendar, and evaluation independent of farmer weights.
+- P4: `fieldshift/recommender` — generation, comparison, weights, and explanations.
+- Integration: `fieldshift/pipeline.py` and `fieldshift/api.py`.
+- Fictional demo: `fieldshift/demo.py`; never use its calendar function in the real engine.
 
-`ENGINE_MODE=demo` întoarce exemple vizibil marcate. `computed` cere implementarea modulelor
-P3/P4 și întoarce 503 până atunci. Nu este implementată o predicție a producției/profitului.
-Adaptorul POWER există, dar nu a fost verificat live în această refacere.
+`ENGINE_MODE=demo` returns clearly labelled examples. `computed` requires the real
+data and evaluation modules and returns 503 when they are unavailable; there is no
+automatic fallback to demo. No yield or profit forecast is implemented. The POWER
+adapter requires separate live verification; see `docs/status.md` for recorded checks.
 
-Setup reproductibil de la rădăcină: `uv sync --project services/engine --frozen --extra dev`.
-Versiunea de referință uv este 0.9.5; dependențele sunt fixate în `uv.lock`.
-Schemele sunt în `packages/contracts/schemas`; exportă-le din workspace când schimbi contractul.
+Reproducible setup from the root: `uv sync --project services/engine --frozen --extra dev`.
+The reference uv version is 0.9.5; dependencies are locked in `uv.lock`.
+Schemas live in `packages/contracts/schemas`; export them from the workspace when changing the contract.
 
-Vezi README rădăcină pentru comanda de pornire. Nu porni servicii într-o sarcină care cere
-numai verificări statice. Testele unitare nu au nevoie de NASA, PostgreSQL sau server HTTP.
+See the root README for startup commands. Do not start services for a task limited
+to static checks. Unit tests do not require NASA, PostgreSQL, or an HTTP server.
+Comments, errors, explanations, and display crop names use English. Intentional
+non-English language-detection samples remain in the regression tests.

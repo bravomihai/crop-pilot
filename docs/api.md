@@ -1,135 +1,138 @@
 # API v1
 
-Sursa contractului: `packages/contracts/src/index.ts`.
-Python consumă schemele generate din `packages/contracts/schemas/`.
-Exemple: `packages/contracts/examples/`.
+Contract source: `packages/contracts/src/index.ts`.
+Python consumes the generated schemas in `packages/contracts/schemas/`.
+Examples: `packages/contracts/examples/`.
 
-| Metodă | Rută web                    | Scop                                                                  |
-| ------ | --------------------------- | --------------------------------------------------------------------- |
-| GET    | `/api/locations?q=Slobozia` | Opțiuni de localitate cu coordonate, Open-Meteo/GeoNames              |
-| POST   | `/api/recommendations`      | Formular complet → rezultat în aceeași cerere                         |
-| GET    | `/api/engine/status`        | Conectivitate engine, mod și compatibilitatea contractului; fără calcul agronomic |
-| GET    | `/api/health`               | Identitate serviciu/versiune contract; nu verifică serviciile externe |
-
-Nu există endpoints de users, auth, farms sau rezultate salvate. Endpointul de calcul
-nu cere login. Next.js validează schema și cel puțin o prioritate pozitivă.
-
-Erori: `{code,error,request_id}`. `400` formular invalid, `413` prea mare, `502` motor
-inaccesibil/răspuns invalid, `503` motor neconfigurat/neimplementat. Răspunsurile nu conțin
-stack traces sau detalii de conexiune. Rezultatele nu sunt cache-uite în browser/proxy.
-
-## Serviciul Python intern
-
-`POST /recommendations`: același request JSON, `Authorization: Bearer <INTERNAL_API_TOKEN>`
-și `X-Request-ID`. Tokenul este configurat în ambele servicii, numai pe server.
-`GET /health`: versiunea și modul configurat; nu este dovadă că există un motor validat.
-
-Cache public pentru P2: `GET/PUT /api/internal/cache/environment:<sha256>` cu același token.
-Un `404` înseamnă cache absent. Căderea cache-ului nu blochează accesul direct la sursă.
-
-## Rezultat
-
-`mode`: `demo` sau `computed`. `status`: `complete` (3 planuri), `limited` (1–2),
-`insufficient_data` (0). Fiecare plan are trei pași, ferestre ISO, avantaje, compromisuri,
-explicație, nivel de încredere și referințe la surse. Aceste niveluri nu reprezintă
-probabilități calibrate de succes. Frontendul arată explicit `mode: demo`.
-
-## Câmpuri opționale (contract 1.0, adăugate 2026-11-14)
-
-Toate sunt opționale: cererile și rezultatele vechi rămân valide, iar cine nu le
-folosește încă nu trebuie să schimbe nimic. Exemple complete:
-`packages/contracts/examples/recommendation-request.full.json` și `recommendation-result.full.json`.
-
-| Câmp | Unde | Cine îl produce / folosește |
+| Method | Web route | Purpose |
 | --- | --- | --- |
-| `current_rotation: crop_id[1–5]` | cerere | P1 îl cere în formular; P4 continuă ciclul pe trei culturi și îl evaluează |
-| `history[].source: typed\|apia\|spray_records\|satellite\|unknown` | cerere | P1 îl trimite; P4 scade încrederea pentru istoricul ghicit |
-| `priorities.productivity: 0–5` | cerere | P1 adaugă slider; P3 dă scorul `productivity`; P4 îl ponderează |
-| `baseline: plan` | rezultat | P4 îl întoarce numai dacă există `current_rotation`; nu intră în `status` |
-| `plan.scores: {water, soil, climate, productivity}` | rezultat | P3 calculează 0–1 sau `null` (necunoscut); P4 le transmite; P1 le afișează |
-| `plan.local_checks: string[]` | rezultat | P3/P4 scriu ce trebuie verificat local; P1 le afișează |
-| `plan.violations: string[]` | rezultat | Numai pentru `baseline`: regulile încălcate de rotația actuală |
+| GET | `/api/locations?q=Slobozia` | Locality options with coordinates from Open-Meteo/GeoNames |
+| POST | `/api/recommendations` | Complete form → result in the same request |
+| GET | `/api/engine/status` | Engine connectivity, mode, and contract compatibility; no agronomic calculation |
+| GET | `/api/health` | Service identity/contract version; does not check external services |
 
-`productivity` este potențial relativ (EcoCrop, FAO GAEZ), nu prognoză de producție sau profit.
+There are no endpoints for users, authentication, farms, or saved results. Calculation
+does not require login. Next.js validates the schema and at least one positive priority.
 
-## Integrare viitoare
+Errors: `{code,error,request_id}`. `400` invalid form, `413` oversized request,
+`502` unreachable engine/invalid response, `503` unconfigured/unimplemented engine.
+Responses contain no stack traces or connection details. Results are not cached by
+the browser or proxy. Display text uses English; location search requests English
+provider labels and includes the language in its public-data cache key.
 
-SMS/WhatsApp nu sunt implementate. Viitoarele adaptoare trebuie să colecteze aceleași
-intrări și să folosească acest contract. Nu introduce conturi sau API-uri Twilio ca
-presupuneri. Nu trimite mesaje și nu modifica webhookurile existente din alte servicii.
+## Internal Python service
 
-## Statusul conexiunii cu motorul
+`POST /recommendations`: the same request JSON, `Authorization: Bearer <INTERNAL_API_TOKEN>`,
+and `X-Request-ID`. Configure the token in both services, on the server only.
+`GET /health`: version and configured mode; it does not prove that the engine is validated.
 
-`GET /api/engine/status` verifică configurația serverului și apelează `/health` din
-Python, cu o limită de 3 secunde inclusiv citirea răspunsului. Nu folosește cache și
-nu efectuează calcule sau apeluri NASA. Redirecționările nu sunt urmate.
+Public-data cache for P2: `GET/PUT /api/internal/cache/environment:<sha256>` with the same
+token. A `404` means a cache miss. Cache failure does not prevent direct source access.
 
-Exemplu de răspuns 200:
+## Result
+
+`mode`: `demo` or `computed`. `status`: `complete` (3 plans), `limited` (1–2),
+`insufficient_data` (0). Each plan contains three steps, ISO windows, benefits,
+trade-offs, an explanation, a confidence level, and source references. Confidence
+levels are not calibrated probabilities of success. The frontend explicitly labels `mode: demo`.
+
+## Optional fields (contract 1.0, added 2026-11-14)
+
+All fields below are optional: older requests/results remain valid, and consumers
+that do not use these fields need no changes. Complete examples:
+`packages/contracts/examples/recommendation-request.full.json` and `recommendation-result.full.json`.
+
+| Field | Location | Producer / consumer |
+| --- | --- | --- |
+| `current_rotation: crop_id[1–5]` | request | P1 collects it; P4 continues the cycle for three crops and evaluates it |
+| `history[].source: typed\|apia\|spray_records\|satellite\|unknown` | request | P1 submits it; P4 lowers confidence for inferred history |
+| `priorities.productivity: 0–5` | request | P1 collects the priority; P3 supplies the `productivity` score; P4 weights it |
+| `baseline: plan` | result | P4 returns it only when `current_rotation` exists; excluded from `status` counts |
+| `plan.scores: {water, soil, climate, productivity}` | result | P3 calculates 0–1 or `null` (unknown); P4 forwards it; P1 displays it |
+| `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
+| `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
+
+`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+
+## Future integration
+
+SMS/WhatsApp are not implemented. Future adapters must collect the same inputs and
+use this contract. Do not assume accounts or Twilio APIs. Do not send messages or
+modify existing webhooks in other services.
+
+## Engine connection status
+
+`GET /api/engine/status` checks server configuration and calls Python `/health`,
+with a 3-second deadline including response-body reading. It does not use the cache,
+perform calculations, or call NASA. Redirects are not followed.
+
+Example 200 response:
 
 ```json
 {"status":"reachable","service":"fieldshift-engine","contract_version":"1.0","mode":"demo","request_id":"<uuid>"}
 ```
 
-`reachable` confirmă numai conectivitatea și forma/versionarea răspunsului. Modul
-`computed` este raportat dacă este configurat, dar nu garantează că P3/P4 sunt gata.
-`/health` din Python nu autentifică tokenul; acest endpoint verifică doar prezența și
-lungimea tokenului configurat în web, nu egalitatea secretelor între servicii.
+`reachable` confirms only connectivity and response shape/version. `computed` is
+reported when configured but does not guarantee that P3/P4 are ready. Python `/health`
+does not authenticate the token; this endpoint checks only the presence and length
+of the web token, not whether the two services' secrets match.
 
-Erori: `503 engine_not_configured` pentru configurație absentă/invalidă;
-`502 engine_unavailable` pentru conexiune eșuată sau status HTTP nereușit;
-`502 invalid_engine_status` pentru JSON invalid, alt serviciu/contract/mod;
-`504 engine_timeout` la depășirea timpului. Toate răspunsurile au `Cache-Control:
-no-store` și `X-Request-ID`, egal cu `request_id` din corp. URL-ul intern și tokenul
-nu sunt returnate. Cache-ul PostgreSQL nu este o dependență a acestei verificări.
+Errors: `503 engine_not_configured` for missing/invalid configuration;
+`502 engine_unavailable` for a failed connection or unsuccessful HTTP status;
+`502 invalid_engine_status` for invalid JSON or a different service/contract/mode;
+`504 engine_timeout` for an exceeded deadline. Every response has `Cache-Control:
+no-store` and `X-Request-ID`, matching the body's `request_id`. The internal URL and
+token are never returned. This check does not depend on the PostgreSQL cache.
 
-Teste backend fără servicii externe: `pnpm test:backend` (include un server HTTP temporar pe localhost pentru timeout).
+Backend checks without external services: `pnpm test:backend` (includes a temporary
+localhost HTTP server to test timeouts).
 
-## Comportament backend consolidat — P5
+## Consolidated backend behavior — P5
 
-Toate Route Handlers implementate răspund cu `Cache-Control: no-store` și
-`X-Request-ID`. Pentru calcul, identificatorul este transmis și către Python și
-verificat în rezultat. Pentru erori este inclus și în corp. Metodele nesuportate
-rămân gestionate automat de Next.js.
+All implemented Route Handlers return `Cache-Control: no-store` and `X-Request-ID`.
+For calculation, the ID is forwarded to Python and checked in its result. Errors
+also include it in the body. Unsupported methods remain handled automatically by Next.js.
 
-`POST /api/recommendations` acceptă `application/json`, cel mult 32 KiB. Configurația
-`ENGINE_TIMEOUT_MS` trebuie să fie un întreg între 100 și 90000 ms; configurația
-invalidă dă 503. Timeoutul include citirea corpului răspunsului. Motorul nu este
-urmat prin redirect. JSON-ul rezultat este limitat la 2 MB și validat prin contract
-și reguli semantice. Se resping ID/localizare nepotrivite, calendare suprapuse,
-semănat înainte de `available_from` și culturi excluse.
+`POST /api/recommendations` accepts `application/json`, up to 32 KiB.
+`ENGINE_TIMEOUT_MS` must be an integer between 100 and 90000 ms; invalid configuration
+returns 503. The timeout includes response-body reading. Engine redirects are not
+followed. Result JSON is limited to 2 MB and checked against the contract and semantic
+rules. Mismatched IDs/locations, overlapping calendars, sowing before `available_from`,
+and excluded crops are rejected.
 
-`GET /api/locations` validează atât datele furnizorului, cât și rezultatul din cache.
-Un rezultat cache invalid este ignorat. Timeoutul este 10 secunde și corpul extern
-este limitat la 128 KB. Nicio potrivire este un rezultat valid cu listă goală.
+`GET /api/locations` validates both provider and cached data. Invalid cached results
+are ignored. The timeout is 10 seconds; the external body is limited to 128 KB.
+No matches is a valid empty-list result.
 
-Coduri suplimentare: `415 unsupported_media_type`, `504 engine_timeout`,
-`504 geocoding_timeout`, `502 invalid_geocoding_result`. Erorile de conexiune sunt
-502. Un engine care răspunde 503 la calcul produce `503 engine_not_ready`, fără fallback.
+Additional codes: `415 unsupported_media_type`, `504 engine_timeout`,
+`504 geocoding_timeout`, `502 invalid_geocoding_result`. Connection failures return
+502. An engine returning 503 for calculation produces `503 engine_not_ready`, without fallback.
 
-### Cache public intern
+### Internal public-data cache
 
-`GET/PUT /api/internal/cache/environment:<sha256>` necesită exact antetul
-`Authorization: Bearer <token>`. PUT acceptă un obiect JSON de cel mult 2 MB și
-răspunde 204 numai după scriere reușită; cache dezactivat/indisponibil produce 503.
-Un GET fără date neexpirate răspunde 404. Aceste răspunsuri nu sunt cache-uite de HTTP.
+`GET/PUT /api/internal/cache/environment:<sha256>` requires exactly the header
+`Authorization: Bearer <token>`. PUT accepts a JSON object up to 2 MB and returns
+204 only after a successful write; disabled/unavailable cache returns 503.
+A GET with no unexpired data returns 404. These responses are not HTTP-cached.
 
-`DELETE /api/internal/cache`, cu același token, șterge cel mult 1000 de intrări expirate
-și răspunde `{deleted,batch_size:1000}`. Cache dezactivat înseamnă zero ștergeri;
-indisponibil înseamnă 503. Serviciul Compose `cache-maintenance` îl apelează la pornire
-și apoi la fiecare oră, cu cel mult 100 de loturi pe rulare. Datele active sunt păstrate.
-Baza are limite de conectare/interogare de 1 secundă. Citirea nereușită se comportă ca
-un cache miss; geocodarea și datele NASA pot folosi sursa externă fără cache.
+`DELETE /api/internal/cache`, with the same token, deletes at most 1000 expired
+entries and returns `{deleted,batch_size:1000}`. Disabled cache means zero deletions;
+unavailable cache returns 503. The Compose `cache-maintenance` service calls it at
+startup and hourly, with at most 100 batches per run. Active data is retained.
+Database connection/query deadlines are 1 second. Failed reads behave as cache misses;
+geocoding and NASA data may use the external source without the cache.
 
-### Acces public și loguri
+### Public access and logs
 
-Intrarea NGINX de pe portul local 8080 aplică limite per IP: 5 calcule/minut (burst 3),
-60 căutări/minut (burst 10), 30 statusuri engine/minut (burst 5). Depășirea întoarce
-429 JSON, `Retry-After: 60`, `X-Request-ID` și `no-store`. Corpurile prea mari primesc
-413 JSON. `/api/internal` și subrutele sale sunt blocate la această intrare chiar cu
-token valid. În producție, numai Caddy este public, iar porturile directe sunt eliminate.
-Limitele nu se aplică la accesarea portului de dezvoltare 3000; acesta nu se publică.
+The NGINX entry point on local port 8080 applies per-IP limits: 5 calculations/minute
+(burst 3), 60 searches/minute (burst 10), and 30 engine status checks/minute (burst 5).
+Exceeding a limit returns 429 JSON, `Retry-After: 60`, `X-Request-ID`, and `no-store`.
+Oversized bodies receive 413 JSON. `/api/internal` and its subroutes are blocked at
+this entry point even with a valid token. In production, only Caddy is public and
+direct service ports are removed. These limits do not apply to development port
+3000; do not expose it publicly.
 
-Logurile aplicației conțin `event`, operație statică, `request_id`, status, cod de eroare
-când există și `duration_ms`. Nu conțin corpul cererii, URL-uri, tokenuri sau mesaje brute
-ale excepțiilor. Nu se creează istoric de analize. Logurile sunt ieșire standard cu
-rotație Docker, nu un sistem de alerte sau un serviciu de monitorizare AWS.
+Application logs contain `event`, a static operation name, `request_id`, status,
+an error code when applicable, and `duration_ms`. They contain no request bodies,
+URLs, tokens, or raw exception messages. No analysis history is created. Logs go to
+standard output with Docker rotation; they are not an alerting system or AWS monitoring service.

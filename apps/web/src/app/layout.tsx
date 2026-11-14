@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import "./analysis.css";
+import "./map-workspace.css";
 export const metadata: Metadata = {
   title: "FieldShift — crop planning",
   description:
     "Compare three plans for your next three main crops.",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
+  // Extensions such as Dark Reader add attributes to <html> before hydration.
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
