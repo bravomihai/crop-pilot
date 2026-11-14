@@ -6,15 +6,27 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.pyc
 .venv/
 venv/
+*.egg-info/
+.pytest_cache/
 .ipynb_checkpoints/
 
 # Node
 node_modules/
+.next/
+dist/
+next-env.d.ts
+*.tsbuildinfo
 
-# Environment
-.env
+# Local data caches (NASA downloads etc.)
+data/
+engine/cache/

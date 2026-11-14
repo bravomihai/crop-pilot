@@ -1,0 +1,60 @@
+{
+  "location": { "lat": 44.2020, "lon": 27.3330 },
+  "period": { "start_year": 2023, "end_year": 2024 },
+  "sources": [
+    { "id": "nasa_power", "dataset": "NASA POWER daily, AG community", "resolution": "0.5° x 0.625°", "url": "https://power.larc.nasa.gov/", "retrieved_at": "2026-11-14T10:00:00Z", "from_cache": false },
+    { "id": "smap_l4", "dataset": "SMAP L4 root-zone soil moisture", "resolution": "9 km", "retrieved_at": "2026-11-14T10:00:00Z" },
+    { "id": "srtm", "dataset": "SRTM 30 m DEM", "resolution": "30 m", "retrieved_at": "2026-11-14T10:00:00Z" },
+    { "id": "soilgrids", "dataset": "ISRIC SoilGrids 2.0", "resolution": "250 m", "retrieved_at": "2026-11-14T10:00:00Z" },
+    { "id": "cmip6", "dataset": "NEX-GDDP-CMIP6 ensemble mean", "resolution": "0.25°", "retrieved_at": "2026-11-14T10:00:00Z" }
+  ],
+  "static": {
+    "elevation_m": 38,
+    "slope_pct": 1.2,
+    "soil": { "ph": 7.4, "texture": "silt_loam", "organic_carbon_pct": 1.6, "source": "soilgrids" }
+  },
+  "years": [
+    {
+      "year": 2023,
+      "precip_mm": 492,
+      "et0_mm": 915,
+      "gdd_base10": 2010,
+      "frost_days": 72,
+      "last_spring_frost_doy": 98,
+      "first_autumn_frost_doy": 301,
+      "heat_days_gt32": 31,
+      "heavy_rain_days_gt20mm": 5,
+      "soil_moisture_rootzone": 0.21,
+      "monthly": {
+        "precip_mm": [28, 24, 30, 45, 58, 72, 40, 31, 44, 38, 42, 40],
+        "et0_mm":    [12, 18, 40, 75, 115, 145, 170, 150, 95, 55, 25, 15],
+        "tmean_c":   [0.5, 1.8, 7.0, 12.4, 18.0, 22.3, 25.6, 24.9, 19.2, 12.6, 6.4, 1.9]
+      }
+    },
+    {
+      "year": 2024,
+      "precip_mm": 418,
+      "et0_mm": 968,
+      "gdd_base10": 2185,
+      "frost_days": 61,
+      "last_spring_frost_doy": 91,
+      "first_autumn_frost_doy": 309,
+      "heat_days_gt32": 44,
+      "heavy_rain_days_gt20mm": 4,
+      "soil_moisture_rootzone": 0.17,
+      "monthly": {
+        "precip_mm": [31, 20, 26, 38, 49, 41, 22, 18, 52, 46, 40, 35],
+        "et0_mm":    [13, 20, 44, 80, 120, 158, 185, 165, 98, 55, 22, 14],
+        "tmean_c":   [0.9, 4.2, 8.1, 13.6, 18.4, 24.1, 27.3, 26.2, 19.8, 12.9, 5.6, 1.4]
+      }
+    }
+  ],
+  "scenario_deltas": {
+    "ssp245_2050": { "temp_change_c": 1.9, "precip_change_pct": -6, "n_models": 10 },
+    "ssp585_2050": { "temp_change_c": 2.6, "precip_change_pct": -10, "n_models": 10 }
+  },
+  "quality": {
+    "missing": ["ndvi"],
+    "notes": ["Example data, values are invented for development."]
+  }
+}

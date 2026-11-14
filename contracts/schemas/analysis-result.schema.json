@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fieldshift.local/schemas/analysis-result.schema.json",
+  "title": "AnalysisResult",
+  "description": "What the farmer sees: the existing rotation plus at least two alternatives, each with why, evidence, benefits, risks and what to check locally. Produced by the recommender (P4), stored by the backend (P5), rendered by the frontend (P1) and summarised over SMS.",
+  "type": "object",
+  "required": ["analysis_id", "farm_id", "created_at", "scenario", "weights_used", "strategies", "data_gaps", "disclaimer"],
+  "additionalProperties": false,
+  "properties": {
+    "analysis_id": { "type": "string" },
+    "farm_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "language": { "type": "string", "enum": ["ro", "en"] },
+    "scenario": { "$ref": "common.schema.json#/$defs/scenario" },
+    "weights_used": {
+      "description": "Normalised priorities (sum = 1) actually applied.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/criterion" },
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "strategies": {
+      "description": "Index 0 is always the existing rotation. Alternatives are sorted by rank.",
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "label", "sequence", "total_score", "rank", "scores", "why", "evidence", "benefits", "risks", "local_checks", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["existing", "alternative"] },
+          "label": { "type": "string" },
+          "sequence": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "common.schema.json#/$defs/cropId" }
+          },
+          "cover_crops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["after_year_index", "crop"],
+              "additionalProperties": false,
+              "properties": {
+                "after_year_index": { "type": "integer", "minimum": 0 },
+                "crop": { "$ref": "common.schema.json#/$defs/cropId" }
+              }
+            }
+          },
+          "total_score": { "$ref": "common.schema.json#/$defs/score" },
+          "rank": { "type": "integer", "minimum": 1 },
+          "scores": {
+            "description": "Per-criterion score copied from the Evaluation (null = unknown).",
+            "type": "object",
+            "propertyNames": { "$ref": "common.schema.json#/$defs/criterion" },
+            "additionalProperties": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+          },
+          "violations": {
+            "description": "Only non-empty for the existing rotation (alternatives are filtered).",
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "calendar": {
+            "description": "Season strip, copied from Evaluation.calendar. One row per rotation year, 12 months (Jan..Dec). Values are crop ids, 'bare', or null.",
+            "type": "array",
+            "items": {
+              "type": "array",
+              "minItems": 12,
+              "maxItems": 12,
+              "items": { "type": ["string", "null"] }
+            }
+          },
+          "why": { "description": "One or two sentences generated from the scores. No facts that are not in evidence.", "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["claim", "source"],
+              "additionalProperties": false,
+              "properties": {
+                "claim": { "type": "string" },
+                "source": { "$ref": "common.schema.json#/$defs/sourceRef" },
+                "criterion": { "$ref": "common.schema.json#/$defs/criterion" },
+                "weather_years": { "type": "array", "items": { "type": "integer" } }
+              }
+            }
+          },
+          "benefits": { "type": "array", "items": { "type": "string" } },
+          "risks": { "type": "array", "items": { "type": "string" } },
+          "local_checks": {
+            "description": "Specific questions for the farmer or a local agronomist.",
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "confidence": {
+            "type": "object",
+            "required": ["level", "signals"],
+            "additionalProperties": false,
+            "properties": {
+              "level": { "$ref": "common.schema.json#/$defs/confidenceLevel" },
+              "signals": {
+                "type": "object",
+                "required": ["history", "rotation_evidence", "satellite_coverage", "climate_sensitivity"],
+                "additionalProperties": false,
+                "properties": {
+                  "history": { "$ref": "common.schema.json#/$defs/score" },
+                  "rotation_evidence": { "$ref": "common.schema.json#/$defs/score" },
+                  "satellite_coverage": { "$ref": "common.schema.json#/$defs/score" },
+                  "climate_sensitivity": { "$ref": "common.schema.json#/$defs/score" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data_gaps": { "type": "array", "items": { "type": "string" } },
+    "sources": {
+      "description": "Merged source list so the frontend can show citations.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" }
+        }
+      }
+    },
+    "disclaimer": { "type": "string" }
+  }
+}

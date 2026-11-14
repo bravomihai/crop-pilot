@@ -1,0 +1,98 @@
+{
+  "analysis_id": "an_demo_001",
+  "farm_id": "farm_demo_001",
+  "created_at": "2026-11-14T12:00:00Z",
+  "language": "ro",
+  "scenario": { "climate": "historical", "rain_change_pct": 0, "temp_change_c": 0 },
+  "weights_used": { "water": 0.333, "soil": 0.222, "income": 0.222, "yield": 0.111, "pest_break": 0.111 },
+  "strategies": [
+    {
+      "id": "existing",
+      "kind": "existing",
+      "label": "Rotația actuală: porumb → porumb → grâu",
+      "sequence": ["maize", "maize", "winter_wheat"],
+      "total_score": 0.53,
+      "rank": 3,
+      "scores": { "suitability": 0.7, "yield": 0.8, "water": 0.45, "soil": 0.35, "erosion": 0.6, "pest_break": 0.3, "succession": 0.53, "forage": 0.5, "income": 0.8 },
+      "violations": ["Porumbul ocupă mai mult de jumătate din rotație."],
+      "calendar": [
+        ["bare", "bare", "bare", "maize", "maize", "maize", "maize", "maize", "maize", "bare", "bare", "bare"],
+        ["bare", "bare", "bare", "maize", "maize", "maize", "maize", "maize", "maize", "winter_wheat", "winter_wheat", "winter_wheat"],
+        ["winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "bare", "bare", "bare", "bare", "bare"]
+      ],
+      "why": "Rotația de referință. Venit bun din porumb, dar cel mai mare deficit de apă și cea mai slabă întrerupere a ciclului dăunătorilor.",
+      "evidence": [
+        { "claim": "Deficit mediu de apă în sezon de 287 mm în 2023–2024.", "source": "nasa_power", "criterion": "water", "weather_years": [2023, 2024] },
+        { "claim": "Porumb după porumb favorizează viermele vestic al rădăcinilor de porumb.", "source": "placeholder_agronomy", "criterion": "pest_break" }
+      ],
+      "benefits": ["Culturi și utilaje cunoscute", "Piață sigură pentru porumb și grâu"],
+      "risks": ["Porumbul suferă în verile secetoase (2024: 44 de zile peste 32 °C)", "14 luni cu solul descoperit în 3 ani"],
+      "local_checks": ["Ați observat atac de viermele rădăcinilor în anii cu porumb după porumb?"],
+      "confidence": {
+        "level": "medium",
+        "signals": { "history": 0.6, "rotation_evidence": 0.7, "satellite_coverage": 0.4, "climate_sensitivity": 0.5 }
+      }
+    },
+    {
+      "id": "alt_1",
+      "kind": "alternative",
+      "label": "Soia → grâu → porumb, cu măzăriche după grâu",
+      "sequence": ["soybean", "winter_wheat", "maize"],
+      "cover_crops": [{ "after_year_index": 1, "crop": "winter_vetch" }],
+      "total_score": 0.73,
+      "rank": 1,
+      "scores": { "suitability": 0.82, "yield": 0.75, "water": 0.62, "soil": 0.85, "erosion": 0.8, "pest_break": 0.9, "succession": 0.87, "forage": 0.55, "income": 0.7 },
+      "calendar": [
+        ["bare", "bare", "bare", "soybean", "soybean", "soybean", "soybean", "soybean", "soybean", "winter_wheat", "winter_wheat", "winter_wheat"],
+        ["winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_vetch", "winter_vetch", "winter_vetch", "winter_vetch", "winter_vetch"],
+        ["winter_vetch", "winter_vetch", "winter_vetch", "maize", "maize", "maize", "maize", "maize", "maize", "bare", "bare", "bare"]
+      ],
+      "why": "Cel mai bun echilibru pentru prioritățile dumneavoastră: mai puțină apă consumată, două culturi care fixează azot și porumb doar o dată în trei ani.",
+      "evidence": [
+        { "claim": "Deficit mediu de apă de 214 mm, față de 287 mm la rotația actuală.", "source": "nasa_power", "criterion": "water", "weather_years": [2023, 2024] },
+        { "claim": "Grâul după soia beneficiază de azotul lăsat în sol.", "source": "placeholder_agronomy", "criterion": "succession" },
+        { "claim": "Doar 6 luni cu solul descoperit în 3 ani, față de 14.", "source": "placeholder_agronomy", "criterion": "soil" }
+      ],
+      "benefits": ["Mai puțin azot cumpărat pentru grâu și porumb", "Solul acoperit aproape tot anul", "Ciclul dăunătorilor porumbului întrerupt"],
+      "risks": ["Soia e sensibilă la secetă în august", "Măzărichea trebuie distrusă la timp înainte de porumb"],
+      "local_checks": ["Există cumpărător local pentru soia?", "Ce soi de soia e potrivit pentru zona dumneavoastră?"],
+      "confidence": {
+        "level": "medium",
+        "signals": { "history": 0.6, "rotation_evidence": 0.8, "satellite_coverage": 0.4, "climate_sensitivity": 0.6 }
+      }
+    },
+    {
+      "id": "alt_2",
+      "kind": "alternative",
+      "label": "Grâu → sorg → soia",
+      "sequence": ["winter_wheat", "sorghum", "soybean"],
+      "total_score": 0.67,
+      "rank": 2,
+      "scores": { "suitability": 0.8, "yield": 0.6, "water": 0.82, "soil": 0.55, "erosion": 0.55, "pest_break": 0.85, "succession": 0.77, "forage": 0.65, "income": 0.5 },
+      "calendar": [
+        ["winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "bare", "bare", "bare", "bare", "bare"],
+        ["bare", "bare", "bare", "bare", "sorghum", "sorghum", "sorghum", "sorghum", "sorghum", "bare", "bare", "bare"],
+        ["bare", "bare", "bare", "soybean", "soybean", "soybean", "soybean", "soybean", "soybean", "winter_wheat", "winter_wheat", "winter_wheat"]
+      ],
+      "why": "Varianta care economisește cel mai mult apă: sorgul tolerează seceta și căldura din iulie mai bine decât porumbul.",
+      "evidence": [
+        { "claim": "Sorgul are cel mai mic deficit de apă dintre culturile de vară în 2024.", "source": "nasa_power", "criterion": "water", "weather_years": [2024] }
+      ],
+      "benefits": ["Risc mai mic în verile secetoase", "Sorgul poate fi folosit și ca furaj"],
+      "risks": ["15 luni cu solul descoperit în 3 ani", "Piața pentru sorg e nesigură"],
+      "local_checks": ["Aveți unde vinde sorgul sau îl puteți folosi la animale?"],
+      "confidence": {
+        "level": "low",
+        "signals": { "history": 0.6, "rotation_evidence": 0.5, "satellite_coverage": 0.4, "climate_sensitivity": 0.7 }
+      }
+    }
+  ],
+  "data_gaps": ["Lipsesc imagini satelitare (NDVI) pentru parcelă.", "Valorile agronomice sunt provizorii, fără surse."],
+  "sources": [
+    { "id": "nasa_power", "title": "NASA POWER", "url": "https://power.larc.nasa.gov/" },
+    { "id": "smap_l4", "title": "SMAP L4 soil moisture" },
+    { "id": "srtm", "title": "SRTM elevation" },
+    { "id": "placeholder_agronomy", "title": "PLACEHOLDER: illustrative values, not sourced" }
+  ],
+  "disclaimer": "Instrumentul sugerează opțiuni pe baza datelor satelitare și a literaturii. Nu înlocuiește experiența dumneavoastră sau sfatul unui agronom local."
+}

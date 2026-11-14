@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fieldshift.local/schemas/common.schema.json",
+  "title": "Shared definitions",
+  "$defs": {
+    "cropId": {
+      "description": "Lowercase snake_case crop id. Must exist in CropRules.crops[].id.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "examples": ["maize", "winter_wheat", "sunflower", "soybean", "rapeseed", "alfalfa"]
+    },
+    "criterion": {
+      "description": "Scoring criteria. The same names are used for farmer priorities (weights) and for evaluation scores.",
+      "type": "string",
+      "enum": ["suitability", "yield", "water", "soil", "erosion", "pest_break", "succession", "forage", "income"]
+    },
+    "score": {
+      "description": "Normalised score, 0 = worst, 1 = best.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "sourceRef": {
+      "description": "Id of a source listed in CropRules.sources or FieldData.sources.",
+      "type": "string"
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["climate"],
+      "additionalProperties": false,
+      "properties": {
+        "climate": {
+          "description": "historical = recent observed years (NASA POWER). ssp* = NEX-GDDP-CMIP6 deltas applied to the observed years.",
+          "type": "string",
+          "enum": ["historical", "ssp245", "ssp585"]
+        },
+        "horizon": {
+          "description": "Target period mid-year for ssp scenarios.",
+          "type": "integer",
+          "enum": [2030, 2050]
+        },
+        "rain_change_pct": {
+          "description": "Manual what-if slider applied on top of the scenario.",
+          "type": "number",
+          "minimum": -50,
+          "maximum": 50,
+          "default": 0
+        },
+        "temp_change_c": {
+          "description": "Manual what-if slider applied on top of the scenario.",
+          "type": "number",
+          "minimum": -3,
+          "maximum": 5,
+          "default": 0
+        }
+      }
+    },
+    "confidenceLevel": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    }
+  }
+}

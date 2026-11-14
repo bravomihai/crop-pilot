@@ -1,0 +1,57 @@
+{
+  "rotation": ["soybean", "winter_wheat", "maize"],
+  "cover_crops": [{ "after_year_index": 1, "crop": "winter_vetch" }],
+  "scenario": { "climate": "historical", "rain_change_pct": 0, "temp_change_c": 0 },
+  "feasible": true,
+  "violations": [],
+  "criteria": {
+    "suitability": { "score": 0.82, "unknown": false, "detail": "All three crops inside EcoCrop temperature and rain ranges in 2023 and 2024.", "sources": ["placeholder_agronomy", "nasa_power"] },
+    "yield": { "score": 0.75, "unknown": false, "detail": "GAEZ attainable yield relative to the best candidate.", "sources": ["placeholder_agronomy"] },
+    "water": { "score": 0.62, "unknown": false, "detail": "Mean seasonal water deficit 214 mm (existing rotation: 287 mm).", "value": 214, "unit": "mm", "sources": ["nasa_power", "smap_l4"] },
+    "soil": { "score": 0.85, "unknown": false, "detail": "Two nitrogen-fixing crops (soybean, vetch); 6 bare months over 3 years.", "sources": ["placeholder_agronomy"] },
+    "erosion": { "score": 0.8, "unknown": false, "detail": "Flat field (1.2% slope); 2 heavy-rain days on bare soil per year.", "sources": ["srtm", "nasa_power"] },
+    "pest_break": { "score": 0.9, "unknown": false, "detail": "No crop repeats; maize once in 3 years.", "sources": ["placeholder_agronomy"] },
+    "succession": { "score": 0.87, "unknown": false, "detail": "Mean successor value of soybean→wheat, wheat→vetch→maize, maize→soybean.", "sources": ["placeholder_agronomy"] },
+    "forage": { "score": 0.55, "unknown": false, "sources": ["placeholder_agronomy"] },
+    "income": { "score": 0.7, "unknown": false, "detail": "All cash crops are in the farmer's market list.", "sources": [] }
+  },
+  "per_year": [
+    {
+      "year_index": 0,
+      "crop": "soybean",
+      "bare_months": 3,
+      "criteria": {
+        "water": { "score": 0.6, "unknown": false, "value": 228, "unit": "mm" },
+        "succession": { "score": 0.8, "unknown": false, "detail": "maize → soybean" }
+      }
+    },
+    {
+      "year_index": 1,
+      "crop": "winter_wheat",
+      "bare_months": 0,
+      "criteria": {
+        "water": { "score": 0.75, "unknown": false, "value": 150, "unit": "mm" },
+        "succession": { "score": 0.9, "unknown": false, "detail": "soybean → winter wheat" }
+      }
+    },
+    {
+      "year_index": 2,
+      "crop": "maize",
+      "bare_months": 3,
+      "criteria": {
+        "water": { "score": 0.5, "unknown": false, "value": 264, "unit": "mm" },
+        "succession": { "score": 0.9, "unknown": false, "detail": "winter vetch → maize" }
+      }
+    }
+  ],
+  "calendar": [
+    ["bare", "bare", "bare", "soybean", "soybean", "soybean", "soybean", "soybean", "soybean", "winter_wheat", "winter_wheat", "winter_wheat"],
+    ["winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_wheat", "winter_vetch", "winter_vetch", "winter_vetch", "winter_vetch", "winter_vetch"],
+    ["winter_vetch", "winter_vetch", "winter_vetch", "maize", "maize", "maize", "maize", "maize", "maize", "bare", "bare", "bare"]
+  ],
+  "replay": [
+    { "weather_year": 2023, "crop": "soybean", "water_deficit_mm": 205, "heat_days_in_flowering": 6, "frost_risk": false, "bare_months": 3, "heavy_rain_on_bare_soil_days": 2 },
+    { "weather_year": 2024, "crop": "winter_wheat", "water_deficit_mm": 162, "heat_days_in_flowering": 2, "frost_risk": false, "bare_months": 0, "heavy_rain_on_bare_soil_days": 0, "note": "Wheat finishes before the July 2024 heat peak." }
+  ],
+  "data_gaps": ["No NDVI for this field yet: crop stress not checked against satellite."]
+}

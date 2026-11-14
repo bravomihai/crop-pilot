@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fieldshift.local/schemas/evaluation.schema.json",
+  "title": "Evaluation",
+  "description": "Scores for ONE rotation, independent of farmer priorities. Produced by evaluate() in the evaluator (P3), consumed by the recommender (P4).",
+  "type": "object",
+  "required": ["rotation", "scenario", "feasible", "violations", "criteria", "per_year", "calendar", "data_gaps"],
+  "additionalProperties": false,
+  "$defs": {
+    "criterionResult": {
+      "type": "object",
+      "required": ["score", "unknown"],
+      "additionalProperties": false,
+      "properties": {
+        "score": {
+          "description": "null when unknown.",
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "unknown": { "type": "boolean" },
+        "detail": { "description": "Short factual reason with the numbers behind it. Used by the explanation templates.", "type": "string" },
+        "value": { "description": "Raw value before normalisation, e.g. water deficit in mm.", "type": "number" },
+        "unit": { "type": "string" },
+        "sources": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/sourceRef" } }
+      }
+    },
+    "criteriaMap": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/criterion" },
+      "additionalProperties": { "$ref": "#/$defs/criterionResult" }
+    }
+  },
+  "properties": {
+    "rotation": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/cropId" }
+    },
+    "cover_crops": {
+      "description": "Cover crop sown after the crop at year_index (0-based).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["after_year_index", "crop"],
+        "additionalProperties": false,
+        "properties": {
+          "after_year_index": { "type": "integer", "minimum": 0 },
+          "crop": { "$ref": "common.schema.json#/$defs/cropId" }
+        }
+      }
+    },
+    "scenario": { "$ref": "common.schema.json#/$defs/scenario" },
+    "feasible": { "type": "boolean" },
+    "violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": { "type": "string" },
+          "message": { "type": "string" },
+          "year_index": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "criteria": {
+      "description": "Aggregated over the whole rotation and all replayed weather years.",
+      "$ref": "#/$defs/criteriaMap"
+    },
+    "per_year": {
+      "description": "One entry per crop in the rotation.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["year_index", "crop", "criteria"],
+        "additionalProperties": false,
+        "properties": {
+          "year_index": { "type": "integer", "minimum": 0 },
+          "crop": { "$ref": "common.schema.json#/$defs/cropId" },
+          "bare_months": { "type": "integer", "minimum": 0, "maximum": 12 },
+          "criteria": { "$ref": "#/$defs/criteriaMap" }
+        }
+      }
+    },
+    "calendar": {
+      "description": "Season strip, built by the evaluator from sowing/harvest months so the recommender needs no crop knowledge. One row per rotation year, 12 months (Jan..Dec). Each value is a crop id (cash or cover crop), 'bare', or null if unknown.",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 12,
+        "maxItems": 12,
+        "items": { "type": ["string", "null"] }
+      }
+    },
+    "replay": {
+      "description": "Rotation played over the observed weather years (the 'what would have happened' evidence).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["weather_year", "crop"],
+        "additionalProperties": false,
+        "properties": {
+          "weather_year": { "type": "integer" },
+          "crop": { "$ref": "common.schema.json#/$defs/cropId" },
+          "water_deficit_mm": { "type": "number" },
+          "heat_days_in_flowering": { "type": "integer", "minimum": 0 },
+          "frost_risk": { "type": "boolean" },
+          "bare_months": { "type": "integer", "minimum": 0, "maximum": 12 },
+          "heavy_rain_on_bare_soil_days": { "type": "integer", "minimum": 0 },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "data_gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
