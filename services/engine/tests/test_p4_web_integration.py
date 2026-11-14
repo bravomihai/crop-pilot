@@ -6,12 +6,14 @@ standing in for P2. Requests use the exact shapes the merged frontend builds
 
 What this file verifies, in Python only:
 - the internal FastAPI endpoint returns real computed results over in-process HTTP
-  (FastAPI TestClient, `build_environment` replaced by the fixture: no server, no network);
+  (FastAPI TestClient; P2's real `build_environment` with only its network calls replaced
+  by the fixture: no server, no network);
 - the result satisfies the checks the Next.js route applies before forwarding it
   (`apps/web/src/lib/server/engine.ts`), mirrored here as `next_route_errors`;
 - user-facing text regressions found in the full-stack audit (raw crop IDs, doubled
   punctuation, equal-looking numbers in comparisons, lists repeated in the explanation);
-- the environment shape P2's current `fetch_power` returns is accepted by P3–P4.
+- P2's real `build_environment` output (network calls replaced offline) is accepted by
+  P3–P4 and gives the same scores as the fixture.
 
 What it does NOT verify: the Next.js handler itself, Zod parsing in Node, React rendering
 or the browser flow. Those were checked with the Node harness described in
@@ -24,14 +26,16 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import re
 from functools import lru_cache
+from unittest import mock
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from fieldshift import pipeline
+from fieldshift import data_service, pipeline
 from fieldshift.api import app
 from fieldshift.contracts import validate
 from fieldshift.evaluator import evaluate, load_rules
@@ -41,6 +45,10 @@ ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "environment-ro-south.json"
 TOKEN = "test-engine-token-with-at-least-32-characters"
 BARAGAN = {"name": "Bărăgan test point", "latitude": 44.56, "longitude": 27.36}
+# In Romania but outside the described southern zone. `run`/`cached_run` call
+# `computed_result` with `load_rules` directly, so they exercise the "no rules at all" path
+# (still reached in production when the provisional profile has no usable temperatures);
+# the HTTP tests go through `pipeline.recommend`, which adds the provisional rules.
 OUTSIDE = {"name": "Outside covered zones", "latitude": 47.2, "longitude": 23.0}
 CROP_IDS = ("winter_wheat", "winter_barley", "winter_rapeseed", "maize", "sunflower", "soybean", "pea")
 
@@ -54,29 +62,32 @@ def environment() -> dict:
     return json.loads(_raw())
 
 
-def p2_shaped_environment() -> dict:
-    """The fixture reshaped to exactly what data_service.fetch_power returns today:
-    no `static` block (elevation), no T2MDEW, an extra `parameters` key."""
+def p2_built_environment(request: dict) -> dict:
+    """Run P2's REAL `build_environment` offline.
+
+    Only its three network calls are replaced: `fetch_power` returns the fixture in the
+    shape `power.fetch_power` returns (daily `values` incl. T2MDEW, `elevation_m`), and
+    SoilGrids/SRTM report themselves unavailable. P2's own daily cleaning, ET0, monthly
+    climate and climate context code runs unchanged.
+    """
     fx = environment()
-    return {
+    power = {
         "location": fx["location"],
         "period": fx["period"],
-        "daily": [
-            {"date": d["date"], "values": {k: v for k, v in d["values"].items() if k != "T2MDEW"}}
-            for d in fx["daily"]
-        ],
+        "elevation_m": fx["static"]["elevation_m"],
+        "daily": fx["daily"],
         "parameters": {},
-        "sources": [
-            {
-                "id": "nasa-power",
-                "title": "NASA POWER Daily API",
-                "url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
-                "resolution": "Regional native provider grid; not a field measurement",
-            }
-        ],
+        "sources": [s for s in fx["sources"] if s["id"] == "nasa-power"],
         "retrieved_at": fx["retrieved_at"],
-        "data_gaps": ["No field-level measurements, soil moisture or soil analysis are supplied by this adapter."],
+        "data_gaps": [],
     }
+    with (
+        mock.patch.object(data_service, "fetch_power", lambda *args: power),
+        mock.patch.object(data_service, "fetch_soil", lambda *args: (None, [], ["SoilGrids not queried (offline test)."])),
+        mock.patch.object(data_service, "fetch_slope", lambda *args: (None, [], ["SRTM slope not queried (offline test)."])),
+        mock.patch.dict(os.environ, {"ENABLE_NASA_POWER": "true"}),
+    ):
+        return data_service.build_environment(request)
 
 
 def dashboard_request(**changes) -> dict:
@@ -158,8 +169,9 @@ def user_texts(result: dict) -> list[str]:
 def computed_client(monkeypatch):
     monkeypatch.setenv("INTERNAL_API_TOKEN", TOKEN)
     monkeypatch.setenv("ENGINE_MODE", "computed")
-    # Stand in for P2 only; P3 (load_rules, evaluate) and P4 are the real modules.
-    monkeypatch.setattr(pipeline, "build_environment", lambda request: environment())
+    # P2's real build_environment with only its network calls replaced (see
+    # p2_built_environment); P3 (load_rules, evaluate) and P4 are the real modules.
+    monkeypatch.setattr(pipeline, "build_environment", p2_built_environment)
     with TestClient(app) as client:
         yield client
 
@@ -179,15 +191,33 @@ def test_internal_api_returns_real_computed_results_that_pass_the_next_route_che
     assert next_route_errors(request, result, "web-request-id") == []
 
 
-def test_internal_api_out_of_zone_is_insufficient_data_not_an_error(computed_client):
+def test_internal_api_outside_described_zones_uses_disclosed_provisional_rules(computed_client):
+    # Since PR #7, Romanian points outside the described southern zone get provisional
+    # thermal-band rules (pipeline.recommend → load_provisional_romania_rules) instead of
+    # `insufficient_data`; the profile reads P2's cleaned daily records (fixed in a372f41).
+    # The fixture's (Bărăgan) weather stands in for this point's weather.
     request = dashboard_request(location=dict(OUTSIDE))
     response = computed_client.post(
         "/recommendations", headers={"Authorization": "Bearer " + TOKEN, "X-Request-ID": "outside"}, json=request
     )
     assert response.status_code == 200
     result = response.json()
-    assert result["status"] == "insufficient_data" and result["plans"] == [] and "baseline" not in result
     assert next_route_errors(request, result, "outside") == []
+    assert result["plans"], "provisional rules supply candidate crops"
+    disclosed = " ".join(result["assumptions"] + result["data_gaps"])
+    assert "provisional" in disclosed and "not validated" in disclosed
+    for plan in result["plans"]:
+        assert plan["confidence"] == "low", "unvalidated provisional calendars cap confidence"
+        assert "provisional regional rules" in plan["explanation"]
+
+
+def test_internal_api_rejects_points_outside_romania_without_plans(computed_client):
+    request = dashboard_request(location={"name": "Budapest", "latitude": 47.4979, "longitude": 19.0402})
+    response = computed_client.post(
+        "/recommendations", headers={"Authorization": "Bearer " + TOKEN, "X-Request-ID": "abroad"}, json=request
+    )
+    assert response.status_code == 422
+    assert "plans" not in response.json()
 
 
 # --- Priorities the frontend sends are the priorities P4 applies ---------------------------
@@ -283,15 +313,54 @@ def test_out_of_zone_gaps_are_not_repeated_and_the_rotation_is_named():
 # --- P2 adapter shape -----------------------------------------------------------------------
 
 
-def test_p2_fetch_power_shape_is_accepted_and_missing_elevation_is_disclosed():
+def test_p2_build_environment_output_is_accepted_without_et0_bias():
     request = dashboard_request()
-    result = run(request, p2_shaped_environment())
+    env = p2_built_environment(request)
+    # PR #7 fixed the audit finding: dew point and elevation now reach the data, so every
+    # day uses FAO-56 Penman-Monteith (no sea-level or Hargreaves fallback).
+    assert env["static"]["elevation_m"] == environment()["static"]["elevation_m"]
+    assert env["quality"]["et0_methods"]["hargreaves"] == 0
+    assert env["quality"]["missing"]["dewpoint"] == 0
+    result = run(request, env)
     assert next_route_errors(request, result, "web-audit") == []
     assert result["status"] == "complete" and "baseline" in result
-    assert any("Elevation is missing" in g for g in result["data_gaps"])
+    assert result["monthly_climate"] and "climate_context" in result
+    assert not any("Elevation is missing" in g for g in result["data_gaps"])
+    assert any("SoilGrids not queried" in g for g in result["data_gaps"]), "P2 gaps reach the farmer"
+    # Same evidence as the fixture path, so the same plans AND the same P3 scores.
     reference = cached_run(request)
-    # Same candidate pool and evaluator: the selected sequences match; water scores differ
-    # because P3 estimates ET0 without dew point and at sea-level pressure.
-    assert [[s["crop_id"] for s in p["steps"]] for p in result["plans"]] == [
-        [s["crop_id"] for s in p["steps"]] for p in reference["plans"]
-    ]
+    shown = lambda r: [(tuple(s["crop_id"] for s in p["steps"]), p["scores"]) for p in r["plans"] + [r["baseline"]]]
+    assert shown(result) == shown(reference)
+
+
+# --- Merge with PR #7: duplicate messages in the result --------------------------------------
+
+
+def test_empty_result_is_explained_once():
+    request = dashboard_request(
+        constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "winter_rapeseed", "maize", "soybean"]}
+    )
+    result = cached_run(request)
+    assert result["status"] == "insufficient_data"
+    assert sum("feasible" in g and "plan" in g for g in result["data_gaps"]) == 1, result["data_gaps"]
+    assert "No feasible rotation could be scored from the available observations and constraints." not in result["data_gaps"]
+
+
+def test_crop_unknown_to_p3_is_listed_once():
+    result = cached_run(dashboard_request(current_rotation=["maize", "rice"]))
+    gaps = " ".join(result["data_gaps"])
+    assert "Crops without regional rules: rice." in gaps and "rice, rice" not in gaps
+
+
+def test_warnings_name_the_step_when_a_crop_repeats():
+    result = cached_run(dashboard_request(
+        constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]}
+    ))
+    for plan in result["plans"]:
+        crops = [s["crop_id"] for s in plan["steps"]]
+        if crops.count("maize") > 1:
+            maize = [t for t in plan["tradeoffs"] if t.startswith("Evaluator warning: Maize")]
+            assert maize and all(re.match(r"Evaluator warning: Maize \(crop [123]\):", t) for t in maize), maize
+            break
+    else:
+        pytest.fail("expected a plan with maize twice")

@@ -242,10 +242,21 @@ def recommend(
         data_gaps.append("Soil properties are not known from a laboratory analysis or an estimate; the soil assessment depends on regional data.")
 
     catalog, catalog_issues = crop_catalog(rules)
+    candidate_catalog = catalog
+    if constraints.get("selected_crops_only", False):
+        selected = set(constraints.get("selected_crops") or [])
+        candidate_catalog = {
+            crop_id: crop
+            for crop_id, crop in catalog.items()
+            if crop_id in selected
+        }
     data_gaps.extend(g for g in (rules.get("data_gaps") or []) if isinstance(g, str))
     data_gaps.extend(catalog_issues)
     data_gaps.extend(history_issues(request, set(catalog)))
-    diagnostics: dict = {"crops": sorted(catalog), "excluded": sorted(excluded)}
+    diagnostics: dict = {
+        "crops": sorted(candidate_catalog),
+        "excluded": sorted(excluded),
+    }
 
     def finish(plans, sources, fixture=False, baseline=None) -> RecommendationOutcome:
         if len(plans) < PLAN_COUNT:
@@ -254,20 +265,25 @@ def recommend(
             )
         return RecommendationOutcome(plans, sources, _dedupe(assumptions), _dedupe(data_gaps), diagnostics, fixture, baseline)
 
-    candidate_set = generate_candidates(catalog, excluded, config.max_candidates)
+    candidate_set = generate_candidates(
+        candidate_catalog, excluded, config.max_candidates
+    )
     diagnostics.update(total_space=candidate_set.total_space, generated=len(candidate_set.candidates), truncated=candidate_set.truncated)
     if candidate_set.truncated:
         data_gaps.append(
             f"The search space ({candidate_set.total_space} sequences) exceeds the limit of {config.max_candidates}; "
             "a deterministic sample was evaluated, so good plans may remain unexplored."
         )
-    if not candidate_set.candidates and (catalog or not rules.get("data_gaps")):
-        # With no rules at all, P3's own reason (forwarded above) already says why.
-        data_gaps.append(
-            "The regional rules offer no candidate crops after the exclusions were applied."
-            if catalog
-            else "The regional rules contain no candidate crops."
-        )
+    if not candidate_set.candidates:
+        if constraints.get("selected_crops_only", False):
+            data_gaps.append(
+                "No candidate crops remain after applying the selected-crop shortlist and exclusions."
+            )
+        elif catalog:
+            data_gaps.append("The regional rules offer no candidate crops after the exclusions were applied.")
+        elif not rules.get("data_gaps"):
+            # With no rules at all, P3's own reason (forwarded above) already says why.
+            data_gaps.append("The regional rules contain no candidate crops.")
 
     # Primary evaluation: the request as given (including any scenario).
     candidates = _evaluate_all(candidate_set.candidates, request, environment, rules, evaluate, available_from)
@@ -352,6 +368,7 @@ def recommend(
         diagnostics["reference_counts"] = _counts({s: c for s, c in reference.items() if s in candidates})
 
     selections = select_diverse(ranked, scores, profiles, pareto, weights, config)
+    region = rules.get("region") if isinstance(rules.get("region"), dict) else {}
     ctx = PlanContext(
         weights=weights,
         available_from=available_from,
@@ -366,6 +383,7 @@ def recommend(
         plan_numbers={s.sequence: i + 1 for i, s in enumerate(selections)},
         requested_criteria=requested_criteria,
         previous_crop_source=previous_source,
+        provisional_rules=bool(region.get("provisional")) or str(region.get("id", "")).startswith("ro-romania-provisional-"),
     )
 
     baseline_plan = None
@@ -452,6 +470,7 @@ def _build_current_baseline(continuation, current: Candidate, weights, known_ids
         "scores": plan_scores(evaluation),
         "local_checks": texts["local_checks"],
         "violations": texts["violations"],
+        **_replay_field(evaluation),
     }
 
 
@@ -471,4 +490,10 @@ def _build_plan(number, selection, cand: Candidate, pareto: ParetoInfo, robustne
         "source_ids": list(cand.source_ids),
         "scores": plan_scores(evaluation),
         "local_checks": checks,
+        **_replay_field(evaluation),
     }
+
+
+def _replay_field(evaluation: Evaluation) -> dict:
+    """Contract `plan.replay`: P3's per-season results, passed through unchanged."""
+    return {"replay": [dict(season) for season in evaluation.replay]} if evaluation.replay else {}

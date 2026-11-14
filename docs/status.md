@@ -4,13 +4,16 @@
 
 - Workspace pnpm: o aplicație Next.js pentru interfață și backend, un serviciu Python.
 - Contract Zod și scheme JSON generate, request/result fără entități de utilizator.
-- Formular cu localitate/punct, dată de disponibilitate, istoric și sol opțional, priorități.
-- Hartă Leaflet/OpenStreetMap, căutare Open-Meteo/GeoNames, trei carduri cu calendare.
+- Formular cu localitate/punct sau contur, istoric, shortlist opțional de culturi, sol și priorități.
+- Hartă Leaflet/OpenStreetMap, căutare Open-Meteo/GeoNames, desenare opțională a conturului GeoJSON și trei carduri cu calendare.
 - Adapter frontend pentru lucru independent și mod demo vizibil.
 - Endpoint stateless Next.js cu validare, timeout și verificarea rezultatului.
 - Prisma/PostgreSQL pentru cache public opțional, cu migrație inițială.
 - API Python intern, pipeline și interfețe pentru P2/P3/P4.
-- Adaptor NASA POWER pentru descărcarea datelor zilnice; nu a fost verificat live în refacere.
+- P2: date NASA POWER normalizate pe zile, rezumate lunare și anuale, ET0 FAO-56, profil SoilGrids 0–30 cm, capacitate de apă estimată, proveniență, lipsuri și contoare de calitate.
+- P3/P4: filtrare și clasare transparentă a rotațiilor, cu ponderi de apă/sol/climă și explicații.
+- Verificare a coordonatelor pe limita României; în afara sudului/sud-estului, profilul folosește benzi termice NASA POWER și calendare provizorii ajustate.
+- Cereri cu contur de teren GeoJSON și shortlist opțional de culturi; clima și solul rămân eșantionate la un punct reprezentativ.
 - Generator demonstrativ, care respectă ordinea temporală și excluderile, fără scoruri fictive.
 - Configurație Compose, instrucțiuni AWS și model de verificări CI neactivat.
 - P4 (branch `alexia`): motor de recomandare determinist în `recommender/` — generare
@@ -39,21 +42,31 @@
   simulat) și componentele reale de rezultat (randare statică); FastAPI intern în
   `computed` testat in-process. 4 erori P4 de text corectate (scor „0.55 vs 0.55”, ID-uri
   brute de culturi, liste repetate în explicație, motive duplicate în afara zonei).
-  Probleme raportate altora: P1 (prioritățile dashboardului nu ajung la P4; mesaj
-  „adaugă rotația” deși a fost dată), P5 (anularea nu oprește calculul în Python), P2
-  (`fetch_power` fără elevație/T2MDEW → scoruri de apă ~+0.04). Suita Python: 176 teste
-  trec; web: TypeScript, `test:backend` 82/82, `test:ui` 25/25. Fluxul în browser nu a
-  fost testat. Nu este validare agronomică; HTTP `computed` rămâne 503 până la P2.
+  După integrarea cu `main` (PR #7 și `a372f41`): elevația și T2MDEW de la P2 sunt
+  rezolvate (scoruri identice cu fixture-ul prin `build_environment` real, offline);
+  corectate: regulile provizorii dau încredere „low” și o verificare locală, 422 din
+  engine devine 422 `unsupported_location` (nu 502), anularea din browser ajunge la apelul
+  spre engine (499), mesajul despre rotația curentă, erori non-JSON de la gateway, mesaje
+  duplicate (rezultat gol, „rice, rice”), avertismente care nu spuneau a câta cultură.
+  Rămân deschise: prioritățile dashboardului (P1), semnificația `violations` (echipă).
+  Suita Python: 213 teste trec; web: TypeScript, `test:backend` 84/84, `test:ui` 26/26;
+  11 rezultate reale trec prin handlerul Next.js și randare. Fluxul live (NASA, servere,
+  browser) nu a fost testat. Nu este validare agronomică.
   Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
-## De implementat de echipă
+## De validat/de implementat de echipă
 
-- P2: verificare live POWER, indicatori și control de calitate, integrarea altor surse justificată.
+- P2: verificarea disponibilității SoilGrids în puncte agricole și tratarea time-out-urilor; POWER a trecut smoke testul pe 2025 în patru puncte din România.
 - P3: reguli regionale citate, praguri, bilanț hidric, compatibilitate și calendare validate.
-- P3/P4: acord asupra contractului intermediar de evaluare propus în raportul P4
-  (`criteria` 0–1 cu proveniență, inclusiv `productivity`, `calendar`, `scenario_applied`,
-  `sources`, `local_checks`; calendar și surse și pentru secvențe nefezabile, ca rotația
-  actuală să poată fi afișată cu încălcările ei).
+- P3/P4: testarea integrării end-to-end cu date reale și validarea semantică a rezultatelor,
+  inclusiv afișarea rotației curente atunci când evaluatorul nu o poate susține.
+- Verificare live a fluxurilor NASA POWER/SoilGrids și calibrare/control de calitate cu surse locale.
+- Validare locală a pragurilor termice și a calendarelor de cultură; benzile curente sunt estimări de proiect, nu zonare oficială.
+- Extinderea și validarea catalogului regional de culturi de către agronomi români.
+- Reprezentarea rotației curente ca strategie de bază alături de cel puțin două alternative; istoricul actual doar constrânge secvențele recomandate.
+- Agregare zonală în interiorul conturului; în prezent datele de climă și sol nu sunt calculate pentru întreaga parcelă.
+- Bilanț hidric mai realist (precipitație efectivă, scurgere și drenaj); capacitatea de apă din SoilGrids este o estimare de pedotransfer, nu măsurare locală.
+- Validare a clasamentelor, scenariilor și pragurilor cu fermieri/date de teren; scorurile actuale sunt doar pentru screening.
 - P4: calibrarea pragurilor de
   selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
@@ -62,17 +75,21 @@
 ## Intenționat în afara versiunii
 
 Conturi, email/login, sesiuni persistente, profiluri de fermieri, analize salvate, SMS,
-WhatsApp, contur de parcelă, predicții exacte de producție/profit, ML antrenat și CMIP6.
+WhatsApp, predicții exacte de producție/profit, ML antrenat și CMIP6.
 
 ## Limitele verificării inițiale (istoric)
 
-Utilizatorul a cerut să nu verificăm pornirea aplicației. Nu am pornit Next.js, FastAPI,
-Docker, PostgreSQL sau migrații și nu am făcut deploy. Verificările statice/contractele
-nu demonstrează că serviciile externe ori evaluarea agronomică sunt validate.
+Nu am pornit Next.js, FastAPI, Docker, PostgreSQL sau migrații și nu am făcut deploy.
+Testele unitare/contractele nu demonstrează că serviciile externe ori evaluarea agronomică
+sunt validate.
 
-Verificat în refacere: generarea schemelor JSON și a clientului Prisma, verificarea
-tipurilor TypeScript pentru web și contracte, sintaxa Python și patru verificări locale
-de contract/calendar. Lockfile-uri Node și Python generate. Fără pornire/deploy.
+După integrarea cu `main`, `python -m pytest services/engine/tests -q` trece 143 teste.
+Verificarea acoperă motorul, datele, schema și fluxul integrat cu module simulate;
+Smoke testul live NASA POWER a întors 365 de zile, fără lipsuri la temperatură sau precipitații,
+și 12 rezumate lunare în Fundulea, Dobrogea și Slobozia. După actualizarea SoilGrids la profilul
+0–30 cm, Fundulea și Dobrogea au returnat valori; Slobozia nu a avut date. Disponibilitatea
+SoilGrids trebuie verificată în mai multe locații agricole. Testul live nu validează
+recomandările agronomice.
 
 CI este păstrat ca exemplu în `infra/ci/checks.yml.example`. Tokenul GitHub disponibil
 nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
@@ -134,12 +151,35 @@ nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
 
 - Testele de succes computed folosesc explicit module simulate și verifică numai
   contractul/orchestrarea pentru 0/1/2/3 planuri. Nu sunt o evaluare agronomică reală.
-- Cu modulele actuale reale, Next.js → Python în computed a fost verificat și răspunde
-  503 fără fallback. P2/P3/P4 trebuie să livreze și să valideze modelele și datele.
+- Cu module reale, datele NASA POWER sunt încă dezactivate implicit; `computed` necesită
+  `ENABLE_NASA_POWER=true`. Rezultatele și regulile rămân de validat agronomic.
 - NASA POWER nu a fost verificat live în această sarcină. Nu există monitorizare AWS
   sau alerte configurate; diagnosticarea implementată este locală, prin loguri.
 - Livrabilul P5 este pe branchul `mihail`. Fișierele de mediu și secretele locale sunt
   ignorate de Git. Containerele locale rămân pornite pentru revizuire.
+
+## Verificare P2 live — 2026-11-14
+
+- NASA POWER: datele din 2025 au 365 de înregistrări și 12 rezumate lunare, fără zile
+  lipsă pentru temperatură sau precipitații, în Fundulea, Dobrogea și Slobozia.
+- SoilGrids: profilul ponderat 0–30 cm a furnizat textură, pH, carbon organic și AWC
+  estimate la Fundulea și Dobrogea. La Slobozia nu au fost disponibile valori.
+- Fluxul complet `computed` la Fundulea a folosit 20 de ani, a produs trei planuri și
+  baseline, iar răspunsul a trecut validarea contractului.
+- Testele motorului după integrarea P2: 160 trecute. Agregarea pe contur rămâne
+  neimplementată; rezultatele SoilGrids sunt estimări, nu analize de teren.
+
+## P2 terrain — country-wide point support
+
+- The OpenTopoData public `srtm30m` endpoint was checked at eight Romanian locations
+  spanning western, eastern, northern, southern, central and coastal regions. All returned
+  SRTM elevations. The dataset covers 60°S–60°N, so its coverage includes Romania.
+- The engine requests one 3×3 neighborhood around each submitted point, calculates a
+  Horn slope estimate in percent, caches the response, and passes `static.slope_pct` to
+  the existing erosion component. It does not calculate parcel-wide slope from a polygon.
+- OpenTopoData receives the point coordinates. Its published public API limits are
+  1 request/second and 1000 requests/day; this is suitable for a prototype, not a
+  confirmed production-scale service.
 
 ## Frontend
 

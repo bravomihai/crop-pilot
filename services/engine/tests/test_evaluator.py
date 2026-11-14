@@ -176,3 +176,44 @@ def test_whole_search_space_is_fast(request_, environment, rules):
     assert len(results) == len(crops) ** 3
     assert sum(r["feasibility"] == "feasible" for r in results) > 20
     assert elapsed < 30
+
+
+def test_cache_never_serves_another_environments_weather(request_, environment, rules):
+    # Two environments with the same shape and point but different weather, built one
+    # after the other, as two requests would be. The second must not reuse the first.
+    rotation = ["pea", "winter_wheat", "maize"]
+    first = evaluate(rotation, request_, copy.deepcopy(environment), rules)
+    drier = copy.deepcopy(environment)
+    for day in drier["daily"]:
+        if day["values"].get("PRECTOTCORR") is not None:
+            day["values"]["PRECTOTCORR"] *= 0.5
+    second = evaluate(rotation, request_, drier, rules)
+    assert second["criteria"]["water"]["score"] < first["criteria"]["water"]["score"]
+
+
+def test_repeated_evaluation_is_stable(request_, environment, rules):
+    rotation = ["winter_rapeseed", "winter_wheat", "sunflower"]
+    a = evaluate(rotation, request_, environment, rules)
+    b = evaluate(rotation, request_, environment, rules)
+    assert a["criteria"] == b["criteria"] and a["replay"] == b["replay"]
+
+
+def test_winterkill_note_only_for_winter_crops(request_, environment, rules):
+    spring = evaluate(["maize", "sunflower", "soybean"], request_, environment, rules)
+    winter = evaluate(["pea", "winter_wheat", "maize"], request_, environment, rules)
+    assert not any("Winterkill" in g for g in spring["data_gaps"])
+    assert any("Winterkill risk for winter wheat" in g for g in winter["data_gaps"])
+
+
+def test_provisional_profile_reads_the_data_services_cleaned_days():
+    # build_environment returns flat cleaned days (tmean, tmin, tmax), not raw POWER values.
+    from fieldshift.evaluator.rules import load_provisional_romania_rules
+
+    cluj = {"latitude": 46.73, "longitude": 23.75}
+    cleaned = {"daily": [{"date": f"2020-{m:02d}-15", "tmean": 16.0, "tmin": 9.0, "tmax": 23.0} for m in range(4, 10)]}
+    only_min_max = {"daily": [{"date": f"2020-{m:02d}-15", "tmean": None, "tmin": 9.0, "tmax": 23.0} for m in range(4, 10)]}
+    for environment in (cleaned, only_min_max):
+        rules = load_provisional_romania_rules(cluj, environment)
+        assert rules["crops"], rules.get("data_gaps")
+        assert rules["region"]["id"].startswith("ro-romania-provisional-")
+        assert rules["region"]["mean_apr_sep_t2m_c"] == 16.0

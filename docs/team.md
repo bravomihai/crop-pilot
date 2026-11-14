@@ -15,17 +15,19 @@ formule agronomice în componente. P2/P3/P4 lucrează în module, cu aceleași d
 de schimb, nu cu servere individuale. P5 păstrează serviciul Python în afara browserului.
 
 P2: `build_environment(request) -> dict` cu date zilnice, surse și lipsuri.
-P3: `load_rules(location) -> dict` și `evaluate(rotation,request,environment,rules) -> dict`.
+P3: `load_rules(location) -> dict` și `evaluate(rotation,request,environment,rules) -> dict`;
+pentru locațiile românești fără reguli locale, pipeline-ul apelează profilul termic provizoriu.
 P4: `recommend_rotations(request,environment,rules,evaluate) -> list[plan]`.
 P3/P4 trebuie să convină un contract intermediar de evaluare înainte de implementare.
 Contractul public request/result este deja comun și verificat în ambele limbaje.
 
-Prima zonă acoperită este câmpia din sud și sud-est (Câmpia Română, Bărăgan, Dobrogea),
-cu culturile de câmp principale. Fundulea rămâne doar punctul de test din exemple; în afara
-zonei acoperite răspundem `insufficient_data`. Exemplul de localitate nu dovedește validare
-agronomică.
+Zona cu reguli locale descrise este sudul și sud-estul României (Câmpia Română, Bărăgan,
+Dobrogea). În restul țării, codul folosește un profil termic și calendare ajustate provizoriu;
+acestea nu sunt recomandări validate local. Limita țării este verificată înaintea calculului.
+Fundulea rămâne un punct de exemplu, nu dovadă de validare agronomică.
 
-Câmpurile opționale noi din contract (`current_rotation`/`baseline`, `plan.scores`,
-`local_checks`, `history[].source`, `priorities.productivity`) sunt în `docs/api.md`.
-Nimic nu se strică dacă nu le folosiți încă; adoptați-le când ajungeți la ele. Prioritățile/scenariile trebuie să influențeze evaluarea
-reală numai după implementarea modelelor; demo declară explicit că nu le calculează.
+Contractul include `current_rotation`/`baseline`, `plan.scores`, `local_checks`,
+`history[].source`, `priorities.productivity`, contur de teren, shortlist de culturi și
+rezumate climatice lunare. Datele de vreme și sol folosesc punctul reprezentativ, nu
+statistici agregate pentru întregul contur. Scorurile și calendarele necesită validare
+agronomică locală; modul demo declară explicit că nu le calculează.

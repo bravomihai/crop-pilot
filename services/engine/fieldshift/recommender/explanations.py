@@ -55,6 +55,7 @@ class PlanContext:
     requested_criteria: tuple = REQUIRED_CRITERIA  # criteria present in request priorities
     previous_crop_source: str | None = None  # source of the most recent history entry
     current_score: Score | None = None  # score of the farmer's current rotation, if shown
+    provisional_rules: bool = False  # P3 rules are a provisional thermal-band shift
 
 
 def _fmt(x: float) -> str:
@@ -106,6 +107,8 @@ def assess_confidence(
         low.append("test (fixture) evaluation, not an agronomic result")
     if score.coverage < 1:
         low.append("not every weighted priority has a P3 score")
+    if ctx.provisional_rules:
+        low.append("provisional regional rules: calendars shifted by a thermal band, not validated locally")
     for name in score.known:
         c = evaluation.criterion(name)
         if c.basis == "assumed":
@@ -143,6 +146,10 @@ def assess_confidence(
 
 def local_checks(evaluation: Evaluation, ctx: PlanContext, extra: tuple[str, ...] = ()) -> list[str]:
     checks = ["Confirm the sowing and harvest windows for this location."]
+    if ctx.provisional_rules:
+        checks.append(
+            "Ask a local agronomist to confirm the crop calendar: the regional rules for this location are provisional."
+        )
     if ctx.history_missing:
         checks.append("Confirm compatibility with the previous crop (no crop history was provided).")
     elif ctx.previous_crop_source == "satellite":
