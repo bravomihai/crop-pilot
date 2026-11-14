@@ -16,50 +16,38 @@ runtime and interface states; earlier checks are not new claims of scientific va
 - NASA POWER daily-data adapter; not checked live during the rebuild.
 - Demo generator respecting chronological order and exclusions, without fabricated scores.
 - Compose configuration, AWS instructions, and an initially inactive CI reference.
-- P4 (branch `alexia`): deterministic recommendation engine in `recommender/` with
-  bounded sequence generation from P3 rules; feasible/infeasible/unknown classification;
-  calendar checks (including autumn crops and `available_from`); normalized weights;
-  intervals for missing scores; Pareto analysis; diverse selection with disclosed
-  trade-offs; scenario/reference-climate comparison when confirmed by P3; explanations
-  and qualitative confidence derived from evidence. Integrated in `pipeline.py` without
-  fallback. P4 user-facing output is English. Adapted to the extended `main` contract:
-  optional `productivity`; `current_rotation` → P3-evaluated `baseline` (with `violations`,
-  omitted with an explanation when P3 supplies no calendar/sources); `history[].source`
-  used in confidence and `local_checks`; `plan.scores` with `null` for unknown.
-  Climate-scenario comparison uses the reference climate, separate from the current rotation.
-  `pipeline.py` again calls `recommend_rotations`, so P5 `tests/test_api.py` passes.
-  P3–P4 integration was checked with real modules (`load_rules`, `evaluate`, pipeline)
-  and the historical NASA POWER fixture (Bărăgan, 2005–2025) in place of P2: 23 tests
-  in `test_p3_p4_integration.py` cover the contract, feasibility, unchanged P3 scores,
-  priorities, scenario vs. reference climate, a current rotation with violations,
-  exclusions/history, uncovered zones, missing data, and repeatability.
-  A cold complete request takes about 14–16 seconds, around 18% of the 90-second
-  `ENGINE_TIMEOUT_MS`; P3 replay accounts for over 98% of the time. Tests found five
-  P4 bugs that were fixed: a scenario disabled by an unknown crop in the current
-  rotation; lost P3 reasons outside coverage and for empty results; unpropagated P3
-  assumptions; and below-median wording when displayed values were equal.
-  Python suite: 162 passed, 0 failed (2026-11-14). This is not agronomic validation;
-  HTTP `computed` remains 503 until P2 is ready. pnpm was not run in that verification
-  because `node_modules` was absent; contracts were unchanged.
+- P4: deterministic recommendation engine in `recommender/`. It generates sequences from
+  P3's rules, classifies them as feasible/infeasible/unknown, checks calendars, applies
+  normalized priority weights with intervals for missing scores, runs Pareto analysis,
+  selects diverse plans with disclosed trade-offs, compares a scenario against the
+  reference climate, and writes explanations and a qualitative confidence grade from the
+  evidence. It evaluates `current_rotation` as `baseline` (violations are agronomic rules
+  only; the farmer's own exclusions are reported separately) and caps confidence at "low"
+  on provisional rules. Integration with real P2 data, P3 and the web app is covered by
+  `test_p3_p4_integration.py`, `test_p4_web_integration.py` and
+  `test_app_audit_fixes.py`. This is not agronomic validation.
   Details: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## Remaining team work
 
-- P2: live POWER verification, indicators and quality checks, and justified integration of other sources.
-- P3: cited regional rules, thresholds, water balance, compatibility, and validated calendars.
-- P3/P4: agree on the intermediate evaluation contract proposed in the P4 report:
-  0–1 `criteria` with provenance (including `productivity`), `calendar`, `scenario_applied`,
-  `sources`, and `local_checks`. Infeasible sequences also need calendars and sources
-  so the current rotation can be displayed with its violations.
-- P4: integration check with the real P3 evaluator (Fundulea), selection-threshold
-  calibration, and crop families for diversity. `computed` remains 503 until P2/P3 are ready.
-- P1: UX/accessibility refinement, comparisons, and source-detail presentation.
-- P5: actual AWS deployment and real secret configuration at deployment; local preparation is described below.
+- All: one live end-to-end check in a browser with real servers in computed mode before
+  the demo, using fields warmed into the local cache (`python -m fieldshift.warm`).
+- P1: remove the unused earlier dashboard and calculator components once the `maria`
+  branch is settled; optionally display `monthly_climate`.
+- P2: review the `maria` branch (Romania-wide crop rules, field sampling) with P3 and P4
+  before merging; it lowers P4's search limit to 500 sequences, which should be a
+  test-only setting instead.
+- P3: agronomist review of the southern rules and the provisional thermal-band shifts;
+  high-altitude and wetland sites are only disclosed, not excluded.
+- P5: AWS deployment and real secrets; confirm the GitHub workflow passes. The Python
+  engine keeps computing after a cancelled request (no cooperative cancellation).
 
 ## Intentionally outside this version
 
 Accounts, email/login, persistent sessions, farmer profiles, saved analyses, SMS,
-WhatsApp, field outlines, precise yield/profit predictions, trained ML, and CMIP6.
+WhatsApp, drawing a field outline in the interface (the contract's optional
+`field_boundary` is accepted by the engine), precise yield/profit predictions, trained
+ML, and CMIP6.
 
 ## Initial verification limits (historical)
 
@@ -235,3 +223,54 @@ Geocoding now requests English provider labels and uses language-specific cache 
 so earlier Romanian responses are not reused. Updated the provider-language regression
 check. Verified: contracts/web TypeScript, 82 backend/data checks, 51 focused Python
 checks (evaluator, English output, and contracts), and whitespace validation.
+
+## Whole-application audit and fixes — 2026-11-14
+
+Integrated `origin/demo-improvements` (Tudor) into local `alexia`; `origin/maria` is not
+merged yet (see Remaining team work). Fixed:
+
+- Result data gaps no longer copy every evaluated sequence's gaps (up to 15 near-identical
+  winterkill lines); P3 writes one winterkill note per crop.
+- A past availability date plans from today and says so, instead of producing plans in
+  the past; the date field cannot go before today; harvest year cannot be in the future.
+- Inputs without effect (irrigation limit with irrigation off, unapplied or conflicting
+  crop shortlist) are reported; high elevation (> 800 m) is disclosed.
+- The current rotation's `violations` are agronomic rules only (exclusions reported apart).
+- NASA POWER, SoilGrids and SRTM are fetched in parallel under `DATA_DEADLINE_S` (60 s);
+  late soil/slope become data gaps, a late POWER answer fails the request.
+- The engine's 422 reason (outside Romania, invalid outline) reaches the farmer.
+- Results show past-season replay and observed yearly climate (rainfall, temperature,
+  hot days); the form's scenario steps match the what-if and follow a recalculation.
+- CI now runs the UI tests. `docs/frontend.md` and `docs/api.md` describe the current app.
+
+Verified: Python 223 passed; web TypeScript, backend 87/87, UI 30/30, production build.
+**Live** (real NASA POWER, SoilGrids, SRTM; temporary local engine in computed mode and
+the built web app; Next.js `/api/recommendations`): Fundulea 8.1 s, complete with
+baseline, 17 replayed seasons and 20 climate years; the same field with +2 °C / −20 %
+rain 6.6 s; Suceava 10.0 s on provisional rules with low confidence; Budapest 422.
+In the browser, the demo link, Calculate, the new charts and a +2 °C what-if worked, and
+the form followed the what-if scenario. Not verified: Docker, NGINX, PostgreSQL cache,
+AWS, the GitHub workflow, screen readers and touch devices. Not agronomic validation.
+
+## Integration of `demo-improvements` up to `e5b8391` — 2026-11-14
+
+Merged Tudor's crop-check rules (`b614bf1`), past-season replay and climate charts
+(`17c910f`), glossary (`e566a58`), and AI summary with print sheet (`e5b8391`) into
+local `alexia`, on top of the audit fixes. The duplicate replay/climate section from the
+audit was dropped in favour of Tudor's `results-evidence.tsx`; its replay note now says
+when a hypothetical scenario was applied. Fixed for the AI summary: the gateway's 32 KB
+body limit would have rejected every summary request (results are 100+ KB), so
+`/api/summary` gets a 256 KB limit and its own rate limit (6/min per IP), and the page
+sends a trimmed, contract-valid result; switching language cancels a pending summary;
+an empty summary section is not printed.
+
+Verified: Python 227 passed; web backend 95/95, UI 32/32, TypeScript, schemas unchanged,
+production build. **Live** (real NASA POWER, SoilGrids, SRTM; temporary local computed
+engine and built web app, in a browser): Fundulea with previous crop, current rotation
+maize → winter wheat, water focus (36 % weight) and pea avoided produced three plans
+without pea and the current-rotation baseline; replay (2007–2023) and climate
+(2006–2025) charts show computed data; a +2 °C what-if updated the replay note and the
+form; the AI summary showed "not set up" (no key configured) with the plans still
+usable; Romanian labels display with diacritics; print rules keep only the results.
+**Not verified live:** an actual AI summary (no `ANTHROPIC_API_KEY`; covered by tests
+with a mocked client), NGINX/Caddy limits (configuration only), Docker and AWS.

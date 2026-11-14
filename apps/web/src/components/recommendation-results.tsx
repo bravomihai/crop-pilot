@@ -126,7 +126,7 @@ export default function RecommendationResults({
           <AiSummary result={result} />
           <ScoreComparison plans={result.plans} baseline={result.baseline} />
           <RotationTimeline plans={result.plans} baseline={result.baseline} />
-          <PlanReplay result={result} />
+          <PlanReplay result={result} scenario={request?.scenario} />
           <ClimateCard result={result} />
           {result.baseline && (
             <div className="baseline-container">

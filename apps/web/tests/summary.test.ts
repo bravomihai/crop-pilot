@@ -106,3 +106,28 @@ test("the prompt forbids new facts and keeps English by default", () => {
   assert.match(prompt, /Every number you write must appear in the input/);
   assert.match(prompt, /Write in English/);
 });
+
+test("the page sends a trimmed result that summarises the same and fits the gateway limit", async () => {
+  const { summaryPayload } = await import("../src/lib/summary-payload");
+  // A realistic size: 60 replayed seasons per plan, 240 monthly rows, 40 climate years.
+  const seasons = Array.from({ length: 60 }, (_, i) => ({
+    season_start_year: 1966 + i,
+    scores: { water: 0.6, climate: 0.5, productivity: 0.4 },
+  }));
+  const big = resultSchema.parse({
+    ...full,
+    plans: full.plans.map((plan) => ({ ...plan, replay: seasons })),
+    monthly_climate: Array.from({ length: 240 }, (_, i) => ({
+      month: `${2006 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`,
+      mean_daily_max_c: 20, max_daily_max_c: 30, mean_daily_min_c: 10, min_daily_min_c: 0,
+      max_temp_observations: 30, min_temp_observations: 30,
+    })),
+  });
+  const payload = summaryPayload(big);
+  assert.ok(resultSchema.safeParse(payload).success, "still a valid result");
+  assert.deepEqual(summaryInput(payload), summaryInput(big), "the model sees exactly the same input");
+  assert.ok(JSON.stringify(big).length > 32 * 1024);
+  assert.ok(JSON.stringify({ result: payload, language: "ro" }).length < 256 * 1024);
+  assert.ok(payload.plans.every((plan) => plan.replay === undefined));
+  assert.equal(payload.monthly_climate.length, 0);
+});

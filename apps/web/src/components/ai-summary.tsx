@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { RecommendationResult } from "@fieldshift/contracts";
+import { summaryPayload } from "@/lib/summary-payload";
 
 type PlanSummary = {
   id: string;
@@ -62,7 +63,7 @@ export default function AiSummary({ result }: { result: RecommendationResult }) 
       const response = await fetch("/api/summary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result, language }),
+        body: JSON.stringify({ result: summaryPayload(result), language }),
         signal: controller.signal,
       });
       const body = await response.json().catch(() => ({}));
@@ -83,7 +84,7 @@ export default function AiSummary({ result }: { result: RecommendationResult }) 
         <div className="ai-summary-controls">
           <label htmlFor="ai-summary-language">
             <span className="sr-only">Language</span>
-            <select id="ai-summary-language" value={language} onChange={(event) => { setLanguage(event.target.value as "en" | "ro"); setSummary(null); }}>
+            <select id="ai-summary-language" value={language} onChange={(event) => { request.current?.abort(); setBusy(false); setLanguage(event.target.value as "en" | "ro"); setSummary(null); setError(""); }}>
               <option value="en">English</option>
               <option value="ro">Română</option>
             </select>

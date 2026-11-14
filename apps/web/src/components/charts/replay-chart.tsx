@@ -2,7 +2,7 @@
 import { useId, useState } from "react";
 import { useChartWidth } from "./use-chart-width";
 
-/** Display-only props. No dependency on a proposed plan.replay contract field. */
+/** Display-only props, built by the caller (e.g. from `plan.replay`). */
 export type ReplaySeries = {
   id: string;
   label: string;
@@ -12,7 +12,7 @@ export type ReplaySeries = {
 
 export default function ReplayChart({
   series,
-  title = "Historical replay preview",
+  title = "Past-season replay",
 }: {
   series: ReplaySeries[];
   title?: string;

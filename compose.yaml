@@ -38,6 +38,7 @@ services:
       ENABLE_NASA_POWER: ${ENABLE_NASA_POWER:-true}
       FIELDSHIFT_CACHE_DIR: ${FIELDSHIFT_CACHE_DIR:-/tmp/fieldshift-cache}
       SOILGRIDS_TIMEOUT_S: ${SOILGRIDS_TIMEOUT_S:-8}
+      DATA_DEADLINE_S: ${DATA_DEADLINE_S:-60}
       CACHE_BACKEND_URL: http://web:3000
     ports: ["127.0.0.1:8000:8000"]
     healthcheck:

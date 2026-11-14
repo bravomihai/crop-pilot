@@ -37,11 +37,7 @@ export async function upstreamJson(
         "The analysis engine is not ready.",
       );
     if (options.unsupported && response.status === 422)
-      throw new ApiError(
-        422,
-        "unsupported_location",
-        "Computed plans are available only for points inside Romania, with a closed field outline. Choose another point or redraw the field.",
-      );
+      throw new ApiError(422, "unsupported_location", await unsupportedReason(response));
     if (!response.ok)
       throw new ApiError(
         502,
@@ -140,5 +136,24 @@ export function engineConfig(path: string) {
       "engine_not_configured",
       "The analysis engine configuration is invalid.",
     );
+  }
+}
+
+/**
+ * The engine's 422 reason is its own plain sentence (location outside Romania, or an
+ * invalid field outline). Pass it on when it is a short plain string; schema-validation
+ * details (objects) and anything unexpected get a generic message.
+ */
+async function unsupportedReason(response: Response): Promise<string> {
+  const fallback = "Computed plans are currently available only for points inside Romania.";
+  try {
+    const text = await response.text();
+    if (text.length > 2000) return fallback;
+    const detail = (JSON.parse(text) as { detail?: unknown }).detail;
+    return typeof detail === "string" && detail.length <= 300 && /^[\p{L}\p{N}\s.,;:()'’—-]+$/u.test(detail)
+      ? detail
+      : fallback;
+  } catch {
+    return fallback;
   }
 }

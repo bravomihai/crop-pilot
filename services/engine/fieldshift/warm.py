@@ -32,6 +32,7 @@ def main(argv: list[str]) -> int:
         return 2
     os.environ["ENABLE_NASA_POWER"] = "true"
     os.environ.setdefault("SOILGRIDS_TIMEOUT_S", "60")
+    os.environ.setdefault("DATA_DEADLINE_S", "180")  # ahead of time, waiting longer is fine
     from .data_service import build_environment  # after the environment is set
 
     failures = 0

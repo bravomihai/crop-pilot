@@ -94,6 +94,33 @@ test("missing baseline after a given rotation is explained, not requested again"
   assert.match(render(undefined), /Add your current rotation/);
 });
 
+test("the past-season replay says when a hypothetical scenario was applied", () => {
+  const full = resultSchema.parse(
+    JSON.parse(
+      readFileSync(
+        new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
+  const render = (scenario: { temp_change_c: number; rain_change_pct: number }) =>
+    renderToStaticMarkup(
+      createElement(RecommendationResults, {
+        result: full,
+        busy: false,
+        error: "",
+        request: { ...fullExampleRequest, scenario },
+        onRecalculate: () => {},
+      }),
+    );
+  assert.ok(
+    render({ temp_change_c: 2, rain_change_pct: -20 }).includes(
+      "includes the hypothetical scenario (+2 °C, -20% rain), so these are not the observed outcomes",
+    ),
+  );
+  assert.ok(!render({ temp_change_c: 0, rain_change_pct: 0 }).includes("hypothetical scenario ("));
+});
+
 test("rotation result cards do not manufacture missing alternatives", () => {
   const fixture = JSON.parse(
     readFileSync(

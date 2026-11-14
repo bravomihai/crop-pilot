@@ -9,7 +9,8 @@ export async function POST(req: Request) {
   return apiRoute("summary", async () => {
     if (!summaryConfigured())
       throw new ApiError(503, "summary_not_configured", "The AI summary is not set up on this server.");
-    const body = (await readJson(req, 2 * 1024 * 1024)) as { result?: unknown; language?: unknown };
+    // The page sends a trimmed result (see summaryPayload); the gateway allows 256 KB here.
+    const body = (await readJson(req, 256 * 1024)) as { result?: unknown; language?: unknown };
     const parsed = resultSchema.safeParse(body?.result);
     if (!parsed.success) throw new ApiError(400, "validation_error", "Send a complete result to summarise.");
     if (parsed.data.mode !== "computed" || !parsed.data.plans.length)

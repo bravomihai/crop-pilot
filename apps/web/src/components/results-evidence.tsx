@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationRequest, RecommendationResult } from "@fieldshift/contracts";
 import ReplayChart from "./charts/replay-chart";
 import ClimateTrendChart from "./charts/climate-trend-chart";
 import {
@@ -13,7 +13,13 @@ import {
 } from "@/lib/chart-data";
 
 /** "How each plan would have done" over the past seasons replayed by the engine. */
-export function PlanReplay({ result }: { result: RecommendationResult }) {
+export function PlanReplay({
+  result,
+  scenario,
+}: {
+  result: RecommendationResult;
+  scenario?: RecommendationRequest["scenario"];
+}) {
   const [metric, setMetric] = useState<ReplayMetric>("water");
   const series = replaySeries(result.plans, result.baseline, metric);
   if (!series.length) return null;
@@ -36,6 +42,8 @@ export function PlanReplay({ result }: { result: RecommendationResult }) {
       <p className="evidence-note">
         Each plan replayed over the real weather of {first}–{last} at this point (NASA POWER), season by season.
         Lines that stay high in dry or hot years are the safer choice.
+        {scenario && (scenario.temp_change_c !== 0 || scenario.rain_change_pct !== 0) &&
+          ` Every season here includes the hypothetical scenario (${scenario.temp_change_c > 0 ? "+" : ""}${scenario.temp_change_c} °C, ${scenario.rain_change_pct > 0 ? "+" : ""}${scenario.rain_change_pct}% rain), so these are not the observed outcomes.`}
       </p>
       <ReplayChart series={series} title={`${REPLAY_METRICS.find(([id]) => id === metric)?.[1]} score by starting season (out of 100)`} />
     </section>

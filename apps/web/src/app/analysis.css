@@ -1101,5 +1101,7 @@
   .map-results-panel[hidden] { display: block !important; }
   details { display: block; }
   details > :not(summary) { display: block !important; }
+  /* Print the AI summary only when one was written (otherwise an empty heading). */
+  .ai-summary:not(:has(.ai-summary-body)) { display: none !important; }
   body { background: #fff !important; color: #000 !important; }
 }

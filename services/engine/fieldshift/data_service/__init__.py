@@ -1,6 +1,9 @@
 """P2 owns this interface. Return crop-independent data and source metadata."""
 
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import datetime, timezone
 
 from .climate import climate_context
@@ -17,13 +20,38 @@ def build_environment(request: dict) -> dict:
             "NASA data ingestion is disabled; configure and validate P2 integration"
         )
     years = int(os.getenv("HISTORY_YEARS", "20"))
+    # About 65 KB of daily POWER data per year: above ~30 years an entry exceeds the shared
+    # (web) cache's 2 MB limit and only the local disk cache (FIELDSHIFT_CACHE_DIR) keeps it.
     if not 1 <= years <= 45:
         raise ValueError("HISTORY_YEARS must be between 1 and 45")
     end = datetime.now(timezone.utc).year - 1
     location = request["location"]
     latitude = float(location["latitude"])
     longitude = float(location["longitude"])
-    power = fetch_power(latitude, longitude, max(1981, end - years + 1), end)
+    # The three providers are independent: query them in parallel under one deadline that
+    # leaves room for evaluation inside the web app's 90 s ENGINE_TIMEOUT_MS. NASA POWER is
+    # required; SoilGrids and SRTM are optional and become data gaps when late.
+    deadline = time.monotonic() + float(os.getenv("DATA_DEADLINE_S", "60"))
+    remaining = lambda: max(0.0, deadline - time.monotonic())
+    pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="p2-fetch")
+    try:
+        power_job = pool.submit(fetch_power, latitude, longitude, max(1981, end - years + 1), end)
+        soil_job = pool.submit(fetch_soil, latitude, longitude)
+        slope_job = pool.submit(fetch_slope, latitude, longitude)
+        try:
+            power = power_job.result(timeout=remaining())
+        except FutureTimeout as error:
+            raise TimeoutError("NASA POWER did not respond within the data deadline") from error
+        try:
+            soil_result = soil_job.result(timeout=remaining())
+        except FutureTimeout:
+            soil_result = (None, [], ["SoilGrids did not respond in time; soil properties are unknown."])
+        try:
+            slope_result = slope_job.result(timeout=remaining())
+        except FutureTimeout:
+            slope_result = (None, [], ["SRTM slope did not respond in time; erosion risk is not included in the soil score."])
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
     elevation = power.get("elevation_m")
     raw_daily = power.get("daily", [])
     daily, quality = clean_daily(raw_daily, latitude, elevation)
@@ -55,7 +83,7 @@ def build_environment(request: dict) -> dict:
             "in the NASA POWER record."
         )
 
-    soil, soil_sources, soil_gaps = fetch_soil(latitude, longitude)
+    soil, soil_sources, soil_gaps = soil_result
     sources.extend(soil_sources)
     data_gaps.extend(soil_gaps)
     static = {}
@@ -66,7 +94,7 @@ def build_environment(request: dict) -> dict:
         assumptions.append(
             "Soil is the ISRIC SoilGrids 0–30 cm modelled estimate at 250 m, not a field analysis."
         )
-    slope_pct, terrain_sources, terrain_gaps = fetch_slope(latitude, longitude)
+    slope_pct, terrain_sources, terrain_gaps = slope_result
     sources.extend(terrain_sources)
     data_gaps.extend(terrain_gaps)
     if slope_pct is not None:

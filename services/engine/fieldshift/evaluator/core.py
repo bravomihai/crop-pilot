@@ -580,9 +580,9 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
             _robust(season_product), "estimated", product_summary, ["fao56", "ecocrop", "ro-agronomy"] + env_ids
         )
         winter = [crops[c]["name"].lower() for c in dict.fromkeys(rotation) if "winterkill" in crops[c].get("hazards", {})]
-        if winter:
+        for name in winter:  # one note per crop, so the same text dedupes across plans
             data_gaps.append(
-                f"Winterkill risk for {', '.join(winter)} ignores snow cover, which protects winter crops; "
+                f"Winterkill risk for {name} ignores snow cover, which protects winter crops; "
                 "check winter hardiness locally."
             )
     else:
