@@ -7,6 +7,7 @@ import Notice from "./ui/notice";
 import ScoreComparison from "./charts/score-comparison";
 import RotationTimeline from "./charts/rotation-timeline";
 import ResultsWhatIf from "./results-what-if";
+import { ClimateCard, PlanReplay } from "./results-evidence";
 
 export default function RecommendationResults({
   result,
@@ -122,6 +123,8 @@ export default function RecommendationResults({
             ))}
           <ScoreComparison plans={result.plans} baseline={result.baseline} />
           <RotationTimeline plans={result.plans} baseline={result.baseline} />
+          <PlanReplay result={result} />
+          <ClimateCard result={result} />
           {result.baseline && (
             <div className="baseline-container">
               <PlanCard plan={result.baseline} baseline />

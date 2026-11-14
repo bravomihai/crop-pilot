@@ -1,4 +1,4 @@
-import type { CriterionScores, RotationPlan } from "@fieldshift/contracts";
+import type { ClimateContext, CriterionScores, RotationPlan } from "@fieldshift/contracts";
 
 export const SCORE_CRITERIA = [
   ["water", "Water"],
@@ -95,4 +95,56 @@ export function linearTrend(points: { year: number; value: number | null }[]) {
       0,
     ) / denominator;
   return { slope, at: (year: number) => meanY + slope * (year - meanX) };
+}
+
+export type ReplayMetric = "water" | "climate" | "productivity";
+export const REPLAY_METRICS: readonly (readonly [ReplayMetric, string])[] = [
+  ["water", "Water"],
+  ["climate", "Climate"],
+  ["productivity", "Productivity"],
+];
+
+/** One line per plan (and the current rotation) from `plan.replay`, scores out of 100. */
+export function replaySeries(
+  plans: RotationPlan[],
+  baseline: RotationPlan | undefined,
+  metric: ReplayMetric,
+) {
+  const rows = [
+    ...(baseline ? [{ plan: baseline, baseline: true }] : []),
+    ...plans.map((plan) => ({ plan, baseline: false })),
+  ];
+  return rows
+    .filter(({ plan }) => plan.replay?.length)
+    .map(({ plan, baseline: isBaseline }) => ({
+      id: plan.id,
+      label: isBaseline ? "Your current rotation" : plan.label,
+      baseline: isBaseline,
+      points: (plan.replay ?? []).map((season) => ({
+        year: season.season_start_year,
+        value: scorePercent(season.scores[metric]),
+      })),
+    }));
+}
+
+export const CLIMATE_INDICATORS = [
+  ["hot_days_gt32", "Days above 32 °C", "days"],
+  ["rain_mm", "Yearly rain", "mm"],
+  ["et0_mm", "Water demand of the air (ET₀)", "mm"],
+  ["dry_spell_max_days_apr_sep", "Longest dry spell, April–September", "days"],
+  ["frost_days", "Frost days", "days"],
+] as const;
+export type ClimateIndicator = (typeof CLIMATE_INDICATORS)[number][0];
+
+/** Yearly points and the per-decade trend for one indicator of `climate_context`. */
+export function climateSeries(
+  context: ClimateContext,
+  indicator: ClimateIndicator,
+) {
+  const points = context.years.map((year) => ({
+    year: year.year,
+    value: year[indicator] ?? null,
+  }));
+  const trend = context.trends?.[indicator];
+  return { points, perDecade: trend?.per_decade ?? null, mean: trend?.mean ?? null };
 }

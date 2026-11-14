@@ -1068,3 +1068,10 @@
     max-width: 78px;
   }
 }
+
+.results-evidence { display: grid; gap: 8px; margin: 18px 0; }
+.results-evidence .evidence-heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px; }
+.results-evidence h3 { margin: 0; }
+.results-evidence label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.results-evidence select { min-height: 32px; }
+.results-evidence .evidence-note { margin: 0; font-size: 13px; line-height: 1.5; opacity: 0.8; }
