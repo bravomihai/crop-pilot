@@ -14,12 +14,16 @@ returned. Since the merge of `main` (contract update of 2026-11-14) it also supp
 optional `productivity` priority, `current_rotation` → `baseline`, `history[].source`,
 and the plan fields `scores`, `local_checks` and `violations` (see section 9).
 
-**Computed mode is not functional yet.** P3 (`load_rules`, `evaluate`) and the P2 data
-switch are still stubs. `ENGINE_MODE=computed` keeps returning HTTP 503, and a test checks
-this. All algorithm tests use a **synthetic evaluator** (`tests/fake_evaluator.py`).
+**Computed mode is still not available over HTTP**, because P2's `build_environment` is
+disabled and `ENGINE_MODE=computed` keeps returning HTTP 503. A test checks this.
+
+P3's real evaluator is now merged. With the historical NASA POWER fixture standing in for
+P2, the real P3 and P4 modules work together and produce contract-valid results; see "P3–P4
+integration audit" below.
+
+P4's algorithm tests still use a **synthetic evaluator** (`tests/fake_evaluator.py`).
 Its outputs are marked `fixture: true`, and the pipeline refuses to return them as
-computed results. The tests check the P4 algorithms. They do not show that any crop,
-calendar or score is agronomically correct.
+computed results. No test shows that any crop, calendar or score is agronomically correct.
 
 ## Files
 
@@ -274,6 +278,130 @@ before, and tests check that.
   agronomic rules", "Unknown source reference in baseline" and "Baseline steps must be
   ordered 1, 2, 3".
 
+## P3–P4 integration audit (real modules, 2026-11-14)
+
+Branch `alexia` at `main` (`1e96016`, P3 merged). The test file is
+`services/engine/tests/test_p3_p4_integration.py`, with 23 tests. Every test uses:
+
+- the real `fieldshift.evaluator.load_rules` and `evaluate`;
+- the real P4 recommender and `pipeline.computed_result`;
+- the historical NASA POWER fixture `tests/fixtures/environment-ro-south.json` (Bărăgan
+  test point, 2005–2025), standing in for P2.
+
+No fake evaluator and no synthetic scores are involved. These are software integration
+results, **not agronomic validation**: P3's calendars, successions and thresholds are
+expert estimates awaiting review (`docs/evaluator.md`).
+
+### What was verified
+
+| Area | Result |
+| --- | --- |
+| Contract | Every result passes the JSON Schema and `validate_result_semantics`: three distinct plans, three ordered crops each, all sources resolvable (`nasa-power`, `fao56`, `ro-agronomy`, …) |
+| Feasibility | Every recommended sequence is `feasible` with no violations when re-evaluated directly by P3 |
+| Scores | `plan.scores` equal P3's criterion scores exactly. The weighted score in the explanation equals Σ wᵢ·sᵢ recomputed from P3's scores |
+| Priorities | With a single priority (water, soil, climate or productivity), plan 1 has the highest P3 score for that criterion among all feasible sequences (checked over all 343). Different priorities give different top plans |
+| Unknown scores | With too little weather to replay, P3 returns `null` for water, climate and productivity. P4 keeps `null`. Equal priorities give `insufficient_data`; soil-only priorities still give plans |
+| Scenario | Both scenario and reference-climate requests reach P3. P3's water scores fall under +2 °C / −20 % rain. Plan text uses "reference climate", never "baseline" |
+| Current rotation | `["maize", "winter_wheat"]` after maize gives a separate `baseline` (winter wheat → maize → winter wheat) with P3's scores, not counted in `status` |
+| Infeasible rotation | `["sunflower"]` gives a baseline with P3's violation ("Sunflower after sunflower …") preserved and explained, never recommended |
+| Exclusions and history | Excluded crops never appear. Sunflower harvested in 2026 (`source: apia`) keeps sunflower out of every plan, through P3's 6-year return interval |
+| Texts | P3's local checks (prefixed "P3:"), warnings, data gaps and method assumptions all reach the result. Confidence is never "high", because P3 marks soil and productivity as estimates. Text is English |
+| Unsupported region and missing data | Outside P3's zones: `insufficient_data` with P3's reason. Without `daily` weather: `insufficient_data` with "No daily weather…". No plans are invented |
+| Repeatability | Two identical requests, the second with a fresh environment object, give identical results apart from `generated_at` |
+
+### Example plans (equal priorities water/soil/climate 3/3/3)
+
+Request: available from 2026-10-01, maize harvested in 2026, rainfed, no scenario. These
+are the real P3 scores, with no agronomic claim attached.
+
+| Plan | Sequence | water | soil | climate | productivity |
+| --- | --- | --- | --- | --- | --- |
+| 1 | pea → winter rapeseed → winter barley | 0.789 | 0.863 | 0.518 | 0.398 |
+| 2 | sunflower → winter wheat → winter wheat | 0.662 | 0.614 | 0.529 | 0.333 |
+| 3 | soybean → winter barley → sunflower | 0.651 | 0.769 | 0.545 | 0.343 |
+| baseline (`maize, winter_wheat`) | winter wheat → maize → winter wheat | 0.591 | 0.564 | 0.495 | 0.270 |
+
+**Priorities change the result:**
+
+- water only: plan 1 is winter rapeseed → winter barley → winter barley (water 0.820);
+- productivity only: plan 1 is pea → winter barley → sunflower (productivity 0.421).
+
+**The scenario changes it too.** Under +2 °C / −20 % rain:
+
+- plan 1 becomes pea → winter barley → winter rapeseed (water 0.607, climate 0.432);
+- plans 2 and 3 change.
+
+Confidence is "medium" for all of these.
+
+### Timing (cold caches, one process; `ENGINE_TIMEOUT_MS` = 90 000)
+
+| Request | Total | P3 `evaluate` | P4 |
+| --- | --- | --- | --- |
+| rainfed, no scenario (343 calls) | 1.4 s | 1.4 s | 0.05 s |
+| rainfed, scenario + reference climate (686 calls) | 7.4 s | 7.2 s | 0.20 s |
+| irrigated, no scenario | 8.3 s | 8.2 s | 0.13 s |
+| irrigated, scenario, current rotation | 14–16 s | 15.5 s | 0.25 s |
+
+The heaviest request uses about 18 % of the timeout. P3's replay accounts for more than
+98 % of the time. The scenario's reference-climate comparison doubles the P3 calls by
+design. The integration test fails if a cold full request exceeds 25 % of the timeout.
+The integration file takes about 80 s; the whole Python suite takes about 81 s.
+
+### P4 bugs found by the integration tests and fixed
+
+1. **A current-rotation crop unknown to P3 disabled the scenario analysis.**
+   - Cause: P3 returns `unknown` with `scenario_applied: false` for crops it has no rules
+     for (for example `rice`). P4 required every evaluation to confirm the scenario.
+   - Effect: P4 declared the scenario "not applied" for the whole result, although all
+     343 candidates applied it.
+   - Fix: scenario support is now judged only on sequences P3 actually evaluated.
+2. **Outside the covered zones, P3's explanation was lost.**
+   - Cause: `load_rules` puts the reason in `rules.data_gaps`, which P4 ignored. P4 also
+     added a misleading "previous crop is not in the regional rules" note.
+   - Fix: P4 forwards `rules.data_gaps` and skips that note when there are no rules at all.
+3. **Empty results did not say why.** P4 copied P3's data gaps only from *selected*
+   plans, so an `insufficient_data` result dropped P3's reasons (for example "No daily
+   weather…"). Fix: when no plan is shown, P4 adds the data gaps P3 reported for every
+   evaluated sequence.
+4. **P3's method assumptions were dropped**, for example the number of replayed seasons
+   and the ET method. Fix: P4 reads `assumptions` from evaluations (now part of the
+   proposed shape) and adds those of the shown plans and baseline to `result.assumptions`.
+5. **Rounding contradiction in plan text.** A plan could say "P3 score 0.52, below the
+   median (0.52)". Fix: both numbers are printed with enough decimals (up to 4) to show
+   a real difference.
+
+None of these fixes changed generation, feasibility filtering, scoring, ranking, Pareto
+analysis, selection or calendar checks. The example rankings above are the same before
+and after.
+
+### P3-side observations (not changed, for Tudor)
+
+No P3 defect was confirmed. These are notes, each with a way to reproduce it:
+
+- **Unknown evaluations report `scenario_applied: false`.** Reproduce:
+  `evaluate(["maize", "rice", "maize"], request_with_scenario, env, rules)`. This is fine
+  semantically, and P4 now handles it. Worth documenting in `docs/evaluator.md`.
+- **Confidence can never reach "high" with P3.** Every evaluation has soil
+  `basis: "estimated"` and a fixed winterkill data gap. This is consistent with the
+  evidence; it is reported only so that nobody expects "high".
+- **Cost of scenario and irrigated replays.** A cold request with irrigation and a
+  scenario spends about 15 s in `evaluate`. Reproduce with the timing case above. It
+  fits the timeout, but more crops (n³ sequences) or zones would grow it quickly.
+- **The weather cache is keyed on `id(environment)`.** If a freed environment's id were
+  reused by a different environment with the same dates, cached weather could be stale.
+  I tried to trigger this (30 attempts) and could not, so it is a theoretical risk only.
+- **P3 output with no contract field.** `details`, `replay`, `soil_inputs` and
+  `soil_components` are not passed on, because the result contract has no fields for
+  them. Charts of past seasons would need a contract change agreed with P1 and P5.
+
+### Still depends on others
+
+- **P2:** a validated `build_environment`, returning `daily`, `static`, `sources` with
+  titles, and `data_gaps`. Until then computed mode returns 503 over HTTP. The fixture
+  covers one test point with no SoilGrids, SMAP or SRTM data.
+- **P3:** agronomist review of calendars, successions and thresholds. Coverage is one
+  zone (southern plains) with 7 crops.
+
 ## Proposed P3–P4 intermediate contract (team approval needed)
 
 `docs/team.md` asks P3 and P4 to agree on this contract. P4 currently reads the shape
@@ -331,7 +459,17 @@ services/engine/.venv/Scripts/python.exe -m pytest services/engine/tests
 `uv` was not installed on this machine. The pinned `uv==0.9.5` was installed into a
 temporary folder only to run the sync. The `.venv` it created is gitignored.
 
-**Result: 120 passed** after merging `main`, across these files:
+**Latest result (P3–P4 audit, 2026-11-14): 162 passed, 0 failed** in about 81 s:
+
+- `test_evaluator.py`: 18 (P3);
+- `test_p3_p4_integration.py`: 23 (real P3 and P4);
+- `test_recommender.py`: 48;
+- `test_p4_contract_extensions.py`: 28;
+- `test_p4_english.py`: 29;
+- `test_api.py`: 8 (P5);
+- contract tests: 8.
+
+Earlier result, kept for history: **120 passed** after merging `main`, across these files:
 
 - `test_contracts.py`: 4 original contract tests;
 - `test_contract_extensions.py`: 4 tests from P5;

@@ -50,7 +50,7 @@ def history_issues(request: dict, catalog_ids) -> list[str]:
                 f"The crop history lists {entry['crop_id']} harvested in {year}, after the year in which "
                 f"the field becomes available ({available.year}); please check the crop history."
             )
-        if entry["crop_id"] not in catalog_ids:
+        if catalog_ids and entry["crop_id"] not in catalog_ids:  # no rules at all: reported elsewhere
             issues.append(
                 f"The previous crop {entry['crop_id']} is not in the regional rules; "
                 "compatibility with it depends on the P3 evaluator."

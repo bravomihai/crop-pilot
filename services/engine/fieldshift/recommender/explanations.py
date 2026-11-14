@@ -69,6 +69,15 @@ def _interval(score: Score) -> str:
     return _fmt(score.lower) if score.complete else f"{_fmt(score.lower)}–{_fmt(score.upper)}"
 
 
+def _pair(a: float, b: float) -> tuple[str, str]:
+    """Format two values with enough decimals that a strict difference stays visible."""
+    for digits in (2, 3, 4):
+        x, y = f"{a:.{digits}f}", f"{b:.{digits}f}"
+        if x != y or a == b:
+            return x, y
+    return x, y
+
+
 def weights_text(weights: dict[str, float]) -> str:
     shown = [n for n in CRITERIA if n in REQUIRED_CRITERIA or weights.get(n, 0) > 0]
     return ", ".join(f"{_lower(n)} {weights[n] * 100:.0f}%" for n in shown)
@@ -181,10 +190,12 @@ def _criterion_lines(evaluation: Evaluation, ctx: PlanContext) -> tuple[list[str
             continue
         m = ctx.pool_medians.get(name)
         detail = f" P3 evidence: {c.summary}" if c.summary else ""
-        if ctx.pool_size > 1 and m is not None and c.score < m:
-            tradeoffs.append(f"{label}: P3 score {_fmt(c.score)}, below the median of feasible candidates ({_fmt(m)}).{detail}")
-        elif ctx.pool_size > 1 and m is not None:
-            benefits.append(f"{label}: P3 score {_fmt(c.score)}, at or above the median of feasible candidates ({_fmt(m)}).{detail}")
+        if ctx.pool_size > 1 and m is not None:
+            s_txt, m_txt = _pair(c.score, m)
+            if c.score < m:
+                tradeoffs.append(f"{label}: P3 score {s_txt}, below the median of feasible candidates ({m_txt}).{detail}")
+            else:
+                benefits.append(f"{label}: P3 score {s_txt}, at or above the median of feasible candidates ({m_txt}).{detail}")
         else:
             benefits.append(f"{label}: P3 score {_fmt(c.score)} out of 1.{detail}")
     return benefits, tradeoffs
