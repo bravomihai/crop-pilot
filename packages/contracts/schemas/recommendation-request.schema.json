@@ -57,12 +57,31 @@
             "type": "integer",
             "minimum": 1950,
             "maximum": 2150
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "typed",
+              "apia",
+              "spray_records",
+              "satellite",
+              "unknown"
+            ]
           }
         },
         "required": [
           "crop_id"
         ],
         "additionalProperties": false
+      }
+    },
+    "current_rotation": {
+      "minItems": 1,
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
       }
     },
     "soil": {
@@ -117,6 +136,11 @@
           "maximum": 5
         },
         "climate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "productivity": {
           "type": "number",
           "minimum": 0,
           "maximum": 5

@@ -6,68 +6,39 @@ import {
   type RecommendationResult,
 } from "@fieldshift/contracts";
 import { ApiError } from "./http";
+import { engineConfig, upstreamJson } from "./upstream";
+
 export async function recommend(
   input: unknown,
   requestId: string,
 ): Promise<RecommendationResult> {
   const parsed = requestSchema.safeParse(input);
-  if (!parsed.success)
+  if (
+    !parsed.success ||
+    Object.values(parsed.data.priorities).every((value) => value === 0)
+  )
     throw new ApiError(
       400,
       "validation_error",
-      "Check the location, availability date, and form values.",
+      "Check the form and choose at least one positive priority.",
     );
-  if (Object.values(parsed.data.priorities).every((v) => v === 0))
-    throw new ApiError(
-      400,
-      "validation_error",
-      "Choose at least one priority.",
-    );
-  const url = process.env.ENGINE_URL,
-    token = process.env.INTERNAL_API_TOKEN;
-  if (!url || !token || token.length < 32)
-    throw new ApiError(
-      503,
-      "engine_not_configured",
-      "The analysis engine is not configured.",
-    );
-  let response: Response;
-  try {
-    response = await fetch(`${url.replace(/\/$/, "")}/recommendations`, {
+  const config = engineConfig("recommendations");
+  const body = await upstreamJson(config.url, {
+    prefix: "engine",
+    notReady: true,
+    invalidCode: "invalid_engine_result",
+    timeoutMs: config.timeoutMs,
+    init: {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${token}`,
+        authorization: `Bearer ${config.token}`,
         "x-request-id": requestId,
       },
       body: JSON.stringify(parsed.data),
-      signal: AbortSignal.timeout(
-        Number(process.env.ENGINE_TIMEOUT_MS ?? 90000),
-      ),
-      cache: "no-store",
-    });
-  } catch {
-    throw new ApiError(
-      502,
-      "engine_unavailable",
-      "The analysis engine is temporarily unavailable. Please try again.",
-    );
-  }
-  if (response.status === 503)
-    throw new ApiError(
-      503,
-      "engine_not_ready",
-      "The agronomic engine is still in development. Use demo mode.",
-    );
-  if (!response.ok)
-    throw new ApiError(
-      502,
-      "engine_error",
-      "The engine could not complete the analysis.",
-    );
-  const result = resultSchema.safeParse(
-    await response.json().catch(() => null),
-  );
+    },
+  });
+  const result = resultSchema.safeParse(body);
   if (
     !result.success ||
     result.data.request_id !== requestId ||
@@ -76,16 +47,23 @@ export async function recommend(
     throw new ApiError(
       502,
       "invalid_engine_result",
-      "The engine returned an incomplete or invalid result.",
+      "The analysis engine returned an invalid result.",
     );
   if (
     result.data.location.latitude !== parsed.data.location.latitude ||
-    result.data.location.longitude !== parsed.data.location.longitude
+    result.data.location.longitude !== parsed.data.location.longitude ||
+    result.data.plans.some((plan) =>
+      plan.steps.some(
+        (step) =>
+          step.sowing_window.start < parsed.data.available_from ||
+          parsed.data.constraints.excluded_crops.includes(step.crop_id),
+      ),
+    )
   )
     throw new ApiError(
       502,
       "invalid_engine_result",
-      "The result location does not match the request.",
+      "The result does not match the request constraints.",
     );
   return result.data;
 }

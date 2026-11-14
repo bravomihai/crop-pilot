@@ -11,7 +11,9 @@
     "test:ui": "tsx --test tests/dashboard.test.ts tests/dashboard-components.test.tsx",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "db:deploy": "prisma migrate deploy",
+    "test:backend": "node --conditions=react-server --import tsx --test tests/*.test.ts",
+    "test:cache": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx tests/cache.integration.ts"
   },
   "dependencies": {
     "@fieldshift/contracts": "workspace:*",

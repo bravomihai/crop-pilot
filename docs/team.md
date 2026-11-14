@@ -20,6 +20,12 @@ P4: `recommend_rotations(request,environment,rules,evaluate) -> list[plan]`.
 P3/P4 trebuie să convină un contract intermediar de evaluare înainte de implementare.
 Contractul public request/result este deja comun și verificat în ambele limbaje.
 
-Primul caz de integrare este Fundulea, cu cinci culturi candidate. Exemplul de localitate
-nu dovedește validare agronomică. Prioritățile/scenariile trebuie să influențeze evaluarea
+Prima zonă acoperită este câmpia din sud și sud-est (Câmpia Română, Bărăgan, Dobrogea),
+cu culturile de câmp principale. Fundulea rămâne doar punctul de test din exemple; în afara
+zonei acoperite răspundem `insufficient_data`. Exemplul de localitate nu dovedește validare
+agronomică.
+
+Câmpurile opționale noi din contract (`current_rotation`/`baseline`, `plan.scores`,
+`local_checks`, `history[].source`, `priorities.productivity`) sunt în `docs/api.md`.
+Nimic nu se strică dacă nu le folosiți încă; adoptați-le când ajungeți la ele. Prioritățile/scenariile trebuie să influențeze evaluarea
 reală numai după implementarea modelelor; demo declară explicit că nu le calculează.

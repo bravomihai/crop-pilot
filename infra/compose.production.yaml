@@ -1,0 +1,29 @@
+# Merge from repo root: docker compose -f compose.yaml -f infra/compose.production.yaml ...
+# Docker Compose >= 2.24.4. Only HTTPS ingress is published.
+services:
+  postgres:
+    ports: !reset []
+  engine:
+    ports: !reset []
+  web:
+    ports: !reset []
+  gateway:
+    ports: !reset []
+  https:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:?Set the public domain}
+      ACME_EMAIL: ${ACME_EMAIL:?Set the certificate contact email}
+    depends_on: [gateway]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  caddy_data:
+  caddy_config:

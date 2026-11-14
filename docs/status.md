@@ -7,32 +7,47 @@
 - Formular cu localitate/punct, dată de disponibilitate, istoric și sol opțional, priorități.
 - Hartă Leaflet/OpenStreetMap, căutare Open-Meteo/GeoNames, trei carduri cu calendare.
 - Adapter frontend pentru lucru independent și mod demo vizibil.
-- Frontend foundation: English navigation, responsive styles, reusable UI
-  components, help content, and explicit empty/loading/error/result states.
 - Endpoint stateless Next.js cu validare, timeout și verificarea rezultatului.
 - Prisma/PostgreSQL pentru cache public opțional, cu migrație inițială.
 - API Python intern, pipeline și interfețe pentru P2/P3/P4.
 - Adaptor NASA POWER pentru descărcarea datelor zilnice; nu a fost verificat live în refacere.
 - Generator demonstrativ, care respectă ordinea temporală și excluderile, fără scoruri fictive.
 - Configurație Compose, instrucțiuni AWS și model de verificări CI neactivat.
+- P4 (branch `alexia`): motor de recomandare determinist în `recommender/` — generare
+  limitată a secvențelor din regulile P3, clasificare fezabil/nefezabil/necunoscut,
+  verificarea calendarului (inclusiv culturi de toamnă și `available_from`), ponderi
+  normalizate, intervale pentru scoruri lipsă, analiză Pareto, selecție diversă cu
+  dezvăluirea compromisurilor, comparație scenariu–referință când P3 o confirmă,
+  explicații și încredere calitativă din dovezi. Integrat în `pipeline.py` fără fallback.
+  Ieșirea P4 pentru utilizatori este în engleză. Adaptat contractului extins din `main`:
+  criteriul opțional `productivity`, `current_rotation` → `baseline` evaluat prin P3 (cu
+  `violations`, omis cu explicație dacă P3 nu dă calendar/surse), `history[].source` în
+  încredere și `local_checks`, `plan.scores` cu `null` pentru necunoscut. Comparația cu
+  scenariul climatic folosește „clima de referință”, separat de rotația actuală.
+  `pipeline.py` apelează din nou `recommend_rotations`, deci `tests/test_api.py` (P5) trece.
+  Verificat numai cu un evaluator SINTETIC de test: 120 teste pytest trec (2026-11-14);
+  nu este validare agronomică. `pnpm` nu a rulat (lipsă `node_modules`; contractele
+  neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## De implementat de echipă
 
 - P2: verificare live POWER, indicatori și control de calitate, integrarea altor surse justificată.
 - P3: reguli regionale citate, praguri, bilanț hidric, compatibilitate și calendare validate.
-- P4: generare și selecție reală, compromisuri, robustețe la scenarii, explicații din dovezi.
-- P1: confirm final input details with the team; review the interface visually
-  in a browser and continue accessibility testing.
-- P5: configurarea deploymentului AWS și a secretelor reale.
+- P3/P4: acord asupra contractului intermediar de evaluare propus în raportul P4
+  (`criteria` 0–1 cu proveniență, inclusiv `productivity`, `calendar`, `scenario_applied`,
+  `sources`, `local_checks`; calendar și surse și pentru secvențe nefezabile, ca rotația
+  actuală să poată fi afișată cu încălcările ei).
+- P4: test de integrare cu evaluatorul real P3 (Fundulea), calibrarea pragurilor de
+  selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
+- P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
+- P5: publicarea efectivă pe AWS și configurarea secretelor reale la deployment; pregătirea locală este descrisă mai jos.
 
 ## Intenționat în afara versiunii
 
 Conturi, email/login, sesiuni persistente, profiluri de fermieri, analize salvate, SMS,
-WhatsApp, predicții exacte de producție/profit, ML antrenat și CMIP6.
-Parcel drawing was subsequently requested explicitly and is now implemented
-as local interface geometry, without changing the engine request contract.
+WhatsApp, contur de parcelă, predicții exacte de producție/profit, ML antrenat și CMIP6.
 
-## Limitele verificării acestei refaceri
+## Limitele verificării inițiale (istoric)
 
 Utilizatorul a cerut să nu verificăm pornirea aplicației. Nu am pornit Next.js, FastAPI,
 Docker, PostgreSQL sau migrații și nu am făcut deploy. Verificările statice/contractele
@@ -46,70 +61,75 @@ CI este păstrat ca exemplu în `infra/ci/checks.yml.example`. Tokenul GitHub di
 nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
 `.github/workflows/checks.yml` folosind un acces care permite administrarea workflow-urilor.
 
-## Frontend foundation update — 2026-11-14
+## Verificare P5 — 2026-11-14
 
-Implemented on `andrei`, after syncing with `main`:
+- `GET /api/engine/status` implementat: conexiune HTTP spre engine, mod și contract,
+  timeout 3 secunde, erori fără URL/token și fără cache. Nu certifică motorul agronomic.
+- `pnpm test:backend`: 18 teste trecute pentru succes, configurație, răspunsuri
+  incompatibile, timeout inclusiv la citirea corpului și lipsa informațiilor secrete.
+- Schemele și clientul Prisma generate; TypeScript și buildul Next.js au trecut.
+- Cele 4 teste Python existente au trecut cu dependențele din lockfile.
+- Verificat cu procese Next.js și FastAPI reale pe localhost, în `demo`, cache
+  dezactivat: status 200; recomandări 200 cu trei planuri a câte trei culturi și
+  localizarea cererii; formular invalid 400; acces direct fără token la engine și
+  cache intern 401; după oprirea engine, noul endpoint răspunde 502.
+- Configurație locală ignorată de Git, cu token comun generat. Procesele pornite
+  pentru verificare au fost oprite. Fără PostgreSQL, Docker, migrații sau deploy.
+- Nu au fost verificate NASA live, funcționarea PostgreSQL sau calculul agronomic
+  `computed`. Exemplul CI include testele backend, dar rămâne neactivat.
 
-- English page shell, in-page navigation, skip link, help, and footer.
-- Shared button, notice, and form-section components; CSS variables, mobile
-  layouts, keyboard focus styles, and reduced-motion support.
-- Separate results component for idle, loading, error, complete, limited, and
-  insufficient-data responses. Each returned plan shows three successive crops;
-  the interface does not add missing alternatives.
-- Location errors stay near the search. Form entries remain after failed
-  calculations; changing entries clears the previous result. Inputs are disabled
-  during a calculation, with a separate control to stop waiting.
-- English crop labels, date formatting, API messages, and fictional demo output.
-  English location searches use a language-specific cache key. Request/response
-  shapes and agronomic behavior are unchanged.
-- Local frontend instructions are in `docs/frontend.md`.
+## Backend consolidat P5 — 2026-11-14
 
-Validation: dependencies installed from the frozen lockfile, JSON schemas and
-Prisma client generated, and TypeScript checks passed for web and contracts.
-React components were rendered in memory with local fixtures to check the result
-states, English page content and dates, demo labels, plan/crop counts, empty
-metadata, loading buttons, unique IDs, and navigation anchors. CSS syntax parsed
-successfully. Direct Python checks confirmed demo syntax, consistency with the
-English fixture, request ID preservation, crop ordering, and limited/insufficient
-responses. The full Python pytest suite could not run because pytest is not
-installed in the available interpreter.
-No Next.js/FastAPI server, browser preview, Docker, database migration, live
-external-service verification, or deployment was run for this update.
+### Implementat și verificat local
 
-## Satellite dashboard update — 2026-11-14
+- Recomandări: JSON și dimensiune limitate, configurație validată, timeout 504
+  inclusiv la citirea corpului; răspunsurile incompatibile sau contrare excluderilor/
+  disponibilității sunt respinse. Fără redirect și fără fallback computed → demo.
+- Geocodare: validare la furnizor și la cache, coordonate verificate, răspuns limitat,
+  erori de conexiune/date și timeout distincte. Open-Meteo a fost verificat live.
+- Toate endpointurile implementate: `no-store`, `X-Request-ID`, loguri structurate
+  cu operație, status, cod și durată; fără formulare/tokenuri/URL-uri în aceste loguri.
+- PostgreSQL 17 în Docker: migrarea aplicată; scriere, citire, upsert, expirare și
+  curățare verificate. DELETE intern autentificat șterge în loturi de cel mult 1000.
+  Serviciu periodic configurat la pornire și apoi la fiecare oră. Limite DB de 1 secundă.
+- Baza a fost oprită temporar: operațiile cache au eșuat controlat, iar geocodarea și
+  calculul demo au continuat. Baza și motorul au fost restaurate după verificare.
+- Gateway NGINX real: 413 pentru corp prea mare, 429 + Retry-After pentru limită,
+  API intern blocat la intrarea publică. NGINX și Caddy au trecut validarea configurației.
+- Imaginile web/migrare/engine construite; stack Compose pornit și verificat HTTP.
+  Aplicația locală cu protecții este pe `http://localhost:8080`.
+- 60 teste backend și 12 teste Python trecute; test separat PostgreSQL trecut.
+  Include timeout HTTP real cu un corp blocat, nu numai o eroare simulată.
+  TypeScript și buildul au trecut. CloudFormation validat cu cfn-lint 1.60.1.
 
-The requested dashboard replaces the standalone calculator on the home page.
-It uses a fixed desktop sidebar, location search, field metadata and regional
-shortcuts, a satellite-map/planning grid, blue actions, white cards, and responsive
-layouts. English remains the interface language.
+### Pregătit pentru publicare, fără execuție în cloud
 
-Implemented:
+- `.github/workflows/checks.yml` include tipuri, contracte, teste, PostgreSQL real,
+  builduri Docker, configurații ingress și lint CloudFormation. Va rula la push/PR;
+  nu a fost publicat sau executat pe GitHub în această sarcină.
+- Profil producție HTTPS prin Caddy, porturile serviciilor eliminate, loguri rotite.
+  Certificatul și accesul public nu au fost testate: nu există domeniu/deployment ales.
+- AWS: șablon EC2 + IAM/SSM + reguli de acces și disc criptat; încărcare din SecureString
+  în `.env.production` ignorat de Git. Documentație în `infra/aws/README.md`.
+  Configurația este pregătită; nicio resursă AWS sau secret de producție nu a fost creat.
 
-- Leaflet satellite basemap using Esri World Imagery and road/place reference layers,
-  with an OpenStreetMap street-layer alternative and visible attribution.
-- Hybrid click/freehand drawing with straight guides, anchor points, per-stroke
-  simplification, finish/undo/cancel/clear/redraw controls, keyboard shortcuts,
-  approximate hectares, and centre coordinates. Invalid outlines are rejected.
-  A point-only alternative remains available. Geometry is held in tab memory.
-- Hypothetical temperature/rainfall controls that update polygon style, four
-  example KPI values, and local crop-preview scores. The dashboard explicitly
-  labels all such values as fictional, rather than NASA measurements or a
-  validated agronomic model. No actual 75% water saving is claimed.
-- Optional PDF selection/removal for history and soil, with size/header checks.
-  Files stay local and are not parsed, sent to services, or used for calibration.
-- Existing adapter-based rotation request from the field centre, available date,
-  scenario, irrigation flag, and manual soil/history. Shared contracts are
-  unchanged; polygon, selected preview crop, and PDF content are not submitted.
-- In-page engine responses with three successive crops per plan; limited,
-  insufficient-data, demo, and error handling remain explicit. Input changes
-  cancel pending requests and clear stale results.
-- NASA documentation links and an informational voice-assistant dialog. Phone
-  service and Romanian translation are not connected.
+### Dependențe de colegi și limite
 
-Verification: 10 automated checks passed for geometry, curve/corner preservation,
-invalid polygons, illustrative scenario changes, PDF selection, and component
-rendering including limited/insufficient-data responses. TypeScript checks passed
-for contracts and web, CSS syntax parsed successfully, and frozen-lockfile
-installation completed. No application server, browser preview, live tile/NASA
-verification, database migration, or deployment was run. Mouse/touch gestures,
-imagery availability, and visual layout still need manual browser review.
+- Testele de succes computed folosesc explicit module simulate și verifică numai
+  contractul/orchestrarea pentru 0/1/2/3 planuri. Nu sunt o evaluare agronomică reală.
+- Cu modulele actuale reale, Next.js → Python în computed a fost verificat și răspunde
+  503 fără fallback. P2/P3/P4 trebuie să livreze și să valideze modelele și datele.
+- NASA POWER nu a fost verificat live în această sarcină. Nu există monitorizare AWS
+  sau alerte configurate; diagnosticarea implementată este locală, prin loguri.
+- Livrabilul P5 este pe branchul `mihail`. Fișierele de mediu și secretele locale sunt
+  ignorate de Git. Containerele locale rămân pornite pentru revizuire.
+
+## Frontend
+
+The andrei branch adds the English responsive dashboard, satellite parcel drawing,
+local PDF selection, explicit demo indicators, and five local priority sliders
+with live crop filtering. Rotation results use the shared adapter and retain
+limited/insufficient-data handling. These indicators and rankings are illustrative,
+not validated NASA or agronomic results. The 21 frontend checks, TypeScript, and
+CSS checks passed before this merge; browser interactions were not yet verified.
+See docs/frontend.md for component ownership and preview instructions.

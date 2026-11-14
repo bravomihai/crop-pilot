@@ -1,30 +1,38 @@
-# AWS — calculator web fără conturi
+# Infrastructură FieldShift
 
-Pentru început: web Next.js și engine Python în containere pe EC2 sau ECS/Fargate.
-PostgreSQL poate rula local în Compose; pe AWS folosiți RDS PostgreSQL dacă doriți cache
-persistent administrat. Cache-ul este opțional și se poate dezactiva.
+- `compose.yaml`: PostgreSQL local, migrare, web, motor, gateway NGINX și mentenanță cache.
+- `nginx.conf`: limite de cereri și corpuri, blocarea API-ului intern la accesul public.
+- `cache-maintenance.py`: curățare periodică autentificată a datelor publice expirate.
+- `Caddyfile` + `compose.production.yaml`: profil HTTPS, fără porturi directe pentru servicii.
+- `aws/host.yaml`, `aws/configure.py`, `aws/README.md`: infrastructură EC2 pregătită și
+  încărcarea secretelor; nicio resursă AWS nu a fost creată.
+- `.github/workflows/checks.yml`: verificări pregătite pentru rulare la push/PR.
+  `ci/checks.yml.example` este copia de referință; workflow-ul nu a rulat pe GitHub încă.
 
-- Publicați numai web-ul prin HTTPS, cu reverse proxy/load balancer.
-- Engine comunică prin rețeaua privată, folosind `INTERNAL_API_TOKEN`.
-- Nu expuneți PostgreSQL sau endpointul engine către internet.
-- Configurați secretul din SSM/Secrets Manager; valorile din exemple sunt numai locale.
-- Rulați `pnpm db:deploy` ca pas de release, cu DATABASE_URL corespunzător, înainte de cache.
-- Folosiți HTTPS către RDS cu certificatul CA adecvat; nu dezactivați verificarea TLS.
-- Next.js așteaptă motorul până la `ENGINE_TIMEOUT_MS` (implicit 90 secunde); configurați
-  timeoutul proxy-ului peste această limită. Pentru calcule mai lungi, proiectați explicit
-  o coadă și retenția datelor; nu introduceți implicit persistența cererilor fermierilor.
-- Limitați cererile la nivelul proxy/AWS WAF și verificați traficul fără a loga formulare.
-- Nu trimiteți SMS și nu reconfigurați numărul/webhookul Anveo existent pentru acest repo.
+## Verificare locală
 
-Nu există infrastructură creată sau deploy efectuat de această refacere.
-Exemplu de proxy: `Caddyfile.example` (adaptați domeniul și rețeaua).
+Cu Node disponibil în shell și dependențele instalate, pornește configurația locală:
 
-Surse: Next.js https://nextjs.org/docs/app/getting-started/deploying
-ECS https://docs.aws.amazon.com/AmazonECS/latest/developerguide/AWS_Fargate.html
-RDS https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html
+```sh
+docker compose up -d --build --wait
+pnpm test:cache
+services/engine/.venv/bin/python infra/check-local.py
+```
 
-Geocoding: https://open-meteo.com/en/docs/geocoding-api (noncommercial prototype; review terms before commercial use).
-Map tiles: https://operations.osmfoundation.org/policies/tiles/ (attribution, normal browser caching, no bulk download).
+Scriptul de integrare folosește numai localhost. Verifică motorul demo, geocodarea live,
+cache-ul și limitele gateway-ului; oprește temporar numai PostgreSQL al acestui proiect
+și recreează temporar engine în `computed`, apoi restaurează baza și `demo`. Nu îl rula
+pe un deployment comun. Nu șterge volume sau date active. Migrarea se face automat ca
+serviciu separat în Compose. Configurația locală este ignorată de Git.
 
-CI: `ci/checks.yml.example` conține verificările propuse. Nu este activ pe GitHub; pentru
-activare mutați-l în `.github/workflows/checks.yml` cu acces workflow corespunzător.
+Aplicația cu limite publice: `http://localhost:8080`; portul direct de dezvoltare este
+3000. Baza și motorul sunt publicate numai pe loopback în profilul local. Pentru producție,
+folosește profilul din [ghidul AWS](aws/README.md), care elimină aceste porturi.
+
+Cache-ul stochează numai date publice. Formularele, istoricul introdus și recomandările
+fermierilor nu sunt persistate. Nu se trimit mesaje SMS/WhatsApp.
+
+Surse primare pentru configurație: [NGINX](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html),
+[Compose](https://docs.docker.com/reference/compose-file/merge/),
+[node-postgres](https://node-postgres.com/apis/client),
+[Caddy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
