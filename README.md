@@ -1,31 +1,98 @@
-# FieldShift — calculator pentru succesiunea culturilor
+# FieldShift: crop rotation planning with NASA data
 
-NASA Space Apps 2026 · Field Shift: Adapting Farms with NASA Data.
+NASA Space Apps Challenge 2026 · **Field Shift: Adapting Farms with NASA Data**
 
-Fermierul introduce localitatea/un punct, data disponibilității, ce a cultivat, informații
-de sol dacă le are și prioritățile sale. Primește trei planuri pentru următoarele trei
-culturi principale, cu ferestre de semănat/recoltare și compromisuri. Nu își face cont.
-Nu salvăm profiluri sau analize personale. O nouă vizită înseamnă un formular nou.
+Farmers in Romania choose the next crops for a field mostly from habit and last year's
+prices, while summers get hotter and dry spells longer. FieldShift helps them compare
+**what they do today** with **three alternative sequences of the next three main crops**,
+using the field's own recent weather from NASA and a climate what-if.
 
-**Starea actuală:** mediu de dezvoltare și integrare demonstrativă. Evaluarea agronomică
-și optimizarea sunt pentru P3/P4. Rezultatele demo sunt fictive și marcate în interfață.
-Modul `computed` nu este încă disponibil. Nu sunt recomandări validate pentru cultivare.
+For each option the farmer sees:
 
-## Structură
+- the sowing and harvest windows of every crop;
+- how it scores on **water**, **soil**, **climate** risk and **productivity** potential;
+- why it was suggested, what it costs (trade-offs) and how sure we are;
+- **what to check locally** with an agronomist before acting on it.
 
-| Director             | Rol                                                                     |
-| -------------------- | ----------------------------------------------------------------------- |
-| `apps/web`           | Next.js + React, formular și API public, Prisma/PostgreSQL pentru cache |
-| `services/engine`    | FastAPI și module Python pentru P2/P3/P4                                |
-| `packages/contracts` | Sursa Zod, tipuri TS, scheme JSON generate, exemple                     |
-| `docs`               | Arhitectură, API, responsabilități, status                              |
-| `infra`              | AWS și reverse proxy                                                    |
+It supports the farmer's and the agronomist's judgement. It does not replace it, and it
+does not forecast yields or profit.
 
-Începe cu [AGENTS.md](AGENTS.md), [docs/team.md](docs/team.md) și [contractul API](docs/api.md).
+## How it works
 
-## Instalare locală
+```text
+Farmer: location, field available from, crop history, current rotation,
+        soil (if known), irrigation, excluded crops, priorities, what-if scenario
+   │
+   ▼
+1. Field data (P2)      NASA POWER daily weather for the last ~20 seasons, FAO-56 ET0,
+                        ISRIC SoilGrids soil; data gaps are reported, never filled in
+   │
+   ▼
+2. Evaluation (P3)      regional crop rules (calendars, successions, return intervals)
+                        decide what is feasible; each sequence is replayed over the past
+                        seasons and the what-if to score water, soil, climate, productivity
+   │
+   ▼
+3. Recommendation (P4)  candidate sequences, farmer weights, trade-offs (Pareto),
+                        three distinct plans + the current rotation as a baseline,
+                        explanations and confidence built only from the evaluation
+   │
+   ▼
+Results: plans and baseline side by side, calendars, scores, sources, local checks
+```
 
-Node 22, pnpm 10.11.0, Python 3.11+, uv 0.9.5 și, opțional, Docker pentru PostgreSQL.
+What keeps it honest:
+
+- **Transparent scoring, not a trained model, makes the decision.** There is no dataset
+  of "the right rotation", and the answer depends on the farmer's priorities. Rules and
+  sourced scores can be explained and checked.
+- **Replay instead of averages.** A sequence is played over each of the field's recent
+  seasons, so a plan that fails in dry years shows it.
+- **Unknown is not neutral.** Missing data gives `null` scores, lower confidence and a
+  question for the agronomist, never a default value.
+- **Regional data is context.** NASA POWER and SoilGrids describe the area around the
+  point, not the field itself. The app asks for a point, not a field boundary.
+- **The what-if is a scenario, not a forecast.** Temperature and rain sliders show how
+  sensitive each plan is.
+
+## Coverage
+
+Crop rules are regional: sowing dates in the Romanian Plain are not those of
+Transylvania. Version 1 covers the **southern and south-eastern plains** (Romanian
+Plain, Bărăgan, Dobrogea) with the main field crops: winter wheat, winter barley, maize,
+sunflower, pea, plus rapeseed and soybean when their rules are sourced. For points
+outside a covered zone the app says so (`insufficient_data`) instead of guessing.
+
+Next zones: the Western Plain, Moldova and Transylvania. Later: cover crops between main
+crops, multi-year forage (alfalfa), SMAP soil moisture, SRTM slope, CMIP6 scenarios and a
+Sentinel-2 crop-history classifier for farmers who don't know their field's history.
+
+## Current status
+
+The web app, the API, the contract, the NASA POWER adapter and the recommender (tested
+with a synthetic evaluator) are written. The regional rules and the evaluator are in
+progress. Until they are done, the app runs in **demo mode** with invented, clearly
+labelled plans. Details: [docs/status.md](docs/status.md).
+
+## Repository
+
+| Folder               | What it holds                                                   | Owner  |
+| -------------------- | --------------------------------------------------------------- | ------ |
+| `apps/web`           | Next.js + React: form, map, results, public API, optional cache | P1, P5 |
+| `services/engine`    | Python FastAPI: `data_service`, `evaluator`, `recommender`      | P2–P4  |
+| `packages/contracts` | Zod contract, generated JSON Schemas, examples                  | all    |
+| `docs`               | Architecture, API, team split, status                           |        |
+| `infra`              | AWS deployment and reverse proxy                                | P5     |
+
+Start with [AGENTS.md](AGENTS.md), [docs/team.md](docs/team.md) and [the API](docs/api.md).
+The contract lives in [`packages/contracts/src/index.ts`](packages/contracts/src/index.ts);
+[`recommendation-request.full.json`](packages/contracts/examples/recommendation-request.full.json)
+and [`recommendation-result.full.json`](packages/contracts/examples/recommendation-result.full.json)
+show every optional field.
+
+## Run locally
+
+Node 22, pnpm 10.11.0, Python 3.11+, uv 0.9.5, and Docker only for the optional cache.
 
 ```sh
 corepack enable
@@ -37,47 +104,38 @@ cp services/engine/.env.example services/engine/.env
 uv sync --project services/engine --frozen --extra dev
 ```
 
-În două terminale, când doriți să porniți aplicația:
+Then, in two terminals:
 
 ```sh
-# Terminal 1
+# Terminal 1: engine
 cd services/engine
 .venv/bin/uvicorn fieldshift.api:app --env-file .env --reload --port 8000
 ```
 
 ```sh
-# Terminal 2, de la rădăcină
+# Terminal 2: web, from the repository root
 pnpm dev
 ```
 
-Web: `http://localhost:3000`. Motorul este intern. Tokenul trebuie să fie identic în
-cele două fișiere de mediu. Configurația implicită locală este `ENGINE_MODE=demo`.
+Open `http://localhost:3000`. The internal token must be the same in both env files.
+The default is `ENGINE_MODE=demo`.
 
-### Frontend independent
+**Frontend only:** set `NEXT_PUBLIC_USE_MOCK_API=true` in `apps/web/.env.local` and run
+only `pnpm dev`; the app reads the shared example.
 
-Setează `NEXT_PUBLIC_USE_MOCK_API=true` în `apps/web/.env.local`, apoi pornește doar web-ul.
-`src/lib/api.ts` citește fixture-ul comun. Formularul nu este evaluat în acest mod și
-calendarul exemplului este fix; interfața afișează avertismentul. Harta și căutarea
-localităților folosesc internet; poți selecta punctul fără căutare.
-
-### Cache PostgreSQL
-
-Cache-ul este opțional și conține date publice, nu formulare/rezultate de fermieri.
+**Optional PostgreSQL cache** (public data only, never farmer input or results):
 
 ```sh
 cp .env.example .env
-# Configurează valorile locale înainte de pornire.
 docker compose up -d postgres
-# Prisma CLI citește apps/web/.env; Next.js citește și .env.local.
 cp apps/web/.env.example apps/web/.env
 pnpm db:deploy
 ```
 
-Setează `CACHE_ENABLED=true` în mediul web. Pentru toate serviciile în containere:
-`docker compose up --build`. Migrarea locală este un serviciu separat din Compose.
-Nu folosi credențialele demonstrative pe un deployment comun.
+Then set `CACHE_ENABLED=true` for the web app. Everything in containers:
+`docker compose up --build`.
 
-## Verificări
+## Checks
 
 ```sh
 pnpm contracts:generate
@@ -89,8 +147,15 @@ pnpm test:cache
 services/engine/.venv/bin/python -m pytest services/engine/tests
 ```
 
-[Starea exactă și limitele](docs/status.md). SMS prin Anveo și WhatsApp prin Meta sunt
-în afara acestei versiuni. Nu există Twilio, login, SQS sau stocare de ferme în acest repo.
+## Data sources
+
+[NASA POWER](https://power.larc.nasa.gov/) daily agro-meteorology ·
+[ISRIC SoilGrids](https://soilgrids.org/) · [FAO-56](https://www.fao.org/3/x0490e/x0490e00.htm)
+crop water use · [FAO EcoCrop](https://gaez.fao.org/pages/ecocrop) ·
+[FAO GAEZ v4](https://gaez.fao.org/) · Romanian crop technology guides (INCDA Fundulea).
+Planned: SMAP, SRTM, NEX-GDDP-CMIP6, Sentinel-2.
+
+## Working together
 
 Dependențele sunt fixate în `pnpm-lock.yaml` și `services/engine/uv.lock`.
 Instalarea uv: https://docs.astral.sh/uv/getting-started/installation/ .

@@ -9,10 +9,21 @@ export const locationSchema = z
   })
   .strict();
 export const dateSchema = z.iso.date();
+export const cropIdSchema = z.string().regex(/^[a-z][a-z0-9_]*$/);
+// Where a history entry came from. Typed or documented history is stronger evidence than
+// a satellite classification; P4 lowers confidence accordingly. Optional: absent = unknown.
+export const historySourceSchema = z.enum([
+  "typed",
+  "apia",
+  "spray_records",
+  "satellite",
+  "unknown",
+]);
 export const cropHistorySchema = z
   .object({
-    crop_id: z.string().regex(/^[a-z][a-z0-9_]*$/),
+    crop_id: cropIdSchema,
     harvest_year: z.number().int().min(1950).max(2150).optional(),
+    source: historySourceSchema.optional(),
   })
   .strict();
 export const soilSchema = z
@@ -30,12 +41,19 @@ export const requestSchema = z
     available_from: dateSchema,
     crop_count: z.literal(3).default(3),
     history: z.array(cropHistorySchema).max(30).default([]),
+    // The rotation the farmer follows today, as one cycle (e.g. ["maize", "winter_wheat"]).
+    // When present, the result also contains `baseline`: that cycle continued for the
+    // next three main crops and evaluated like the plans, so they can be compared.
+    current_rotation: z.array(cropIdSchema).min(1).max(5).optional(),
     soil: soilSchema.optional(),
     priorities: z
       .object({
         water: z.number().min(0).max(5),
         soil: z.number().min(0).max(5),
         climate: z.number().min(0).max(5),
+        // Relative production potential (EcoCrop suitability, FAO GAEZ attainable yield).
+        // Not a yield or profit forecast. Optional: absent = not weighted.
+        productivity: z.number().min(0).max(5).optional(),
       })
       .strict(),
     constraints: z
@@ -81,6 +99,15 @@ export const stepSchema = z
     reason: z.string(),
   })
   .strict();
+const scoreSchema = z.number().min(0).max(1).nullable();
+export const criterionScoresSchema = z
+  .object({
+    water: scoreSchema.optional(),
+    soil: scoreSchema.optional(),
+    climate: scoreSchema.optional(),
+    productivity: scoreSchema.optional(),
+  })
+  .strict();
 export const planSchema = z
   .object({
     id: z.string(),
@@ -91,6 +118,14 @@ export const planSchema = z
     explanation: z.string(),
     confidence: z.enum(["low", "medium", "high"]),
     source_ids: z.array(z.string()),
+    // Optional additions (all producers may omit them):
+    // P3 criterion scores, 0–1, higher is better; null = unknown, never a neutral 0.5.
+    scores: criterionScoresSchema.optional(),
+    // What a local agronomist or the farmer should verify before acting on the plan.
+    local_checks: z.array(z.string()).optional(),
+    // Agronomic rules the sequence breaks. Recommended plans never break rules, so this is
+    // only filled for `baseline`, where the farmer's current rotation is shown as it is.
+    violations: z.array(z.string()).optional(),
   })
   .strict();
 export const resultSchema = z
@@ -102,6 +137,10 @@ export const resultSchema = z
     status: z.enum(["complete", "limited", "insufficient_data"]),
     location: locationSchema,
     plans: z.array(planSchema).max(3),
+    // The farmer's current rotation continued for three main crops, evaluated the same
+    // way as the plans. Present only when the request has `current_rotation`. It is not
+    // counted in `status` and may repeat a plan's sequence.
+    baseline: planSchema.optional(),
     assumptions: z.array(z.string()),
     data_gaps: z.array(z.string()),
     sources: z.array(sourceSchema),
@@ -111,6 +150,8 @@ export const resultSchema = z
 export type RecommendationRequest = z.infer<typeof requestSchema>;
 export type RecommendationResult = z.infer<typeof resultSchema>;
 export type RotationPlan = z.infer<typeof planSchema>;
+export type CriterionScores = z.infer<typeof criterionScoresSchema>;
+export type HistorySource = z.infer<typeof historySourceSchema>;
 export type Location = z.infer<typeof locationSchema>;
 
 export function validateResultSemantics(
@@ -148,6 +189,16 @@ export function validateResultSemantics(
         plan.steps[i - 1].harvest_window.end >= step.sowing_window.start
       )
         errors.push("Crop windows overlap.");
+    });
+    if (plan.violations?.length)
+      errors.push("Recommended plans cannot break agronomic rules.");
+  }
+  if (result.baseline) {
+    if (result.baseline.source_ids.some((id) => !ids.has(id)))
+      errors.push("Unknown source reference in baseline.");
+    result.baseline.steps.forEach((step, i) => {
+      if (step.order !== i + 1)
+        errors.push("Baseline steps must be ordered 1, 2, 3.");
     });
   }
   return errors;
