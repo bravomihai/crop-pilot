@@ -21,6 +21,8 @@ P3's real evaluator is now merged. With the historical NASA POWER fixture standi
 P2, the real P3 and P4 modules work together and produce contract-valid results; see "P3–P4
 integration audit" below.
 
+The merged API and frontend accept and display these real results without loss. One display issue remains and belongs to P1; see "Full-stack integration audit".
+
 P4's algorithm tests still use a **synthetic evaluator** (`tests/fake_evaluator.py`).
 Its outputs are marked `fixture: true`, and the pipeline refuses to return them as
 computed results. No test shows that any crop, calendar or score is agronomically correct.
@@ -402,6 +404,129 @@ No P3 defect was confirmed. These are notes, each with a way to reproduce it:
 - **P3:** agronomist review of calendars, successions and thresholds. Coverage is one
   zone (southern plains) with 7 crops.
 
+## Full-stack integration audit (real P3–P4 → API → frontend, 2026-11-14)
+
+Branch `alexia` after the frontend merge (`951bd96`). Goal: check that the merged API and
+frontend can consume real computed results before P2 is live. P2 is replaced only by the
+historical NASA POWER fixture. No fake evaluator, servers, browser, Docker or external
+service was used.
+
+### Method
+
+1. **Real results.** `computed_result` with the real `load_rules`, `evaluate` and
+   `recommend_rotations` produced 11 results:
+   - complete, with and without baseline;
+   - infeasible baseline;
+   - +2 °C / −20 % scenario;
+   - limited (2 plans);
+   - two kinds of `insufficient_data`: no feasible sequence, and outside the zones (also
+     with a current rotation);
+   - unknown (`null`) scores;
+   - the exact request shape the dashboard builds;
+   - the shared full example the calculator loads.
+2. **Python boundary.** `tests/test_p4_web_integration.py` (14 tests, kept in the repo)
+   covers the internal FastAPI endpoint in computed mode, the Next.js post-checks
+   mirrored in Python, priorities, text regressions and P2's output shape.
+3. **Node boundary.** A Node test harness ran outside the repo, against the installed web
+   dependencies, because `apps/web` belongs to P1/P5. For each real result it checked:
+   - Zod `resultSchema` parsing is lossless (deep-equal before and after);
+   - `validateResultSemantics` passes;
+   - the real `POST /api/recommendations` handler, with only the engine `fetch` stubbed,
+     returns 200 with the body unchanged except `request_id`, and forwards the priorities
+     exactly as entered;
+   - the real `RecommendationResults` component, rendered with `renderToStaticMarkup`,
+     shows every returned element.
+
+   It can be added to `apps/web/tests/` with P1/P5's agreement.
+
+**What this does not verify:** the browser flow (clicks, sliders, debounce/abort in a real
+page), running Next.js/FastAPI servers, NGINX, live NASA/P2 data, touch or screen-reader
+use, and agronomic correctness.
+
+### Results
+
+| Check | Result |
+| --- | --- |
+| JSON Schema + semantic rules (Python) | 11/11 |
+| Zod parse, lossless (Node) | 11/11 |
+| Next.js route accepts the result unchanged; priorities forwarded as sent | 11/11 |
+| Internal FastAPI `/recommendations`, computed, real P3–P4, `X-Request-ID` echoed | pass (dashboard, calculator, outside zone) |
+| Rendering: crop names; sowing and harvest windows; 4 scores ("Unknown" for `null`); baseline card and violations; local checks; benefits, trade-offs, explanation; assumptions, data gaps, sources, disclaimer; what-if block; limited/insufficient notices; no demo banner; unique DOM ids | 10/11 (the failure is finding P1-2) |
+| Result size | 2–26 KB (Next.js limit 2 MB) |
+| Scenario recalculation | `ResultsWhatIf` → `recalculate({...lastRequest, scenario})` → same endpoint. Real output changes with the scenario. Browser interaction not tested |
+
+### Confirmed findings
+
+Severity reflects the effect on farmers and integration, not effort.
+
+**Fixed (P4):**
+
+| ID | Severity | Finding | Fix |
+| --- | --- | --- | --- |
+| P4-1 | Medium | Comparison with the current rotation printed equal numbers: "Higher weighted score than your current rotation (0.55 vs 0.55)" | Complete scores use `_pair` (2–4 decimals until the difference is visible) |
+| P4-2 | Low | Raw crop IDs in user text: "Your current rotation (maize → winter_wheat)…", "…you excluded…: winter_wheat" | `crop_label`: rules display name, or the readable ID ("Winter wheat") when there are no rules |
+| P4-3 | Low | Each explanation repeated the full data-gap and local-check lists, which the UI already shows (result "Missing data", plan "Check locally before you decide"), with "..", ".;" glitches | Explanation gives counts and points to those lists. `join_sentences` removes doubled punctuation. Nothing is lost: plan gaps are in `result.data_gaps`, checks in `plan.local_checks` |
+| P4-4 | Low | Out of zone: three overlapping reasons | P4's "no candidate crops" line is dropped when P3's rules already explain |
+
+The ranking, selection and scores are unchanged. Each fix has a regression test that
+fails on the previous code.
+
+**Other findings: status after merging `main` (PR #7 and `a372f41`).**
+
+| ID | Owner | Severity | Finding | Status |
+| --- | --- | --- | --- | --- |
+| P2-1 | P2 (Maria) | Medium | `fetch_power` returned no elevation and no `T2MDEW`, biasing water scores by about +0.04 | **Fixed by Maria in PR #7.** `T2MDEW` is requested, and elevation reaches `static.elevation_m`. P2's real `build_environment`, run offline, uses Penman-Monteith on every day and gives exactly the fixture's plans and scores (test) |
+| P5-1 | P5 | Medium (load) | Browser cancellation did not reach the engine call | **Fixed in the merge.** The route passes `req.signal`; `upstreamJson` combines it with the timeout and answers `499 request_cancelled` (test). Still open: the synchronous FastAPI handler keeps computing after the connection closes; stopping it would need cooperative cancellation in Python |
+| P1-2 | P1 | Low | "Add your current rotation" shown when one was given but could not be evaluated | **Fixed in the merge.** The hint now says the rotation could not be evaluated and points to "Missing data" (UI test) |
+| P1-4 | P1/P5 | Low | A non-JSON gateway error page surfaced a JSON parse error | **Fixed in the merge.** `getRecommendations` parses defensively and falls back to a generic message |
+| P3-2 | P3 | Low | Warnings for a crop that occurs twice did not say which occurrence | **Fixed in the merge** (text only): "Maize (crop 3): …" when a crop repeats (test) |
+| P1-1 | P1 | Medium | The dashboard always sends `water: 3, soil: 3, climate: 3`; its five 0–100 sliders only re-rank the fictional preview (`field-dashboard.tsx`, `priority-panel.tsx`). Disclosed in small print | **Open: design decision for P1.** Add the calculator's four 0–5 engine priorities to the dashboard, or send users to `/calculator` for weighting |
+| P1-3 | P1 | Low | Computed results carry no positive provenance label | **Open: UX choice for P1.** For example "Computed from NASA POWER history and regional rules · not agronomically validated" |
+| P1-5 | P1 | Low | Dashboard temperature slider is 0…+5 °C; the results what-if is −3…+5 °C | **Open, not a bug.** Both are contract-valid; allowing negatives also needs the slider's fixed "+" label and preview colours changed |
+| P5-2 | P5 | Low | 5 calculations/min per IP; each what-if recalculation counts | **Open: configuration choice for P5** |
+| P3-1 | P3 (Tudor) | Low | An excluded crop is reported as a baseline *violation*, although the contract defines violations as agronomic rules (`evaluator/schedule.py`) | **Open: team decision** on the meaning of `violations` |
+| P3-3 | P3/P4 | Low | Per-sequence season counts ("18 past seasons", "17 past seasons") appear as separate assumptions | **Open, low.** Accurate per plan; could be worded per plan |
+
+### Merge with `main` (PR #7, `a372f41`) and follow-up fixes
+
+PR #7 added the Romania-wide data pipeline:
+- SoilGrids and SRTM slope;
+- cleaned daily records with ET0;
+- `monthly_climate` (required in results), `climate_context` and `plan.replay`;
+- `field_boundary`, and `selected_crops` / `selected_crops_only`;
+- rejection of points outside Romania (HTTP 422);
+- provisional thermal-band rules outside the described southern zone.
+
+Merge conflicts were in `recommender/engine.py` (main's selected-crops message and the P4
+duplicate-gap fix were combined) and `docs/status.md`. All four P4 text fixes are kept.
+
+Issues found and fixed during the merge:
+
+| Issue | Owner area | Fix |
+| --- | --- | --- |
+| Provisional rules read `daily[].values.T2M`, but P2 now returns cleaned records (`tmean`), so they were never built with real P2 data | P2/P3 | Fixed upstream by Tudor (`a372f41`); covered by the HTTP test that now feeds P2's real offline output |
+| Plans built on provisional (unvalidated, shifted) calendars got the same "medium" confidence as the described zone | P4 (flag in P3 rules) | The provisional rules carry `region.provisional: true`. P4 caps confidence at "low", says why, and adds a local check asking an agronomist to confirm the calendar |
+| The engine's 422 for a point outside Romania became Next.js 502 "unavailable" | P5 | Mapped to `422 unsupported_location` with an actionable message (web test) |
+| An empty result was explained twice (pipeline line plus P4's line) | pipeline | The pipeline line is only added for callers without a P4 outcome |
+| "Crops without regional rules: rice, rice." | P3 | Each crop is listed once |
+| My HTTP tests fed the API the raw fixture, which hid the provisional-rules bug | P4 tests | They now use P2's real `build_environment` with only its network calls replaced |
+
+**Verification after the merge:**
+- **Python:** 213 passed, 0 failed (`test_p4_web_integration.py`: 18).
+- **Web:** `test:backend` 84/84 and `test:ui` 26/26; TypeScript passes for the contracts and the web app; schema regeneration showed no content drift.
+- **Node harness:** for 11 real results built through P2's offline `build_environment`, the real Next.js route accepts each unchanged (11/11), and the real results component renders every element (11/11). The results range from 71 to 126 KB.
+
+**Not verified:** live NASA/SoilGrids/OpenTopoData calls, running servers, NGINX, and a browser session.
+
+### Remaining dependencies before live computed mode
+
+1. **P2/P5:** enable `ENABLE_NASA_POWER` in the deployment and run one live end-to-end
+   check with real servers and a browser (Next.js → FastAPI → P2 → P3 → P4).
+2. **P1:** decide P1-1 (engine priorities on the dashboard).
+3. **P3:** agronomist review of the southern rules and the provisional thermal-band
+   shifts.
+4. **Team:** agree the meaning of `violations` (P3-1).
+
 ## Proposed P3–P4 intermediate contract (team approval needed)
 
 `docs/team.md` asks P3 and P4 to agree on this contract. P4 currently reads the shape
@@ -459,7 +584,9 @@ services/engine/.venv/Scripts/python.exe -m pytest services/engine/tests
 `uv` was not installed on this machine. The pinned `uv==0.9.5` was installed into a
 temporary folder only to run the sync. The `.venv` it created is gitignored.
 
-**Latest result (P3–P4 audit, 2026-11-14): 162 passed, 0 failed** in about 81 s:
+**Latest result (merge with `main` incl. PR #7, 2026-11-14): 213 passed, 0 failed**, about 55 s; web `test:backend` 84/84, `test:ui` 26/26, TypeScript passes. Previous result (full-stack audit): 176 passed, 0 failed in about 43 s. That is the 162 below plus `test_p4_web_integration.py` (14). Web checks in the same audit: contracts and web TypeScript passed, `test:backend` 82/82, `test:ui` 25/25. Schema regeneration produced identical content; only line endings differed, so the committed files were restored.
+
+Previous result (P3–P4 audit): 162 passed, 0 failed, in about 81 s:
 
 - `test_evaluator.py`: 18 (P3);
 - `test_p3_p4_integration.py`: 23 (real P3 and P4);

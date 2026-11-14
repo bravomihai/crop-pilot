@@ -108,12 +108,18 @@ export default function RecommendationResults({
                 : "The available data cannot support any plans. Review the missing information before trying again."}
             </Notice>
           )}
-          {!result.baseline && (
-            <p className="baseline-hint">
-              Add your current rotation to compare the plans with what you do
-              today.
-            </p>
-          )}
+          {!result.baseline &&
+            (request?.current_rotation?.length ? (
+              <p className="baseline-hint">
+                Your current rotation could not be evaluated for comparison. See
+                Missing data below for the reason.
+              </p>
+            ) : (
+              <p className="baseline-hint">
+                Add your current rotation to compare the plans with what you do
+                today.
+              </p>
+            ))}
           <ScoreComparison plans={result.plans} baseline={result.baseline} />
           <RotationTimeline plans={result.plans} baseline={result.baseline} />
           {result.baseline && (

@@ -18,7 +18,9 @@ opțional în `constraints.selected_crops`; `selected_crops_only` limitează pla
 Până la agregarea zonală, clima și solul folosesc punctul reprezentativ din `location`,
 nu media întregii parcele.
 
-Erori: `{code,error,request_id}`. `400` formular invalid, `413` prea mare, `502` motor
+Erori: `{code,error,request_id}`. `400` formular invalid, `413` prea mare, `422`
+`unsupported_location` (punct în afara României sau contur invalid, respins de motor),
+`499` `request_cancelled` (browserul a anulat cererea), `502` motor
 inaccesibil/răspuns invalid, `503` motor neconfigurat/neimplementat. Răspunsurile nu conțin
 stack traces sau detalii de conexiune. Rezultatele nu sunt cache-uite în browser/proxy.
 

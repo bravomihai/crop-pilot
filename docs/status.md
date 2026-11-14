@@ -36,9 +36,23 @@
   `ENGINE_TIMEOUT_MS` (90 s); >98% din timp e replay-ul P3. Testele au găsit și am corectat
   5 erori P4 (scenariu dezactivat de o cultură necunoscută în rotația actuală, motivul P3
   pierdut în afara zonei și la rezultate goale, ipotezele P3 nepreluate, text „sub mediană”
-  cu valori afișate egale). Suita Python: 162 teste trec, 0 eșuează (2026-11-14). Nu este
-  validare agronomică; HTTP `computed` rămâne 503 până la P2. `pnpm` nu a rulat (lipsă
-  `node_modules`; contractele neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
+  cu valori afișate egale).
+  Audit full-stack (2026-11-14, fără servere/browser): 11 rezultate reale P3–P4 trec
+  fără pierderi prin Zod, handlerul real Next.js `/api/recommendations` (fetch spre engine
+  simulat) și componentele reale de rezultat (randare statică); FastAPI intern în
+  `computed` testat in-process. 4 erori P4 de text corectate (scor „0.55 vs 0.55”, ID-uri
+  brute de culturi, liste repetate în explicație, motive duplicate în afara zonei).
+  După integrarea cu `main` (PR #7 și `a372f41`): elevația și T2MDEW de la P2 sunt
+  rezolvate (scoruri identice cu fixture-ul prin `build_environment` real, offline);
+  corectate: regulile provizorii dau încredere „low” și o verificare locală, 422 din
+  engine devine 422 `unsupported_location` (nu 502), anularea din browser ajunge la apelul
+  spre engine (499), mesajul despre rotația curentă, erori non-JSON de la gateway, mesaje
+  duplicate (rezultat gol, „rice, rice”), avertismente care nu spuneau a câta cultură.
+  Rămân deschise: prioritățile dashboardului (P1), semnificația `violations` (echipă).
+  Suita Python: 213 teste trec; web: TypeScript, `test:backend` 84/84, `test:ui` 26/26;
+  11 rezultate reale trec prin handlerul Next.js și randare. Fluxul live (NASA, servere,
+  browser) nu a fost testat. Nu este validare agronomică.
+  Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## De validat/de implementat de echipă
 
@@ -53,6 +67,8 @@
 - Agregare zonală în interiorul conturului; în prezent datele de climă și sol nu sunt calculate pentru întreaga parcelă.
 - Bilanț hidric mai realist (precipitație efectivă, scurgere și drenaj); capacitatea de apă din SoilGrids este o estimare de pedotransfer, nu măsurare locală.
 - Validare a clasamentelor, scenariilor și pragurilor cu fermieri/date de teren; scorurile actuale sunt doar pentru screening.
+- P4: calibrarea pragurilor de
+  selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
 - P5: publicarea efectivă pe AWS și configurarea secretelor reale la deployment; pregătirea locală este descrisă mai jos.
 

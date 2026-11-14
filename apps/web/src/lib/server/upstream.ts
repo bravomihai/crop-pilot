@@ -7,6 +7,10 @@ type Options = {
   invalidCode: string;
   maxBytes?: number;
   notReady?: boolean;
+  /** Map an engine 422 (location/outline it cannot process) to a 422 for the farmer. */
+  unsupported?: boolean;
+  /** The caller's own cancellation (e.g. the browser closed the request). */
+  signal?: AbortSignal;
   init?: RequestInit;
 };
 
@@ -15,7 +19,10 @@ export async function upstreamJson(
   url: URL,
   options: Options,
 ): Promise<unknown> {
-  const signal = AbortSignal.timeout(options.timeoutMs);
+  const deadline = AbortSignal.timeout(options.timeoutMs);
+  const signal = options.signal
+    ? AbortSignal.any([deadline, options.signal])
+    : deadline;
   try {
     const response = await fetch(url, {
       ...options.init,
@@ -28,6 +35,12 @@ export async function upstreamJson(
         503,
         "engine_not_ready",
         "The analysis engine is not ready.",
+      );
+    if (options.unsupported && response.status === 422)
+      throw new ApiError(
+        422,
+        "unsupported_location",
+        "Computed plans are available only for points inside Romania, with a closed field outline. Choose another point or redraw the field.",
       );
     if (!response.ok)
       throw new ApiError(
@@ -73,6 +86,12 @@ export async function upstreamJson(
     }
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    if (options.signal?.aborted && !deadline.aborted)
+      throw new ApiError(
+        499,
+        "request_cancelled",
+        "The request was cancelled before the analysis finished.",
+      );
     if (
       signal.aborted ||
       (error instanceof Error &&

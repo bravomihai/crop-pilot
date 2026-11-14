@@ -314,7 +314,7 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
 
     if not crops or "settings" not in rules:
         return _unknown(rotation, "No regional rules are available for this location.", sources, list(rules.get("data_gaps") or []))
-    missing = [c for c in rotation if c not in crops]
+    missing = list(dict.fromkeys(c for c in rotation if c not in crops))  # each crop once
     if missing:
         return _unknown(rotation, f"Crops without regional rules: {', '.join(missing)}.", sources)
 
@@ -518,15 +518,17 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
                 weakest_water = (detail, water_mean)
             if weakest_climate is None or detail["climate_risk_mean"] > weakest_climate[0]["climate_risk_mean"]:
                 weakest_climate = (detail, detail["climate_risk_mean"])
+            # Name the step when the crop occurs more than once in the sequence.
+            who = crop["name"] if sum(st.crop_id == step.crop_id for st in steps) == 1 else f"{crop['name']} (crop {i + 1})"
             for name, count in acc["events"].items():
                 if count and count / n >= 0.25:
                     label = scoring.HAZARD_LABELS[name].format(**crop["hazards"][name])
                     severity = "high" if count / n >= 0.5 else "medium"
-                    warnings.append({"message": f"{crop['name']}: {label} in {_pct(count, n)} past seasons.", "severity": severity})
+                    warnings.append({"message": f"{who}: {label} in {_pct(count, n)} past seasons.", "severity": severity})
             if fails and fails / n >= 0.25:
                 warnings.append(
                     {
-                        "message": f"{crop['name']}: severe water shortage (less than {failure}% of its need met) in {_pct(fails, n)} past seasons.",
+                        "message": f"{who}: severe water shortage (less than {failure}% of its need met) in {_pct(fails, n)} past seasons.",
                         "severity": "high" if fails / n >= 0.5 else "medium",
                     }
                 )

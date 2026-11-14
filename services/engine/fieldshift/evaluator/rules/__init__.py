@@ -131,6 +131,9 @@ def load_provisional_romania_rules(location: dict, environment: dict) -> dict:
         "thermal_band": zone["name"],
         "mean_apr_sep_t2m_c": round(mean_temperature, 1),
         "boxes": [],
+        # Explicit marker for consumers (P4 caps confidence): calendars are shifted by a
+        # project thermal band, not validated regional rules.
+        "provisional": True,
     }
     rules.setdefault("assumptions", []).append(
         "Outside the locally described southern zone, crop rules use provisional project thermal-band calendar shifts; they are not validated Romanian regional recommendations."
