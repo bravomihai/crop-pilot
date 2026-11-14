@@ -1,0 +1,11 @@
+# Put Caddy in the same container network, replace domain, and expose only 80/443.
+fieldshift.example.com {
+  request_body {
+    max_size 64KB
+  }
+  reverse_proxy web:3000 {
+    transport http {
+      response_header_timeout 110s
+    }
+  }
+}

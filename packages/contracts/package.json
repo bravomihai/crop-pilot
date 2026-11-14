@@ -1,0 +1,22 @@
+{
+  "name": "@fieldshift/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./demo-result": "./examples/recommendation-result.json"
+  },
+  "scripts": {
+    "generate": "tsx scripts/export-schemas.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "tsx": "4.23.15",
+    "@types/node": "^22.15.0"
+  }
+}

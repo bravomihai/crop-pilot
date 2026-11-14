@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "location": {
+    "name": "Fundulea, România — exemplu",
+    "latitude": 44.45,
+    "longitude": 26.5
+  },
+  "available_from": "2027-03-01",
+  "crop_count": 3,
+  "history": [],
+  "priorities": {
+    "water": 3,
+    "soil": 3,
+    "climate": 3
+  },
+  "constraints": {
+    "irrigated": false,
+    "excluded_crops": []
+  },
+  "scenario": {
+    "temp_change_c": 0,
+    "rain_change_pct": 0
+  }
+}

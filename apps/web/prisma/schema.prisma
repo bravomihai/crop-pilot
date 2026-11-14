@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+datasource db {
+  provider = "postgresql"
+}
+// Public environmental/geocoding data only. Never cache farmer submissions here.
+model DataCache {
+  key       String   @id
+  namespace String
+  payload   Json
+  expiresAt DateTime
+  updatedAt DateTime @default(now()) @updatedAt
+  @@index([expiresAt])
+}
