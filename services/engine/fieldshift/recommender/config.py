@@ -19,7 +19,7 @@ class RecommenderConfig:
     # Upper bound on evaluated sequences per climate condition. When the full space
     # (n_crops ** 3) is larger, a deterministic SHA-256 sample is evaluated and the
     # truncation is reported in data_gaps.
-    max_candidates: int = 850
+    max_candidates: int = 500
     # Minimum share of the farmer's (normalized) priority weight that must be backed by
     # known P3 scores for a plan to be returned at all.
     min_coverage: float = 0.5
