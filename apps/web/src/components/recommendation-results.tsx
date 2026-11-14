@@ -9,6 +9,7 @@ import RotationTimeline from "./charts/rotation-timeline";
 import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
+import AiSummary, { PrintSheetButton } from "./ai-summary";
 
 export default function RecommendationResults({
   result,
@@ -122,6 +123,7 @@ export default function RecommendationResults({
                 today.
               </p>
             ))}
+          <AiSummary result={result} />
           <ScoreComparison plans={result.plans} baseline={result.baseline} />
           <RotationTimeline plans={result.plans} baseline={result.baseline} />
           <PlanReplay result={result} />
@@ -189,6 +191,7 @@ export default function RecommendationResults({
           </details>
           <Glossary />
           <p className="result-disclaimer">{result.disclaimer}</p>
+          {result.mode === "computed" && result.plans.length > 0 && <PrintSheetButton />}
         </div>
       )}
     </section>
