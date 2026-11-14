@@ -131,3 +131,16 @@ nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
   sau alerte configurate; diagnosticarea implementată este locală, prin loguri.
 - Livrabilul P5 este pe branchul `mihail`. Fișierele de mediu și secretele locale sunt
   ignorate de Git. Containerele locale rămân pornite pentru revizuire.
+
+## Frontend
+
+The English dashboard retains its explicit demo indicators, local-only PDFs, and
+five preview-priority sliders. The full `/calculator` now supports optional current
+rotation, history sources, productivity priority, baseline/score comparison,
+local checks, shared crop timelines, and cancellable scenario recalculation.
+Both maps have capability-derived GIBS context, POWER-cell and rule-zone outlines.
+Replay and climate-trend charts are preview-only, waiting for future fields.
+TypeScript, 82 backend/data checks, 25 UI checks, and mock production build passed;
+Edge checks covered fixtures, 375/1440 px, keyboard interactions, light/dark, and
+tile failure isolation. No scientific or physical-touchscreen validation is
+claimed. See docs/frontend.md for exact identifiers, previews, and verification.

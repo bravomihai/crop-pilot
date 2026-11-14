@@ -1,19 +1,25 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, CircleMarker } from "leaflet";
 import type { Location } from "@fieldshift/contracts";
+import RegionalMapContext from "./regional-map-context";
 export default function LocationMap({
   location,
   onSelect,
+  disabled = false,
 }: {
   location?: Location;
   onSelect: (value: Location) => void;
+  disabled?: boolean;
 }) {
+  const [ready, setReady] = useState(false);
   const container = useRef<HTMLDivElement>(null),
     map = useRef<LeafletMap | null>(null),
     marker = useRef<CircleMarker | null>(null);
   const callback = useRef(onSelect);
   callback.current = onSelect;
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
   useEffect(() => {
     let disposed = false;
     void import("leaflet").then((L) => {
@@ -24,13 +30,15 @@ export default function LocationMap({
         attribution:
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map.current);
-      map.current.on("click", (event) =>
+      map.current.on("click", (event) => {
+        if (disabledRef.current) return;
         callback.current({
-          name: "Punct selectat pe hartă",
+          name: "Point selected on the map",
           latitude: Number(event.latlng.lat.toFixed(6)),
           longitude: Number(event.latlng.lng.toFixed(6)),
-        }),
-      );
+        });
+      });
+      setReady(true);
     });
     return () => {
       disposed = true;
@@ -54,13 +62,20 @@ export default function LocationMap({
     return () => {
       disposed = true;
     };
-  }, [location]);
+  }, [location, ready]);
   return (
-    <div
-      ref={container}
-      className="map"
-      role="region"
-      aria-label="Hartă: selectează un punct prin click"
-    />
+    <div className="location-map-wrap">
+      <div
+        ref={container}
+        className="map"
+        role="region"
+        aria-label="Map: click to select a point"
+        aria-disabled={disabled || undefined}
+      />
+      <RegionalMapContext
+        map={ready ? map.current : null}
+        location={location}
+      />
+    </div>
   );
 }
