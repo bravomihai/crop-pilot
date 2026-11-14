@@ -13,6 +13,7 @@ import {
   type FieldSelection,
 } from "@/lib/parcel-geometry";
 import Icon from "./icon";
+import RegionalMapContext from "../regional-map-context";
 
 type Commands = {
   start: () => void;
@@ -578,6 +579,10 @@ export default function ParcelMap(props: Props) {
           drawing remain separate from these reference layers.
         </p>
       )}
+      <RegionalMapContext
+        map={ready ? map.current : null}
+        location={props.selection?.location}
+      />
     </section>
   );
 }

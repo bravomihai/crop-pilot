@@ -119,3 +119,39 @@ region changes while drawing, tile failures, PDF replacement/removal, and edits
 during a calculation. Confirm demo notices remain visible and limited results
 show only returned plans. The automated checks do not verify browser gestures,
 layout, tile services, or external integrations.
+
+## NASA regional context layers
+
+`RegionalMapContext` is shared by the dashboard parcel map and the calculator's
+point map. It reads the EPSG:3857
+[GIBS capabilities document](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml)
+in the browser. The following exact identifiers were verified on 2026-11-14:
+
+| Display layer | Identifier | Advertised matrix set | Default snapshot at verification |
+| --- | --- | --- | --- |
+| SMAP root-zone soil moisture | `SMAP_L4_Analyzed_Root_Zone_Soil_Moisture` | `GoogleMapsCompatible_Level6` | 2026-11-10 |
+| MODIS daytime land surface temperature | `MODIS_Terra_Land_Surface_Temp_Day` | `GoogleMapsCompatible_Level7` | 2026-11-14 |
+| GPM IMERG precipitation rate | `IMERG_Precipitation_Rate` | `GoogleMapsCompatible_Level6` | 2026-11-13 |
+
+The chosen matrix sets advertise 256 px tiles, with native levels 0–6 / 0–7 / 0–6.
+The component reads the matrix set, native zoom, tile size, default style, Time
+values, and horizontal LegendURL again at runtime. No unavailable layer, date,
+or matrix is guessed. The legends are the advertised
+`SMAP_Analyzed_Soil_Moisture_H.svg`, `MODIS_Land_Surface_Temp_H.svg`, and
+`GPM_Precipitation_Rate_H.svg` under `https://gibs.earthdata.nasa.gov/legends/`.
+Their text labels are also fetched from the official SVG and displayed as text.
+
+The month control covers the current UTC month and preceding 59 months. It shows
+the last advertised daily snapshot within each month, not a monthly average.
+Daily interval gaps are respected; an unavailable month shows a message and sends
+no tile request. Play/pause advances months. Each layer has its own toggle,
+opacity slider, and official legend. Attribution is **NASA GIBS / EOSDIS** and the
+interface labels the overlays **Regional context (km-scale), not a field
+measurement.** They are independent of the fictional dashboard KPI cards.
+
+The weather-cell rectangle snaps to 0.5° latitude / 0.625° longitude and extends
+±0.25° / ±0.3125°. Four dashed crop-rule boxes are copied into
+`src/lib/regional-context.ts` from `ro_south.json` (`region.boxes`), with a source
+comment. An outside-zone point displays the coverage warning; it does not claim
+that the engine can compute a plan there. Capabilities, legend, and tile failures
+are isolated from the base map and form.
