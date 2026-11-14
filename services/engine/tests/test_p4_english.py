@@ -142,5 +142,5 @@ def test_generated_output_is_english(name, outcome):
 def test_computed_result_disclaimer_and_texts_are_english():
     result = pipeline.computed_result(_request(), "req-en", {"sources": []}, fake_rules(), FakeEvaluator(fixture=False))
     assert not romanian_hits(result["disclaimer"])
-    assert result["plans"] and result["plans"][0]["label"].startswith("Option 1")
+    assert result["plans"] and result["plans"][0]["label"].startswith("Plan 1")
     assert "confidence" in result["plans"][0]["explanation"]

@@ -277,3 +277,5 @@
   outline: 2px solid var(--forest);
   outline-offset: 4px;
 }
+
+.map-experience .field-hint { margin: -8px 0 15px; font-size: 11px; line-height: 1.5; color: #7a5a12; }

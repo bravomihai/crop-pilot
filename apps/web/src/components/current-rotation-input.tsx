@@ -5,12 +5,14 @@ export default function CurrentRotationInput({
   value,
   onChange,
   prefix = "current-rotation",
+  badge = "Optional",
 }: {
   value: NonNullable<RecommendationRequest["current_rotation"]>;
   onChange: (
     value: NonNullable<RecommendationRequest["current_rotation"]>,
   ) => void;
   prefix?: string;
+  badge?: string;
 }) {
   function move(index: number, direction: number) {
     const next = [...value];
@@ -23,11 +25,11 @@ export default function CurrentRotationInput({
   return (
     <fieldset className="current-rotation" aria-describedby={`${prefix}-help`}>
       <legend>
-        Your current rotation <small>Optional</small>
+        Your current rotation <small>{badge}</small>
       </legend>
       <p id={`${prefix}-help`}>
         The crops you usually grow in turn, for example maize then winter wheat.
-        We compare the plans with it.
+        We compare every plan with what you do today.
       </p>
       <ol>
         {value.map((crop, index) => (

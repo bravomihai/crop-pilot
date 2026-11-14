@@ -236,7 +236,7 @@ def test_low_coverage_candidates_are_not_proposed():
     assert outcome.diagnostics["counts"]["low_coverage"] > 0
     partial = recommend(make_request(), ENV, fake_rules(), FakeEvaluator(missing=("soil",)))
     assert partial.plans and all(p["confidence"] == "low" for p in partial.plans)
-    assert any("not evaluated by P3" in t for t in partial.plans[0]["tradeoffs"])
+    assert any("not known for this field" in t for t in partial.plans[0]["tradeoffs"])
 
 
 # 10. Determinism ------------------------------------------------------------------------
@@ -484,7 +484,7 @@ def test_scenario_triggers_reference_climate_reevaluation_of_same_candidates():
     assert scen == base and len(scen) == 125
     assert outcome.diagnostics["scenario_status"] == "computed"
     assert any("hypothetical assumption, not a NASA forecast" in a for a in outcome.assumptions)
-    assert any("reference climate" in t for p in outcome.plans for t in p["tradeoffs"] + p["benefits"])
+    assert any("current climate" in t for p in outcome.plans for t in p["tradeoffs"] + p["benefits"])
     reference = recommend(make_request(), ENV, fake_rules(), FakeEvaluator(scenario_aware=True))
     assert sequences(outcome.plans) != sequences(reference.plans)
 

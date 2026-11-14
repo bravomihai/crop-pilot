@@ -228,7 +228,7 @@ def test_dashboard_fixed_priorities_are_what_p4_reports():
     # The dashboard's five 0–100 preview sliders are not sent; P4 sees water/soil/climate 3.
     assert "Priorities were normalized to: water 33%, soil 33%, climate 33%." in result["assumptions"]
     for plan in result["plans"]:
-        assert "(water 33%, soil 33%, climate 33%)" in plan["explanation"]
+        assert "priorities as water 33%, soil 33%, climate 33%." in plan["explanation"]
 
 
 def test_calculator_priorities_reach_p4_unchanged():
@@ -284,7 +284,7 @@ def test_current_rotation_comparison_never_shows_equal_numbers_as_different():
         result = cached_run(request)
         for plan in result["plans"]:
             for line in plan["benefits"] + plan["tradeoffs"]:
-                m = re.search(r"(Higher|Lower) weighted score than your current rotation \(([\d.]+) vs ([\d.]+)\)", line)
+                m = re.search(r"(Better|Worse) overall than your current rotation \(([\d.]+) vs ([\d.]+) out of 100\)", line)
                 if m:
                     found = True
                     assert m.group(2) != m.group(3), line
@@ -359,8 +359,8 @@ def test_warnings_name_the_step_when_a_crop_repeats():
     for plan in result["plans"]:
         crops = [s["crop_id"] for s in plan["steps"]]
         if crops.count("maize") > 1:
-            maize = [t for t in plan["tradeoffs"] if t.startswith("Evaluator warning: Maize")]
-            assert maize and all(re.match(r"Evaluator warning: Maize \(crop [123]\):", t) for t in maize), maize
+            maize = [t for t in plan["tradeoffs"] if t.startswith("Watch out: Maize")]
+            assert maize and all(re.match(r"Watch out: Maize \(crop [123]\):", t) for t in maize), maize
             break
     else:
         pytest.fail("expected a plan with maize twice")

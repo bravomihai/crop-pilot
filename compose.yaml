@@ -34,8 +34,10 @@ services:
       dockerfile: services/engine/Dockerfile
     environment:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
-      ENGINE_MODE: ${ENGINE_MODE:-demo}
-      ENABLE_NASA_POWER: ${ENABLE_NASA_POWER:-false}
+      ENGINE_MODE: ${ENGINE_MODE:-computed}
+      ENABLE_NASA_POWER: ${ENABLE_NASA_POWER:-true}
+      FIELDSHIFT_CACHE_DIR: ${FIELDSHIFT_CACHE_DIR:-/tmp/fieldshift-cache}
+      SOILGRIDS_TIMEOUT_S: ${SOILGRIDS_TIMEOUT_S:-8}
       CACHE_BACKEND_URL: http://web:3000
     ports: ["127.0.0.1:8000:8000"]
     healthcheck:

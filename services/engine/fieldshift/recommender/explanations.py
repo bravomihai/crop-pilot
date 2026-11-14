@@ -66,6 +66,10 @@ def _lower(name: str) -> str:
     return CRITERION_LABELS[name].lower()
 
 
+def _interval100(score: Score) -> str:
+    return _pts(score.lower) if score.complete else f"{_pts(score.lower)}–{_pts(score.upper)}"
+
+
 def _interval(score: Score) -> str:
     return _fmt(score.lower) if score.complete else f"{_fmt(score.lower)}–{_fmt(score.upper)}"
 
@@ -79,6 +83,20 @@ def crop_label(names: dict[str, str], crop_id: str) -> str:
 def join_sentences(items) -> str:
     """Join complete sentences into one list without doubled punctuation ('..', '.;')."""
     return "; ".join(str(s).strip().rstrip(".") for s in items if str(s).strip()) + "."
+
+
+def _pts(x: float) -> str:
+    """A 0–1 score as points out of 100, matching the score bars in the interface."""
+    return f"{x * 100:.0f}"
+
+
+def _pair100(a: float, b: float) -> tuple[str, str]:
+    """Two scores out of 100, with enough decimals that a strict difference stays visible."""
+    for digits in (0, 1, 2):
+        x, y = f"{a * 100:.{digits}f}", f"{b * 100:.{digits}f}"
+        if x != y or a == b:
+            return x, y
+    return x, y
 
 
 def _pair(a: float, b: float) -> tuple[str, str]:
@@ -106,7 +124,7 @@ def assess_confidence(
     if evaluation.fixture:
         low.append("test (fixture) evaluation, not an agronomic result")
     if score.coverage < 1:
-        low.append("not every weighted priority has a P3 score")
+        low.append("some of your priorities could not be scored")
     if ctx.provisional_rules:
         low.append("provisional regional rules: calendars shifted by a thermal band, not validated locally")
     for name in score.known:
@@ -129,13 +147,13 @@ def assess_confidence(
     if ctx.soil_weak:
         medium.append("soil not measured by a laboratory")
     if ctx.scenario_status == UNSUPPORTED:
-        medium.append("the scenario was not applied by the evaluator")
+        medium.append("the what-if change could not be applied")
     if robustness is not None and robustness.reference_status != "feasible":
-        medium.append("feasibility differs between the scenario and the reference climate")
+        medium.append("the plan only works in one of the two climates compared")
     if any(w.severity == "high" for w in evaluation.warnings):
-        medium.append("high-severity warning from the evaluator")
+        medium.append("a serious weather or water warning")
     if evaluation.data_gaps:
-        medium.append("data gaps reported by the evaluator")
+        medium.append("some data is missing")
     medium.extend(extra_medium)
     if low:
         return LOW, low + medium
@@ -162,9 +180,9 @@ def local_checks(evaluation: Evaluation, ctx: PlanContext, extra: tuple[str, ...
         checks.append("Confirm that irrigation water is available when the crops need it.")
     weak = [_lower(n) for n in CRITERIA if evaluation.criterion(n).known and evaluation.criterion(n).basis in ("estimated", "assumed")]
     if weak:
-        checks.append("Review the estimated criteria (" + ", ".join(weak) + ").")
+        checks.append("Treat the " + " and ".join(weak) + " scores as estimates.")
     checks.extend(extra)
-    checks.extend(f"P3: {c}" for c in evaluation.local_checks)
+    checks.extend(evaluation.local_checks)
     return list(dict.fromkeys(checks))
 
 
@@ -175,24 +193,24 @@ def plan_scores(evaluation: Evaluation) -> dict:
 
 def _score_text(score: Score) -> str:
     if score.complete:
-        return f"a weighted score of {_fmt(score.lower)} out of 1"
+        return f"an overall score of {_pts(score.lower)}/100"
     return (
-        f"a weighted score between {_fmt(score.lower)} and {_fmt(score.upper)} out of 1 "
-        f"(an interval: {score.coverage * 100:.0f}% of the priority weight is backed by evidence)"
+        f"an overall score between {_pts(score.lower)} and {_pts(score.upper)} out of 100 "
+        f"(only {score.coverage * 100:.0f}% of your priorities could be scored)"
     )
 
 
 def _label(number: int, selection: Selection, ctx: PlanContext) -> str:
     if selection.tier == BEST:
-        return f"Option {number} — highest weighted score"
+        return f"Plan {number} · Best overall match"
     if selection.tier == DIVERSE:
         if selection.strength:
-            return f"Option {number} — distinct alternative (strength: {_lower(selection.strength)})"
-        return f"Option {number} — distinct alternative"
+            return f"Plan {number} · Different crops, strongest on {_lower(selection.strength)}"
+        return f"Plan {number} · Different crops"
     if selection.tier == SCORE_GAP:
-        return f"Option {number} — distinct alternative with a lower score"
+        return f"Plan {number} · Different crops, lower score"
     nearest = ctx.plan_numbers.get(selection.nearest)
-    return f"Option {number} — similar to Option {nearest}"
+    return f"Plan {number} · Similar to plan {nearest}"
 
 
 def _criterion_lines(evaluation: Evaluation, ctx: PlanContext) -> tuple[list[str], list[str]]:
@@ -204,18 +222,18 @@ def _criterion_lines(evaluation: Evaluation, ctx: PlanContext) -> tuple[list[str
         c = evaluation.criterion(name)
         label = CRITERION_LABELS[name]
         if not c.known:
-            tradeoffs.append(f"{label}: not evaluated by P3 — not treated as an average or zero value.")
+            tradeoffs.append(f"{label}: not known for this field, so it was left out rather than guessed.")
             continue
         m = ctx.pool_medians.get(name)
-        detail = f" P3 evidence: {c.summary}" if c.summary else ""
+        detail = f" {c.summary}" if c.summary else ""
         if ctx.pool_size > 1 and m is not None:
-            s_txt, m_txt = _pair(c.score, m)
+            s_txt, m_txt = _pair100(c.score, m)
             if c.score < m:
-                tradeoffs.append(f"{label}: P3 score {s_txt}, below the median of feasible candidates ({m_txt}).{detail}")
+                tradeoffs.append(f"{label}: {s_txt}/100, below the typical option ({m_txt}/100).{detail}")
             else:
-                benefits.append(f"{label}: P3 score {s_txt}, at or above the median of feasible candidates ({m_txt}).{detail}")
+                benefits.append(f"{label}: {s_txt}/100, as good as or better than the typical option ({m_txt}/100).{detail}")
         else:
-            benefits.append(f"{label}: P3 score {_fmt(c.score)} out of 1.{detail}")
+            benefits.append(f"{label}: {_pts(c.score)}/100.{detail}")
     return benefits, tradeoffs
 
 
@@ -225,20 +243,20 @@ def _robustness_lines(robustness: CandidateRobustness | None, with_rank: bool) -
     if robustness is None:
         return benefits, tradeoffs
     if robustness.reference_status == "feasible":
-        benefits.append("Remains feasible under the reference climate (without the scenario).")
+        benefits.append("Also works in the current climate (without the what-if change).")
         if with_rank and robustness.reference_rank is not None and robustness.reference_rank != robustness.scenario_rank:
             tradeoffs.append(
-                f"Its ranking depends on the scenario: rank {robustness.scenario_rank} under the scenario, "
-                f"rank {robustness.reference_rank} of {robustness.reference_eligible_count} under the reference climate."
+                f"Its ranking depends on the what-if change: number {robustness.scenario_rank} with the change, "
+                f"number {robustness.reference_rank} of {robustness.reference_eligible_count} in the current climate."
             )
     else:
         tradeoffs.append(
-            "Under the reference climate (without the scenario) this sequence is not feasible or cannot be compared "
-            f"(status: {robustness.reference_status}); the result depends on the climate assumption."
+            "In the current climate (without the what-if change) this sequence does not fit the rules or cannot be "
+            f"compared ({robustness.reference_status}); the result depends on the climate assumption."
         )
-    parts = ", ".join(f"{_lower(n)} {d:+.2f}" for n, d in robustness.deltas.items() if abs(d) > 1e-9)
+    parts = ", ".join(f"{_lower(n)} {d * 100:+.0f}" for n, d in robustness.deltas.items() if abs(d) > 1e-9)
     if parts:
-        tradeoffs.append(f"Change in P3 scores under the scenario relative to the reference climate: {parts}.")
+        tradeoffs.append(f"Change in scores (out of 100) with the what-if, compared with the current climate: {parts}.")
     return benefits, tradeoffs
 
 
@@ -247,14 +265,14 @@ def _current_rotation_comparison(score: Score, ctx: PlanContext) -> tuple[str | 
     if current is None or current.coverage <= 0 or score.coverage <= 0:
         return None, None
     if score.complete and current.complete:
-        text = "{} vs {}".format(*_pair(score.lower, current.lower))
+        text = "{} vs {} out of 100".format(*_pair100(score.lower, current.lower))
     else:
-        text = f"{_interval(score)} vs {_interval(current)}"
+        text = f"{_interval100(score)} vs {_interval100(current)} out of 100"
     if score.lower > current.upper + 1e-9:
-        return f"Higher weighted score than your current rotation ({text}).", None
+        return f"Better overall than your current rotation ({text}).", None
     if score.upper < current.lower - 1e-9:
-        return None, f"Lower weighted score than your current rotation ({text})."
-    return None, f"Not clearly different from your current rotation on the weighted priorities ({text})."
+        return None, f"Worse overall than your current rotation ({text})."
+    return None, f"About the same as your current rotation on your priorities ({text})."
 
 
 def build_texts(
@@ -268,28 +286,25 @@ def build_texts(
 ) -> dict:
     benefits, tradeoffs = _criterion_lines(evaluation, ctx)
     if pareto.status == NONDOMINATED:
-        benefits.append(
-            "Pareto non-dominated among fully evaluated candidates: no other plan is at least as "
-            "good on all of your priorities and better on at least one."
-        )
+        benefits.append("No other option beats it on all of your priorities at once.")
     elif pareto.status == DOMINATED and not selection.dominated_by_selected:
         tradeoffs.append(
-            f"Pareto-dominated by {len(pareto.dominated_by)} feasible candidate(s) that were not selected; "
-            "kept for crop-sequence diversity."
+            f"{len(pareto.dominated_by)} other option(s) are at least as good on every priority; "
+            "this one is shown to offer different crops."
         )
     for seq in selection.dominated_by_selected:
         tradeoffs.append(
-            f"Pareto-dominated by Option {ctx.plan_numbers[seq]}: it is not better on any evaluated criterion."
+            f"Plan {ctx.plan_numbers[seq]} is at least as good on every priority."
         )
     if selection.tier == SCORE_GAP:
         tradeoffs.append(
-            f"Its guaranteed weighted score is {_fmt(selection.score_gap)} lower than Option 1; "
-            "included because no distinct alternative with a comparable score exists."
+            f"Scores {_pts(selection.score_gap)} points lower overall than plan 1; "
+            "shown because no closer option uses different crops."
         )
     if selection.tier == LOW_DIVERSITY:
         tradeoffs.append(
-            f"Similar to Option {ctx.plan_numbers[selection.nearest]} (distance {_fmt(selection.min_distance)}); "
-            "no more distinct feasible alternatives were available."
+            f"Similar to plan {ctx.plan_numbers[selection.nearest]}; "
+            "no more different options fit the rules."
         )
     b, t = _robustness_lines(robustness, with_rank=True)
     benefits += b
@@ -300,9 +315,9 @@ def build_texts(
     if worse:
         tradeoffs.append(worse)
     for w in evaluation.warnings:
-        tradeoffs.append(f"Evaluator warning: {w.message}")
+        tradeoffs.append(f"Watch out: {w.message}")
     if not benefits:
-        benefits.append("Feasible according to the P3 evaluator, with no distinct advantage over the other candidates.")
+        benefits.append("Fits the crop rotation rules, with no clear advantage over the other options.")
     if not tradeoffs:
         tradeoffs.append("No trade-offs were identified in the evaluated criteria; local verification is still required.")
     return {"label": _label(number, selection, ctx), "benefits": benefits, "tradeoffs": tradeoffs}
@@ -310,21 +325,20 @@ def build_texts(
 
 def _common_tail(evaluation: Evaluation, confidence: str, confidence_reasons: list[str], checks: list[str], ctx: PlanContext) -> list[str]:
     parts = [
-        "Feasibility, the crop calendar and the criterion scores come from the P3 evaluator; P4 only "
-        "compares and selects. Scores are not yields, profits or probabilities."
+        "Scores compare the options with each other; they are not yields, profits or probabilities."
     ]
     if ctx.scenario_text and ctx.scenario_status == COMPUTED:
-        parts.append(f"The ranking uses {ctx.scenario_text}, compared against the reference climate.")
+        parts.append(f"The ranking uses {ctx.scenario_text}, compared with the current climate.")
     elif ctx.scenario_text and ctx.scenario_status == UNSUPPORTED:
-        parts.append(f"{ctx.scenario_text[0].upper()}{ctx.scenario_text[1:]} was not applied by the evaluator; the ranking does not reflect it.")
+        parts.append(f"{ctx.scenario_text[0].upper()}{ctx.scenario_text[1:]} could not be applied; the ranking does not reflect it.")
     # The gaps and checks themselves are structured fields (result `data_gaps`, plan
     # `local_checks`) that the interface lists separately; the explanation only points to
     # them instead of repeating the full lists.
     gaps = len(evaluation.data_gaps)
     if gaps:
         parts.append(
-            f"The evaluator reported {gaps} data gap{'s' if gaps != 1 else ''} for this sequence; "
-            "they are listed with the result's missing data."
+            f"{gaps} piece{'s' if gaps != 1 else ''} of information {'are' if gaps != 1 else 'is'} missing or estimated for this plan; "
+            "see Missing data."
         )
     if checks:
         parts.append(
@@ -348,19 +362,17 @@ def build_explanation(
     checks: list[str] | None = None,
 ) -> str:
     why = {
-        BEST: "Selected as the plan with the highest guaranteed weighted score among the feasible sequences.",
-        DIVERSE: "Selected as an alternative with a different crop sequence and a score close to Option 1.",
-        SCORE_GAP: "Selected as a distinct alternative; its score is noticeably lower than Option 1.",
-        LOW_DIVERSITY: "Selected because no other sufficiently different feasible sequences were available.",
+        BEST: "Chosen because it scores best overall on your priorities.",
+        DIVERSE: "A different crop sequence that scores close to plan 1.",
+        SCORE_GAP: "A different crop sequence; it scores noticeably lower than plan 1.",
+        LOW_DIVERSITY: "Shown because no other clearly different crop sequences fit the rules.",
     }[selection.tier]
     parts = [
         why,
-        f"It has {_score_text(score)}, using your normalized priorities ({weights_text(ctx.weights)}).",
+        f"It has {_score_text(score)}, weighting your priorities as {weights_text(ctx.weights)}.",
     ]
-    if pareto.status == NONDOMINATED:
-        parts.append("It lies on the Pareto frontier of the fully evaluated candidates.")
-    elif pareto.status == "undetermined":
-        parts.append("Its Pareto position cannot be determined because some criteria are missing.")
+    if pareto.status == "undetermined":
+        parts.append("Some priorities could not be scored, so it cannot be compared on all of them.")
     checks = checks if checks is not None else local_checks(evaluation, ctx)
     parts += _common_tail(evaluation, confidence, confidence_reasons, checks, ctx)
     return " ".join(parts)
@@ -377,7 +389,7 @@ def build_current_rotation_texts(
     """Fields for the contract `baseline` plan (the farmer's current rotation continued)."""
     benefits, tradeoffs = _criterion_lines(evaluation, ctx)
     violations = list(evaluation.violations)
-    tradeoffs = [f"Breaks an agronomic rule (P3): {v}" for v in violations] + tradeoffs
+    tradeoffs = [f"Breaks a crop rotation rule: {v}" for v in violations] + tradeoffs
     if excluded_crops:
         names = ", ".join(crop_label(ctx.crop_names, c) for c in excluded_crops)
         tradeoffs.append(f"Includes crop(s) you excluded from the recommendations: {names}.")
@@ -385,7 +397,7 @@ def build_current_rotation_texts(
     benefits += b
     tradeoffs += t
     for w in evaluation.warnings:
-        tradeoffs.append(f"Evaluator warning: {w.message}")
+        tradeoffs.append(f"Watch out: {w.message}")
     if not benefits:
         benefits.append("Continues the rotation you already follow; no other advantage was identified in the evaluated criteria.")
     if not tradeoffs:
@@ -414,17 +426,16 @@ def build_current_rotation_texts(
     else:
         parts.append(f"The position in the cycle was taken from your most recent crop history ({continuation.matched} matching entr{'y' if continuation.matched == 1 else 'ies'}).")
     parts.append(
-        "It was evaluated by P3 in the same way as the recommended options and is shown for comparison only; "
-        "it is not a recommendation and does not count toward the result status."
+        "It was scored the same way as the plans and is shown only for comparison; it is not a recommendation."
     )
     if evaluation.feasibility == INFEASIBLE:
         parts.append(
-            f"P3 reports that this sequence breaks {len(violations)} agronomic rule(s); it is shown as it is, not as a recommendation."
+            f"It breaks {len(violations)} crop rotation rule(s); it is shown as it is, not as a recommendation."
         )
     if score.coverage > 0:
-        parts.append(f"It has {_score_text(score)}, using your normalized priorities ({weights_text(ctx.weights)}).")
+        parts.append(f"It has {_score_text(score)}, weighting your priorities as {weights_text(ctx.weights)}.")
     else:
-        parts.append("P3 provided no scores for your weighted priorities, so it cannot be compared with the options on them.")
+        parts.append("None of your priorities could be scored for it, so it cannot be compared with the plans.")
     parts += _common_tail(evaluation, confidence, reasons, checks, ctx)
     return {
         "label": "Current rotation continued",
