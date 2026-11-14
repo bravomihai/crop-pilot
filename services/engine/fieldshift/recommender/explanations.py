@@ -69,6 +69,17 @@ def _interval(score: Score) -> str:
     return _fmt(score.lower) if score.complete else f"{_fmt(score.lower)}–{_fmt(score.upper)}"
 
 
+def crop_label(names: dict[str, str], crop_id: str) -> str:
+    """Display name from the rules, or the ID made readable ('winter_wheat' → 'Winter wheat')
+    when the rules do not name the crop (for example outside the covered zones)."""
+    return names.get(crop_id) or crop_id.replace("_", " ").capitalize()
+
+
+def join_sentences(items) -> str:
+    """Join complete sentences into one list without doubled punctuation ('..', '.;')."""
+    return "; ".join(str(s).strip().rstrip(".") for s in items if str(s).strip()) + "."
+
+
 def _pair(a: float, b: float) -> tuple[str, str]:
     """Format two values with enough decimals that a strict difference stays visible."""
     for digits in (2, 3, 4):
@@ -228,7 +239,10 @@ def _current_rotation_comparison(score: Score, ctx: PlanContext) -> tuple[str | 
     current = ctx.current_score
     if current is None or current.coverage <= 0 or score.coverage <= 0:
         return None, None
-    text = f"{_interval(score)} vs {_interval(current)}"
+    if score.complete and current.complete:
+        text = "{} vs {}".format(*_pair(score.lower, current.lower))
+    else:
+        text = f"{_interval(score)} vs {_interval(current)}"
     if score.lower > current.upper + 1e-9:
         return f"Higher weighted score than your current rotation ({text}).", None
     if score.upper < current.lower - 1e-9:
@@ -296,9 +310,19 @@ def _common_tail(evaluation: Evaluation, confidence: str, confidence_reasons: li
         parts.append(f"The ranking uses {ctx.scenario_text}, compared against the reference climate.")
     elif ctx.scenario_text and ctx.scenario_status == UNSUPPORTED:
         parts.append(f"{ctx.scenario_text[0].upper()}{ctx.scenario_text[1:]} was not applied by the evaluator; the ranking does not reflect it.")
-    if evaluation.data_gaps:
-        parts.append("Data gaps reported by the evaluator: " + "; ".join(evaluation.data_gaps) + ".")
-    parts.append("Local checks before acting: " + " ".join(checks))
+    # The gaps and checks themselves are structured fields (result `data_gaps`, plan
+    # `local_checks`) that the interface lists separately; the explanation only points to
+    # them instead of repeating the full lists.
+    gaps = len(evaluation.data_gaps)
+    if gaps:
+        parts.append(
+            f"The evaluator reported {gaps} data gap{'s' if gaps != 1 else ''} for this sequence; "
+            "they are listed with the result's missing data."
+        )
+    if checks:
+        parts.append(
+            f"Before acting, review the {len(checks)} local check{'s' if len(checks) != 1 else ''} listed for this plan."
+        )
     reason_text = f" ({'; '.join(confidence_reasons)})" if confidence_reasons else ""
     parts.append(
         f"{CONFIDENCE_TEXT[confidence]} confidence{reason_text}: a qualitative grade of the evidence, not a probability of success."
@@ -348,7 +372,8 @@ def build_current_rotation_texts(
     violations = list(evaluation.violations)
     tradeoffs = [f"Breaks an agronomic rule (P3): {v}" for v in violations] + tradeoffs
     if excluded_crops:
-        tradeoffs.append(f"Includes crop(s) you excluded from the recommendations: {', '.join(excluded_crops)}.")
+        names = ", ".join(crop_label(ctx.crop_names, c) for c in excluded_crops)
+        tradeoffs.append(f"Includes crop(s) you excluded from the recommendations: {names}.")
     b, t = _robustness_lines(robustness, with_rank=False)
     benefits += b
     tradeoffs += t
@@ -371,7 +396,8 @@ def build_current_rotation_texts(
 
     names = [ctx.crop_names.get(c, c) for c in continuation.sequence]
     parts = [
-        f"Your current rotation ({' → '.join(continuation.cycle)}) continued for the next three main crops: "
+        f"Your current rotation ({' → '.join(crop_label(ctx.crop_names, c) for c in continuation.cycle)}) "
+        "continued for the next three main crops: "
         f"{', '.join(names)}."
     ]
     if not continuation.aligned:

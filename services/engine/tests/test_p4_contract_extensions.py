@@ -291,7 +291,11 @@ def test_full_contract_example_request_runs_end_to_end():
     result = pipeline.computed_result(request, "full-example", ENV, rules, evaluate)
     assert validate("recommendation-result", result) == [] and validate_result_semantics(result) == []
     assert "baseline" not in result  # unknown feasibility: omitted, not invented
-    assert any("Your current rotation (maize → winter_wheat) could not be shown" in g for g in result["data_gaps"])
+    # Display names from the rules, not crop IDs (full-stack audit).
+    assert any(
+        "Your current rotation (Maize (synthetic) → Winter wheat (synthetic)) could not be shown" in g
+        for g in result["data_gaps"]
+    )
 
 
 # Plan fields and validator --------------------------------------------------------------

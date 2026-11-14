@@ -20,6 +20,8 @@ from .explanations import (
     build_current_rotation_texts,
     build_explanation,
     build_texts,
+    crop_label,
+    join_sentences,
     local_checks,
     plan_scores,
     pool_medians,
@@ -259,7 +261,8 @@ def recommend(
             f"The search space ({candidate_set.total_space} sequences) exceeds the limit of {config.max_candidates}; "
             "a deterministic sample was evaluated, so good plans may remain unexplored."
         )
-    if not candidate_set.candidates:
+    if not candidate_set.candidates and (catalog or not rules.get("data_gaps")):
+        # With no rules at all, P3's own reason (forwarded above) already says why.
         data_gaps.append(
             "The regional rules offer no candidate crops after the exclusions were applied."
             if catalog
@@ -403,7 +406,7 @@ def _build_current_baseline(continuation, current: Candidate, weights, known_ids
     are never fabricated.
     """
     evaluation = current.evaluation
-    cycle_text = " → ".join(continuation.cycle)
+    cycle_text = " → ".join(crop_label(ctx.crop_names, c) for c in continuation.cycle)
     _resolve_sources(current, weights, known_ids)
     problem = None
     if evaluation.feasibility == UNKNOWN:
@@ -417,7 +420,7 @@ def _build_current_baseline(continuation, current: Candidate, weights, known_ids
     if problem:
         message = f"Your current rotation ({cycle_text}) could not be shown for comparison: {problem}."
         if evaluation.violations:
-            message += " P3 reported these rule violations: " + "; ".join(evaluation.violations) + "."
+            message += " P3 reported these rule violations: " + join_sentences(evaluation.violations)
         data_gaps.append(message)
         return None
     robustness = None

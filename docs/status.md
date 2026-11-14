@@ -33,9 +33,18 @@
   `ENGINE_TIMEOUT_MS` (90 s); >98% din timp e replay-ul P3. Testele au găsit și am corectat
   5 erori P4 (scenariu dezactivat de o cultură necunoscută în rotația actuală, motivul P3
   pierdut în afara zonei și la rezultate goale, ipotezele P3 nepreluate, text „sub mediană”
-  cu valori afișate egale). Suita Python: 162 teste trec, 0 eșuează (2026-11-14). Nu este
-  validare agronomică; HTTP `computed` rămâne 503 până la P2. `pnpm` nu a rulat (lipsă
-  `node_modules`; contractele neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
+  cu valori afișate egale).
+  Audit full-stack (2026-11-14, fără servere/browser): 11 rezultate reale P3–P4 trec
+  fără pierderi prin Zod, handlerul real Next.js `/api/recommendations` (fetch spre engine
+  simulat) și componentele reale de rezultat (randare statică); FastAPI intern în
+  `computed` testat in-process. 4 erori P4 de text corectate (scor „0.55 vs 0.55”, ID-uri
+  brute de culturi, liste repetate în explicație, motive duplicate în afara zonei).
+  Probleme raportate altora: P1 (prioritățile dashboardului nu ajung la P4; mesaj
+  „adaugă rotația” deși a fost dată), P5 (anularea nu oprește calculul în Python), P2
+  (`fetch_power` fără elevație/T2MDEW → scoruri de apă ~+0.04). Suita Python: 176 teste
+  trec; web: TypeScript, `test:backend` 82/82, `test:ui` 25/25. Fluxul în browser nu a
+  fost testat. Nu este validare agronomică; HTTP `computed` rămâne 503 până la P2.
+  Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## De implementat de echipă
 
@@ -45,7 +54,7 @@
   (`criteria` 0–1 cu proveniență, inclusiv `productivity`, `calendar`, `scenario_applied`,
   `sources`, `local_checks`; calendar și surse și pentru secvențe nefezabile, ca rotația
   actuală să poată fi afișată cu încălcările ei).
-- P4: test de integrare cu evaluatorul real P3 (Fundulea), calibrarea pragurilor de
+- P4: calibrarea pragurilor de
   selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
 - P5: publicarea efectivă pe AWS și configurarea secretelor reale la deployment; pregătirea locală este descrisă mai jos.
