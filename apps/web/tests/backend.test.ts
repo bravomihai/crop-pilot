@@ -209,6 +209,41 @@ test("unimplemented computed mode remains 503 without fallback", async () => {
   await check(await POST(request()), 503, "engine_not_ready");
   assert.equal(fetchMock.mock.callCount(), 1);
 });
+test("engine 422 for an unsupported location is a 422, not 'unavailable'", async () => {
+  fetchMock.mock.mockImplementation(async () =>
+    Response.json(
+      { detail: "The computed crop-screening model currently supports locations inside Romania." },
+      { status: 422 },
+    ),
+  );
+  const body = await check(await POST(request()), 422, "unsupported_location");
+  assert.match(body.error, /inside Romania/);
+});
+test("browser cancellation aborts the engine call instead of waiting for it", async () => {
+  let engineSignal: AbortSignal | undefined;
+  fetchMock.mock.mockImplementation(
+    (_url, options) =>
+      new Promise<Response>((_resolve, reject) => {
+        engineSignal = options?.signal ?? undefined;
+        engineSignal?.addEventListener("abort", () =>
+          reject(new DOMException("Aborted", "AbortError")),
+        );
+      }),
+  );
+  const browser = new AbortController();
+  const pending = POST(
+    new Request("http://web/api/recommendations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+      signal: browser.signal,
+    }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  browser.abort();
+  await check(await pending, 499, "request_cancelled");
+  assert.equal(engineSignal?.aborted, true);
+});
 test("invalid upstream JSON is 502", async () => {
   fetchMock.mock.mockImplementation(async () => new Response("not json"));
   await check(await POST(request()), 502, "invalid_engine_result");
@@ -300,6 +335,8 @@ test("geocoding requests English labels and preserves attribution", async () => 
   const [providerUrl] = fetchMock.mock.calls[0].arguments;
   assert.equal(new URL(String(providerUrl)).searchParams.get("language"), "en");
   assert.equal(body.attribution, "Open-Meteo / GeoNames");
+  const [url] = fetchMock.mock.calls[0].arguments;
+  assert.equal(new URL(String(url)).searchParams.get("countryCode"), "RO");
 });
 test("no geocoding matches is a valid empty result", async () => {
   fetchMock.mock.mockImplementation(async () =>

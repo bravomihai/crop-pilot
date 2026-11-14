@@ -138,6 +138,29 @@ token could not publish workflows. To activate it, move the file to
 - P5 work is on `mihail`. Environment files/local secrets are ignored by Git.
   Local containers were left running for review.
 
+## Verificare P2 live — 2026-11-14
+
+- NASA POWER: datele din 2025 au 365 de înregistrări și 12 rezumate lunare, fără zile
+  lipsă pentru temperatură sau precipitații, în Fundulea, Dobrogea și Slobozia.
+- SoilGrids: profilul ponderat 0–30 cm a furnizat textură, pH, carbon organic și AWC
+  estimate la Fundulea și Dobrogea. La Slobozia nu au fost disponibile valori.
+- Fluxul complet `computed` la Fundulea a folosit 20 de ani, a produs trei planuri și
+  baseline, iar răspunsul a trecut validarea contractului.
+- Testele motorului după integrarea P2: 160 trecute. Agregarea pe contur rămâne
+  neimplementată; rezultatele SoilGrids sunt estimări, nu analize de teren.
+
+## P2 terrain — country-wide point support
+
+- The OpenTopoData public `srtm30m` endpoint was checked at eight Romanian locations
+  spanning western, eastern, northern, southern, central and coastal regions. All returned
+  SRTM elevations. The dataset covers 60°S–60°N, so its coverage includes Romania.
+- The engine requests one 3×3 neighborhood around each submitted point, calculates a
+  Horn slope estimate in percent, caches the response, and passes `static.slope_pct` to
+  the existing erosion component. It does not calculate parcel-wide slope from a polygon.
+- OpenTopoData receives the point coordinates. Its published public API limits are
+  1 request/second and 1000 requests/day; this is suitable for a prototype, not a
+  confirmed production-scale service.
+
 ## Frontend
 
 The English dashboard retains its explicit demo indicators, local-only PDFs, and

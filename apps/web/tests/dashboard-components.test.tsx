@@ -67,6 +67,33 @@ test("compatibility cards show three interactive alternatives with explicit demo
   assert.equal((html.match(/<button/g) || []).length, 3);
 });
 
+test("missing baseline after a given rotation is explained, not requested again", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../packages/contracts/examples/recommendation-result.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const result = resultSchema.parse({ ...fixture, baseline: undefined });
+  const render = (current_rotation?: string[]) =>
+    renderToStaticMarkup(
+      createElement(RecommendationResults, {
+        result,
+        busy: false,
+        error: "",
+        request: { ...fullExampleRequest, current_rotation },
+        onRecalculate: () => {},
+      }),
+    );
+  const given = render(["maize", "winter_wheat"]);
+  assert.doesNotMatch(given, /Add your current rotation/);
+  assert.match(given, /could not be evaluated for comparison/);
+  assert.match(render(undefined), /Add your current rotation/);
+});
+
 test("rotation result cards do not manufacture missing alternatives", () => {
   const fixture = JSON.parse(
     readFileSync(

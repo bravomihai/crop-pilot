@@ -11,6 +11,7 @@ import { engineConfig, upstreamJson } from "./upstream";
 export async function recommend(
   input: unknown,
   requestId: string,
+  signal?: AbortSignal,
 ): Promise<RecommendationResult> {
   const parsed = requestSchema.safeParse(input);
   if (
@@ -26,6 +27,8 @@ export async function recommend(
   const body = await upstreamJson(config.url, {
     prefix: "engine",
     notReady: true,
+    unsupported: true,
+    signal,
     invalidCode: "invalid_engine_result",
     timeoutMs: config.timeoutMs,
     init: {

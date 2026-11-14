@@ -53,6 +53,7 @@ export async function findLocations(query: string) {
     count: "8",
     language: "en",
     format: "json",
+    countryCode: "RO",
   }).toString();
   const data = providerSchema.safeParse(
     await upstreamJson(url, {
@@ -77,6 +78,6 @@ export async function findLocations(query: string) {
     })),
     attribution: "Open-Meteo / GeoNames" as const,
   };
-  await writeCache(key, "geocoding", output, 86400 * 7);
+  await writeCache(key, "geocoding-ro", output, 86400 * 7);
   return output;
 }

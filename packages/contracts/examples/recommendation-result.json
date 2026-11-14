@@ -185,6 +185,7 @@
       "source_ids": ["demo-fixture"]
     }
   ],
+  "monthly_climate": [],
   "assumptions": [
     "A fictional result for development, not an agronomic recommendation.",
     "Three successive main crops; the plan does not repeat automatically.",

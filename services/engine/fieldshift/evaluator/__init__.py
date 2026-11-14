@@ -9,7 +9,8 @@ environment (with the hypothetical scenario applied) and returns four criterion 
 
 from __future__ import annotations
 
+from .climate import climate_context
 from .core import evaluate
 from .rules import load_rules
 
-__all__ = ["evaluate", "load_rules"]
+__all__ = ["climate_context", "evaluate", "load_rules"]
