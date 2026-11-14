@@ -5,6 +5,7 @@ import secrets
 import uuid
 from fastapi import FastAPI, Header, HTTPException, Depends
 from .contracts import validate
+from .geography import UnsupportedLocationError
 from .pipeline import recommend
 
 app = FastAPI(
@@ -40,6 +41,8 @@ def recommendations(request: dict, x_request_id: str | None = Header(default=Non
         raise HTTPException(422, "At least one priority must be positive")
     try:
         result = recommend(request, x_request_id or str(uuid.uuid4()))
+    except UnsupportedLocationError as error:
+        raise HTTPException(422, str(error)) from error
     except NotImplementedError:
         raise HTTPException(
             503, "Scientific engine is not ready; explicitly use demo mode"

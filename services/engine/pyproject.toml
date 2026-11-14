@@ -13,6 +13,7 @@ build-backend = "setuptools.build_meta"
 include = ["fieldshift*"]
 [tool.setuptools.package-data]
 "fieldshift.evaluator.rules" = ["*.json"]
+fieldshift = ["crop_rules.json", "romania_boundary.geojson"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

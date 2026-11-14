@@ -240,9 +240,20 @@ def recommend(
         data_gaps.append("Soil properties are not known from a laboratory analysis or an estimate; the soil assessment depends on regional data.")
 
     catalog, catalog_issues = crop_catalog(rules)
+    candidate_catalog = catalog
+    if constraints.get("selected_crops_only", False):
+        selected = set(constraints.get("selected_crops") or [])
+        candidate_catalog = {
+            crop_id: crop
+            for crop_id, crop in catalog.items()
+            if crop_id in selected
+        }
     data_gaps.extend(catalog_issues)
     data_gaps.extend(history_issues(request, set(catalog)))
-    diagnostics: dict = {"crops": sorted(catalog), "excluded": sorted(excluded)}
+    diagnostics: dict = {
+        "crops": sorted(candidate_catalog),
+        "excluded": sorted(excluded),
+    }
 
     def finish(plans, sources, fixture=False, baseline=None) -> RecommendationOutcome:
         if len(plans) < PLAN_COUNT:
@@ -251,7 +262,9 @@ def recommend(
             )
         return RecommendationOutcome(plans, sources, _dedupe(assumptions), _dedupe(data_gaps), diagnostics, fixture, baseline)
 
-    candidate_set = generate_candidates(catalog, excluded, config.max_candidates)
+    candidate_set = generate_candidates(
+        candidate_catalog, excluded, config.max_candidates
+    )
     diagnostics.update(total_space=candidate_set.total_space, generated=len(candidate_set.candidates), truncated=candidate_set.truncated)
     if candidate_set.truncated:
         data_gaps.append(
@@ -259,11 +272,16 @@ def recommend(
             "a deterministic sample was evaluated, so good plans may remain unexplored."
         )
     if not candidate_set.candidates:
-        data_gaps.append(
-            "The regional rules offer no candidate crops after the exclusions were applied."
-            if catalog
-            else "The regional rules contain no candidate crops."
-        )
+        if constraints.get("selected_crops_only", False):
+            data_gaps.append(
+                "No candidate crops remain after applying the selected-crop shortlist and exclusions."
+            )
+        else:
+            data_gaps.append(
+                "The regional rules offer no candidate crops after the exclusions were applied."
+                if catalog
+                else "The regional rules contain no candidate crops."
+            )
 
     # Primary evaluation: the request as given (including any scenario).
     candidates = _evaluate_all(candidate_set.candidates, request, environment, rules, evaluate, available_from)

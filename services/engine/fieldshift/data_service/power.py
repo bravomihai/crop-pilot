@@ -43,6 +43,7 @@ def fetch_power(
     raw = response.json()
     values = raw["properties"]["parameter"]
     fill = raw.get("header", {}).get("fill_value", -999)
+    coordinates = raw.get("geometry", {}).get("coordinates", [])
     dates = sorted(set().union(*(set(v) for v in values.values())))
     daily = [
         {
@@ -59,6 +60,7 @@ def fetch_power(
     result = {
         "location": {"latitude": latitude, "longitude": longitude},
         "period": {"start_year": start_year, "end_year": end_year},
+        "elevation_m": coordinates[2] if len(coordinates) > 2 else None,
         "daily": daily,
         "parameters": raw.get("parameters", {}),
         "sources": [

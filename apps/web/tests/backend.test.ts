@@ -291,6 +291,8 @@ test("valid geocoding results are mapped and attributed", async () => {
   const body = await check(await locations(locationRequest()), 200);
   assert.equal(body.locations[0].name, "Fundulea");
   assert.equal(body.attribution, "Open-Meteo / GeoNames");
+  const [url] = fetchMock.mock.calls[0].arguments;
+  assert.equal(new URL(String(url)).searchParams.get("countryCode"), "RO");
 });
 test("no geocoding matches is a valid empty result", async () => {
   fetchMock.mock.mockImplementation(async () =>

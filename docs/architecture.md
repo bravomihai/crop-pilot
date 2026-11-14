@@ -30,7 +30,9 @@ C→A după ultimul pas. Culturile de acoperire și plantele multianuale sunt ex
 
 ## Date și incertitudine
 
-Localizarea este un punct, deci nu pretindem măsurători pe parcelă sau analiză subparcelară.
+Fermierul poate trimite un contur GeoJSON de tip Polygon; limita este verificată să rămână
+în România. Pentru moment, NASA POWER și SoilGrids sunt interogate într-un punct
+reprezentativ, nu agregate pe întreaga parcelă; răspunsul semnalează această limitare.
 POWER este context regional. Datele zilnice și metadatele sunt păstrate pentru ferestre
 specifice culturilor; mediile anuale nu înlocuiesc expunerea din perioade sensibile.
 Solul introdus de utilizator își păstrează sursa. Istoricul absent duce la reguli neverificate,
@@ -40,8 +42,27 @@ nu la presupunerea unui teren fără culturi anterioare.
 
 - `NEXT_PUBLIC_USE_MOCK_API=true`: frontend independent cu fixture fix, vizibil demonstrativ.
 - `ENGINE_MODE=demo`: backend real și Python, dar planuri fictive etichetate explicit.
-- `ENGINE_MODE=computed`: contract pentru implementarea reală; P3/P4 sunt încă neimplementate
-  și răspund 503. Nu există fallback automat către rezultate fictive.
+- `ENGINE_MODE=computed`: folosește NASA POWER, ET0 FAO-56, reguli regionale și clasare
+  transparentă; cere `ENABLE_NASA_POWER=true`. Fără fallback automat către rezultate demo.
+
+## Screening-ul rotațiilor
+
+Modelul transparent, fără ML, acoperă România și verifică coordonatele cu limita
+geoBoundaries ADM0.
+Un profil termic cald, temperat sau răcoros este ales din media NASA POWER aprilie–septembrie;
+aceste benzi și ajustările lunilor de semănat/fazelor sensibile sunt estimări de proiect,
+nu zonare oficială sau calendare validate local. Păstrează cele cinci culturi inițiale și
+coeficienți FAO-56 generali. Clasarea combină adecvarea istorică precipitații/ETc, percentila 10 a
+observațiilor pe sezoane și un proxy structural pentru diversitatea familiilor/faza de
+leguminoase. Ultimele două scoruri de apă/climă sunt corelate, nu predicții independente.
+Răspunsul calculat include rezumate lunare ale temperaturilor zilnice maxime și minime;
+pentru culturile selectate, adaugă și numărul istoric al zilelor peste pragurile de screening
+din lunile sensibile estimate, cu numărul anilor observați. Pragurile sunt literatură generală,
+ferestrele sunt estimări provizorii pentru profilul termic selectat; aceste avertismente explicative nu schimbă
+clasarea și nu reprezintă predicții validate ale vătămării termice.
+SoilGrids furnizează context opțional, dar pH-ul și carbonul organic nu intră în scor până
+când nu există praguri locale validate. Nu se estimează producția, profitul sau schimbarea
+fertilității; precipitația efectivă, scurgerea și stocarea apei în sol nu sunt modelate.
 
 ## Date păstrate
 

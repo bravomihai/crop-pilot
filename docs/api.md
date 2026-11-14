@@ -6,13 +6,17 @@ Exemple: `packages/contracts/examples/`.
 
 | Metodă | Rută web                    | Scop                                                                  |
 | ------ | --------------------------- | --------------------------------------------------------------------- |
-| GET    | `/api/locations?q=Slobozia` | Opțiuni de localitate cu coordonate, Open-Meteo/GeoNames              |
+| GET    | `/api/locations?q=Cluj`     | Opțiuni de localitate din România, Open-Meteo/GeoNames                |
 | POST   | `/api/recommendations`      | Formular complet → rezultat în aceeași cerere                         |
 | GET    | `/api/engine/status`        | Conectivitate engine, mod și compatibilitatea contractului; fără calcul agronomic |
 | GET    | `/api/health`               | Identitate serviciu/versiune contract; nu verifică serviciile externe |
 
 Nu există endpoints de users, auth, farms sau rezultate salvate. Endpointul de calcul
 nu cere login. Next.js validează schema și cel puțin o prioritate pozitivă.
+Cererea poate include un singur inel GeoJSON Polygon în `field_boundary` și un shortlist
+opțional în `constraints.selected_crops`; `selected_crops_only` limitează planurile la acesta.
+Până la agregarea zonală, clima și solul folosesc punctul reprezentativ din `location`,
+nu media întregii parcele.
 
 Erori: `{code,error,request_id}`. `400` formular invalid, `413` prea mare, `502` motor
 inaccesibil/răspuns invalid, `503` motor neconfigurat/neimplementat. Răspunsurile nu conțin
@@ -32,7 +36,9 @@ Un `404` înseamnă cache absent. Căderea cache-ului nu blochează accesul dire
 `mode`: `demo` sau `computed`. `status`: `complete` (3 planuri), `limited` (1–2),
 `insufficient_data` (0). Fiecare plan are trei pași, ferestre ISO, avantaje, compromisuri,
 explicație, nivel de încredere și referințe la surse. Aceste niveluri nu reprezintă
-probabilități calibrate de succes. Frontendul arată explicit `mode: demo`.
+probabilități calibrate de succes. `monthly_climate` oferă media și extrema lunară ale
+maximelor/minimelor zilnice și numărul observațiilor; `data_gaps` și sursele cu titlu sunt
+la nivelul rezultatului. Frontendul arată explicit `mode: demo`.
 
 ## Câmpuri opționale (contract 1.0, adăugate 2026-11-14)
 
@@ -42,7 +48,7 @@ folosește încă nu trebuie să schimbe nimic. Exemple complete:
 
 | Câmp | Unde | Cine îl produce / folosește |
 | --- | --- | --- |
-| `current_rotation: crop_id[1–5]` | cerere | P1 îl cere în formular; P4 continuă ciclul pe trei culturi și îl evaluează |
+| `current_rotation: crop_id[1–5]` | cerere | API-ul acceptă rotația; P4 o continuă și o evaluează ca `baseline` |
 | `history[].source: typed\|apia\|spray_records\|satellite\|unknown` | cerere | P1 îl trimite; P4 scade încrederea pentru istoricul ghicit |
 | `priorities.productivity: 0–5` | cerere | P1 adaugă slider; P3 dă scorul `productivity`; P4 îl ponderează |
 | `baseline: plan` | rezultat | P4 îl întoarce numai dacă există `current_rotation`; nu intră în `status` |

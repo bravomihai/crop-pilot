@@ -15,6 +15,63 @@ const CROPS = [
   ["pea", "Mazăre"],
   ["sunflower", "Floarea-soarelui"],
 ] as const;
+type Position = [number, number];
+
+function containsPoint(point: Position, points: Position[]): boolean {
+  const [longitude, latitude] = point;
+  let inside = false;
+  for (
+    let index = 0, previous = points.length - 1;
+    index < points.length;
+    previous = index, index += 1
+  ) {
+    const [x1, y1] = points[index];
+    const [x2, y2] = points[previous];
+    const cross = (longitude - x1) * (y2 - y1) - (latitude - y1) * (x2 - x1);
+    if (
+      Math.abs(cross) < 1e-10 &&
+      longitude >= Math.min(x1, x2) &&
+      longitude <= Math.max(x1, x2) &&
+      latitude >= Math.min(y1, y2) &&
+      latitude <= Math.max(y1, y2)
+    ) {
+      return true;
+    }
+    if ((y1 > latitude) !== (y2 > latitude)) {
+      const crossingLongitude =
+        x1 + ((latitude - y1) * (x2 - x1)) / (y2 - y1);
+      if (longitude < crossingLongitude) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function polygonCenter(points: Position[]): [number, number] {
+  let twiceArea = 0;
+  let longitude = 0;
+  let latitude = 0;
+  const ring = [...points, points[0]];
+  for (let index = 0; index < points.length; index += 1) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[index + 1];
+    const cross = x1 * y2 - x2 * y1;
+    twiceArea += cross;
+    longitude += (x1 + x2) * cross;
+    latitude += (y1 + y2) * cross;
+  }
+  if (Math.abs(twiceArea) < 1e-10) {
+    return [
+      points.reduce((sum, point) => sum + point[0], 0) / points.length,
+      points.reduce((sum, point) => sum + point[1], 0) / points.length,
+    ];
+  }
+  const center: Position = [
+    longitude / (3 * twiceArea),
+    latitude / (3 * twiceArea),
+  ];
+  return containsPoint(center, points) ? center : points[0];
+}
+
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -23,6 +80,8 @@ export default function Calculator() {
   const [query, setQuery] = useState(""),
     [locations, setLocations] = useState<Location[]>([]),
     [location, setLocation] = useState<Location>();
+  const [fieldBoundary, setFieldBoundary] = useState<Position[]>([]);
+  const [drawingBoundary, setDrawingBoundary] = useState(false);
   const [date, setDate] = useState(today),
     [history, setHistory] = useState([
       { crop_id: "", harvest_year: "" },
@@ -43,6 +102,8 @@ export default function Calculator() {
     [irrigated, setIrrigated] = useState(false),
     [irrigation, setIrrigation] = useState("");
   const [excluded, setExcluded] = useState<string[]>([]),
+    [selectedCrops, setSelectedCrops] = useState<string[]>([]),
+    [selectedCropsOnly, setSelectedCropsOnly] = useState(false),
     [scenario, setScenario] = useState({
       temp_change_c: 0,
       rain_change_pct: 0,
@@ -73,6 +134,18 @@ export default function Calculator() {
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (drawingBoundary) {
+      setError("Încheie conturul terenului înainte de calcul.");
+      return;
+    }
+    if (fieldBoundary.length > 0 && fieldBoundary.length < 3) {
+      setError("Conturul terenului trebuie să aibă cel puțin trei puncte.");
+      return;
+    }
+    if (selectedCropsOnly && selectedCrops.length < 3) {
+      setError("Selectează cel puțin trei culturi pentru a limita recomandările.");
+      return;
+    }
     if (!location) {
       setError("Alege localitatea sau un punct pe hartă.");
       return;
@@ -86,6 +159,16 @@ export default function Calculator() {
     const input: RecommendationRequest = {
       schema_version: "1.0",
       location,
+      ...(fieldBoundary.length >= 3
+        ? {
+            field_boundary: {
+              type: "Polygon" as const,
+              coordinates: [
+                [...fieldBoundary, fieldBoundary[0]],
+              ] as [Position[]],
+            },
+          }
+        : {}),
       available_from: date,
       crop_count: 3,
       history: history
@@ -113,6 +196,8 @@ export default function Calculator() {
           ? { max_irrigation_mm: Number(irrigation) }
           : {}),
         excluded_crops: excluded,
+        selected_crops: selectedCrops,
+        selected_crops_only: selectedCropsOnly,
       },
       scenario,
     };
@@ -138,8 +223,8 @@ export default function Calculator() {
         <section className="panel">
           <h2>1. Unde este terenul?</h2>
           <p className="muted">
-            Este suficientă localitatea sau un punct. Nu cerem cont sau contur
-            de parcelă.
+            Caută localitatea, alege un punct sau trasează conturul parcelei pe
+            hartă.
           </p>
           <label>
             Localitate
@@ -166,6 +251,8 @@ export default function Calculator() {
                     type="button"
                     onClick={() => {
                       setLocation(l);
+                      setFieldBoundary([]);
+                      setDrawingBoundary(false);
                       setLocations([]);
                     }}
                   >
@@ -175,7 +262,64 @@ export default function Calculator() {
               ))}
             </ul>
           )}
-          <LocationMap location={location} onSelect={setLocation} />
+          <div className="inline">
+            <button
+              type="button"
+              onClick={() => {
+                setLocation(undefined);
+                setFieldBoundary([]);
+                setDrawingBoundary(true);
+              }}
+              disabled={drawingBoundary}
+            >
+              Desenează conturul parcelei
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (fieldBoundary.length < 3) return;
+                const [longitude, latitude] = polygonCenter(fieldBoundary);
+                setLocation({
+                  name: "Punct reprezentativ al parcelei",
+                  latitude: Number(latitude.toFixed(6)),
+                  longitude: Number(longitude.toFixed(6)),
+                });
+                setDrawingBoundary(false);
+              }}
+              disabled={!drawingBoundary || fieldBoundary.length < 3}
+            >
+              Încheie conturul
+            </button>
+            {fieldBoundary.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocation(undefined);
+                  setFieldBoundary([]);
+                  setDrawingBoundary(false);
+                }}
+              >
+                Șterge conturul
+              </button>
+            )}
+          </div>
+          <p className="muted">
+            {drawingBoundary
+              ? `Apasă pe hartă pentru a adăuga puncte (${fieldBoundary.length}); încheie conturul după cel puțin trei puncte.`
+              : fieldBoundary.length >= 3
+                ? "Contur desenat. Datele climatice și de sol sunt încă preluate din punctul reprezentativ, nu agregate pe întreaga parcelă."
+                : "Fără contur, analiza folosește punctul selectat."}
+          </p>
+          <LocationMap
+            location={location}
+            onSelect={(value) => {
+              setLocation(value);
+              setFieldBoundary([]);
+            }}
+            fieldBoundary={fieldBoundary}
+            onBoundaryChange={setFieldBoundary}
+            drawingBoundary={drawingBoundary}
+          />
           {location && (
             <p>
               {location.name} · {location.latitude.toFixed(4)},{" "}
@@ -238,6 +382,42 @@ export default function Calculator() {
               </label>
             </div>
           ))}
+          <details>
+            <summary>Vreau să includ doar anumite culturi</summary>
+            <p className="muted">
+              Dacă nu activezi filtrul, modelul compară toate culturile
+              disponibile. Catalogul actual are cinci culturi candidate.
+            </p>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={selectedCropsOnly}
+                onChange={(e) => setSelectedCropsOnly(e.target.checked)}
+              />
+              Limitează planurile la culturile bifate
+            </label>
+            {CROPS.map(([id, name]) => (
+              <label className="check" key={id}>
+                <input
+                  type="checkbox"
+                  checked={selectedCrops.includes(id)}
+                  onChange={(e) =>
+                    setSelectedCrops(
+                      e.target.checked
+                        ? [...selectedCrops, id]
+                        : selectedCrops.filter((crop) => crop !== id),
+                    )
+                  }
+                />
+                {name}
+              </label>
+            ))}
+            {selectedCropsOnly && selectedCrops.length < 3 && (
+              <p className="muted">
+                Selectează cel puțin trei culturi pentru a putea forma o rotație.
+              </p>
+            )}
+          </details>
           <details>
             <summary>Sol și irigații — dacă ai informații</summary>
             <label>

@@ -1,0 +1,192 @@
+{
+  "region": {
+    "id": "ro-romania",
+    "name": "Romania thermal crop-screening profile",
+    "boundary_source_id": "romania-admin-boundary",
+    "thermal_bands": {
+      "warm": {
+        "name": "cald",
+        "minimum_mean_apr_sep_c": 18
+      },
+      "temperate": {
+        "name": "temperat",
+        "minimum_mean_apr_sep_c": 16
+      },
+      "cool": {
+        "name": "răcoros"
+      }
+    },
+    "zone_adjustments": {
+      "warm": {
+        "spring_sowing_month_offset": 0,
+        "autumn_sowing_month_offset": 0,
+        "sensitive_month_offset": 0
+      },
+      "temperate": {
+        "spring_sowing_month_offset": 0,
+        "autumn_sowing_month_offset": 0,
+        "sensitive_month_offset": 1
+      },
+      "cool": {
+        "spring_sowing_month_offset": 1,
+        "autumn_sowing_month_offset": -1,
+        "sensitive_month_offset": 1
+      }
+    }
+  },
+  "crops": [
+    {
+      "id": "pea",
+      "name": "Mazăre",
+      "family": "fabaceae",
+      "sowing_month": 3,
+      "duration_days": 90,
+      "stage_days": [15, 25, 35, 15],
+      "kc": { "initial": 0.4, "mid": 1.15, "end": 0.3 },
+      "source_ids": ["fao56-water", "romania-calendar-estimate"],
+      "heat_sensitivity": {
+        "stage": "flowering and reproductive development",
+        "months": [5],
+        "daily_max_threshold_c": 25,
+        "comparison": "gt",
+        "source_ids": ["pea-heat-review", "romania-thermal-calendar-estimate"]
+      }
+    },
+    {
+      "id": "maize",
+      "name": "Porumb",
+      "family": "poaceae",
+      "sowing_month": 4,
+      "duration_days": 150,
+      "stage_days": [30, 40, 50, 30],
+      "kc": { "initial": 0.3, "mid": 1.2, "end": 0.35 },
+      "source_ids": ["fao56-water", "romania-calendar-estimate"],
+      "heat_sensitivity": {
+        "stage": "pollen shed and silking",
+        "months": [7],
+        "daily_max_threshold_c": 35,
+        "comparison": "gt",
+        "source_ids": ["maize-heat-review", "romania-thermal-calendar-estimate"]
+      }
+    },
+    {
+      "id": "winter_wheat",
+      "name": "Grâu de toamnă",
+      "family": "poaceae",
+      "sowing_month": 10,
+      "duration_days": 240,
+      "stage_days": [30, 140, 40, 30],
+      "kc": { "initial": 0.4, "mid": 1.15, "end": 0.325 },
+      "source_ids": ["fao56-water", "romania-calendar-estimate"],
+      "heat_sensitivity": {
+        "stage": "pollen development before anthesis",
+        "months": [5],
+        "daily_max_threshold_c": 30,
+        "comparison": "gte",
+        "source_ids": ["wheat-heat-review", "romania-thermal-calendar-estimate"]
+      }
+    },
+    {
+      "id": "winter_barley",
+      "name": "Orz de toamnă",
+      "family": "poaceae",
+      "sowing_month": 10,
+      "duration_days": 200,
+      "stage_days": [40, 60, 60, 40],
+      "kc": { "initial": 0.3, "mid": 1.15, "end": 0.25 },
+      "source_ids": ["fao56-water", "romania-calendar-estimate"],
+      "heat_sensitivity": {
+        "stage": "flowering and grain filling",
+        "months": [5, 6],
+        "daily_max_threshold_c": 30,
+        "comparison": "gt",
+        "source_ids": ["barley-heat-study", "romania-thermal-calendar-estimate"]
+      }
+    },
+    {
+      "id": "sunflower",
+      "name": "Floarea-soarelui",
+      "family": "asteraceae",
+      "sowing_month": 4,
+      "duration_days": 130,
+      "stage_days": [25, 35, 45, 25],
+      "kc": { "initial": 0.35, "mid": 1.075, "end": 0.35 },
+      "source_ids": ["fao56-water", "romania-calendar-estimate"],
+      "heat_sensitivity": {
+        "stage": "flowering",
+        "months": [7],
+        "daily_max_threshold_c": 33,
+        "comparison": "gt",
+        "source_ids": ["sunflower-heat-guidance", "romania-thermal-calendar-estimate"]
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "fao56-water",
+      "title": "FAO Irrigation and Drainage Paper 56, Chapter 6, Tables 11-12",
+      "url": "https://www.fao.org/4/x0490e/x0490e0b.htm"
+    },
+    {
+      "id": "romania-admin-boundary",
+      "title": "geoBoundaries Romania ADM0 simplified boundary (CC BY 3.0)",
+      "url": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09592ced973a3448cf66b6100b741b64c0d/releaseData/gbOpen/ROU/ADM0/geoBoundaries-ROU-ADM0_simplified.geojson"
+    },
+    {
+      "id": "ro-thermal-bands",
+      "title": "FieldShift provisional thermal bands derived from NASA POWER April–September temperature climatology"
+    },
+    {
+      "id": "romania-calendar-estimate",
+      "title": "Project-estimated crop sowing months by Romania thermal band; provisional and not locally validated"
+    },
+    {
+      "id": "romania-thermal-calendar-estimate",
+      "title": "Project-estimated crop heat-sensitive months by Romania thermal band; provisional and not locally validated"
+    },
+    {
+      "id": "pea-heat-review",
+      "title": "Heat stress tolerance in peas (Pisum sativum L.): Current status and way forward (2022)",
+      "url": "https://doi.org/10.3389/fpls.2022.1108276"
+    },
+    {
+      "id": "maize-heat-review",
+      "title": "Thermal Stresses in Maize: Effects and Management Strategies (2021)",
+      "url": "https://doi.org/10.3390/plants10020293"
+    },
+    {
+      "id": "wheat-heat-review",
+      "title": "Overcoming Reproductive Compromise Under Heat Stress in Wheat (2022)",
+      "url": "https://doi.org/10.3389/fpls.2022.881813"
+    },
+    {
+      "id": "barley-heat-study",
+      "title": "Grain-Filling Rate Improves Physical Grain Quality in Barley Under Heat Stress Conditions During the Grain-Filling Period (2022)",
+      "url": "https://doi.org/10.3389/fpls.2022.858652"
+    },
+    {
+      "id": "sunflower-heat-guidance",
+      "title": "Heat Wave Hits Sunflowers as They Approach Flowering (Terres Inovia)",
+      "url": "https://www.terresinovia.fr/en/news/heat-wave-hits-sunflowers-they-approach-flowering"
+    },
+    {
+      "id": "fieldshift-mcda",
+      "title": "FieldShift transparent ranking method; screening scores are not yield predictions"
+    }
+  ],
+  "assumptions": [
+    "FAO-56 crop-stage lengths and coefficients are general reference values; cultivar, region, soil and management change actual crop water use.",
+    "Romania is divided into provisional warm, temperate, and cool thermal bands using NASA POWER mean daily temperature for April–September (18°C and 16°C cutoffs); these are project bands, not official agroclimatic regions.",
+    "Crop sowing and heat-sensitive months shift by thermal band as project estimates; regional calendars and suitability need Romanian agronomist validation.",
+    "Rainfall is compared directly with crop evapotranspiration; runoff, effective rainfall, soil-water storage and drainage are not modeled.",
+    "A 10th-percentile historical water-adequacy score is used as the climate-reliability criterion.",
+    "The 10th percentile is calculated across valid crop-season observations; it reuses water adequacy and is not an independent climate-risk model.",
+    "A crop season is excluded unless at least 90% of its daily observations have both usable ET0 and precipitation.",
+    "The soil score is not derived from SoilGrids or user soil measurements because locally validated crop-response thresholds are not yet available.",
+    "Adjacent crops from the same botanical family are excluded; if recent crop history is provided, the first crop cannot share its latest known family.",
+    "Heat thresholds are literature-based screening levels, not precise local crop-damage limits; cultivar, exposure duration, and night temperatures matter.",
+    "Sensitive months are provisional thermal-band calendar estimates, not measured phenology; heat exposure does not affect the current ranking.",
+    "Heat-day counts compare daily maximum air temperature with the crop screening threshold in its sensitive month(s); they do not model canopy temperature, exposure duration, or frost.",
+    "The soil score is a rotation-structure proxy based on family diversity and a legume phase; it is not a measured soil-carbon or nitrogen change."
+  ]
+}

@@ -48,6 +48,7 @@
       "local_checks": ["Illustrative: check pea root diseases in recent seasons on this field."]
     }
   ],
+  "monthly_climate": [],
   "baseline": {
     "id": "baseline",
     "label": "Current rotation continued",

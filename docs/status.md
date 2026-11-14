@@ -4,13 +4,16 @@
 
 - Workspace pnpm: o aplicație Next.js pentru interfață și backend, un serviciu Python.
 - Contract Zod și scheme JSON generate, request/result fără entități de utilizator.
-- Formular cu localitate/punct, dată de disponibilitate, istoric și sol opțional, priorități.
-- Hartă Leaflet/OpenStreetMap, căutare Open-Meteo/GeoNames, trei carduri cu calendare.
+- Formular cu localitate/punct sau contur, istoric, shortlist opțional de culturi, sol și priorități.
+- Hartă Leaflet/OpenStreetMap, căutare Open-Meteo/GeoNames, desenare opțională a conturului GeoJSON și trei carduri cu calendare.
 - Adapter frontend pentru lucru independent și mod demo vizibil.
 - Endpoint stateless Next.js cu validare, timeout și verificarea rezultatului.
 - Prisma/PostgreSQL pentru cache public opțional, cu migrație inițială.
 - API Python intern, pipeline și interfețe pentru P2/P3/P4.
-- Adaptor NASA POWER pentru descărcarea datelor zilnice; nu a fost verificat live în refacere.
+- P2: date zilnice NASA POWER, rezumate lunare ale temperaturilor, ET0 de referință FAO-56 și SoilGrids opțional, cu proveniență și lipsuri explicite.
+- P3/P4: filtrare și clasare transparentă a rotațiilor, cu ponderi de apă/sol/climă și explicații.
+- Verificare a coordonatelor pe limita României; în afara sudului/sud-estului, profilul folosește benzi termice NASA POWER și calendare provizorii ajustate.
+- Cereri cu contur de teren GeoJSON și shortlist opțional de culturi; clima și solul rămân eșantionate la un punct reprezentativ.
 - Generator demonstrativ, care respectă ordinea temporală și excluderile, fără scoruri fictive.
 - Configurație Compose, instrucțiuni AWS și model de verificări CI neactivat.
 - P4 (branch `alexia`): motor de recomandare determinist în `recommender/` — generare
@@ -29,33 +32,36 @@
   nu este validare agronomică. `pnpm` nu a rulat (lipsă `node_modules`; contractele
   neschimbate). Detalii: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
-## De implementat de echipă
+## De validat/de implementat de echipă
 
 - P2: verificare live POWER, indicatori și control de calitate, integrarea altor surse justificată.
 - P3: reguli regionale citate, praguri, bilanț hidric, compatibilitate și calendare validate.
-- P3/P4: acord asupra contractului intermediar de evaluare propus în raportul P4
-  (`criteria` 0–1 cu proveniență, inclusiv `productivity`, `calendar`, `scenario_applied`,
-  `sources`, `local_checks`; calendar și surse și pentru secvențe nefezabile, ca rotația
-  actuală să poată fi afișată cu încălcările ei).
-- P4: test de integrare cu evaluatorul real P3 (Fundulea), calibrarea pragurilor de
-  selecție, familii de culturi pentru diversitate. `computed` rămâne 503 până la P2/P3.
+- P3/P4: testarea integrării end-to-end cu date reale și validarea semantică a rezultatelor,
+  inclusiv afișarea rotației curente atunci când evaluatorul nu o poate susține.
+- Verificare live a fluxurilor NASA POWER/SoilGrids și calibrare/control de calitate cu surse locale.
+- Validare locală a pragurilor termice și a calendarelor de cultură; benzile curente sunt estimări de proiect, nu zonare oficială.
+- Extinderea și validarea catalogului regional de culturi de către agronomi români.
+- Reprezentarea rotației curente ca strategie de bază alături de cel puțin două alternative; istoricul actual doar constrânge secvențele recomandate.
+- Agregare zonală în interiorul conturului; în prezent datele de climă și sol nu sunt calculate pentru întreaga parcelă.
+- Bilanț hidric mai realist (precipitație efectivă, stocarea apei în sol, scurgere și drenaj); SoilGrids nu influențează încă scorul.
+- Validare a clasamentelor, scenariilor și pragurilor cu fermieri/date de teren; scorurile actuale sunt doar pentru screening.
 - P1: rafinare UX și accesibilitate, prezentarea comparațiilor și a detaliilor surselor.
 - P5: publicarea efectivă pe AWS și configurarea secretelor reale la deployment; pregătirea locală este descrisă mai jos.
 
 ## Intenționat în afara versiunii
 
 Conturi, email/login, sesiuni persistente, profiluri de fermieri, analize salvate, SMS,
-WhatsApp, contur de parcelă, predicții exacte de producție/profit, ML antrenat și CMIP6.
+WhatsApp, predicții exacte de producție/profit, ML antrenat și CMIP6.
 
 ## Limitele verificării inițiale (istoric)
 
-Utilizatorul a cerut să nu verificăm pornirea aplicației. Nu am pornit Next.js, FastAPI,
-Docker, PostgreSQL sau migrații și nu am făcut deploy. Verificările statice/contractele
-nu demonstrează că serviciile externe ori evaluarea agronomică sunt validate.
+Nu am pornit Next.js, FastAPI, Docker, PostgreSQL sau migrații și nu am făcut deploy.
+Testele unitare/contractele nu demonstrează că serviciile externe ori evaluarea agronomică
+sunt validate.
 
-Verificat în refacere: generarea schemelor JSON și a clientului Prisma, verificarea
-tipurilor TypeScript pentru web și contracte, sintaxa Python și patru verificări locale
-de contract/calendar. Lockfile-uri Node și Python generate. Fără pornire/deploy.
+După integrarea cu `main`, `python -m pytest services/engine/tests -q` trece 143 teste.
+Verificarea acoperă motorul, datele, schema și fluxul integrat cu module simulate;
+NASA POWER/SoilGrids nu au fost verificate live și nu validează recomandările agronomice.
 
 CI este păstrat ca exemplu în `infra/ci/checks.yml.example`. Tokenul GitHub disponibil
 nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
@@ -117,8 +123,8 @@ nu permite publicarea workflow-urilor. Pentru activare, mutați fișierul în
 
 - Testele de succes computed folosesc explicit module simulate și verifică numai
   contractul/orchestrarea pentru 0/1/2/3 planuri. Nu sunt o evaluare agronomică reală.
-- Cu modulele actuale reale, Next.js → Python în computed a fost verificat și răspunde
-  503 fără fallback. P2/P3/P4 trebuie să livreze și să valideze modelele și datele.
+- Cu module reale, datele NASA POWER sunt încă dezactivate implicit; `computed` necesită
+  `ENABLE_NASA_POWER=true`. Rezultatele și regulile rămân de validat agronomic.
 - NASA POWER nu a fost verificat live în această sarcină. Nu există monitorizare AWS
   sau alerte configurate; diagnosticarea implementată este locală, prin loguri.
 - Livrabilul P5 este pe branchul `mihail`. Fișierele de mediu și secretele locale sunt
