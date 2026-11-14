@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
+import "./analysis.css";
 export const metadata: Metadata = {
   title: "FieldShift — crop planning",
   description:

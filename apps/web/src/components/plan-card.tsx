@@ -1,4 +1,5 @@
 import type { RotationPlan } from "@fieldshift/contracts";
+import ScoreMeters from "./charts/score-meters";
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -8,15 +9,39 @@ const date = (value: string) =>
 export default function PlanCard({
   plan,
   number,
+  baseline = false,
 }: {
   plan: RotationPlan;
-  number: number;
+  number?: number;
+  baseline?: boolean;
 }) {
   return (
-    <article className="plan">
-      <p className="eyebrow">ALTERNATIVE {String(number).padStart(2, "0")}</p>
-      <h3>{plan.label}</h3>
+    <article className={baseline ? "plan baseline-plan" : "plan"}>
+      <p className="eyebrow">
+        {baseline
+          ? "BASELINE · NOT COUNTED AS AN ALTERNATIVE"
+          : `ALTERNATIVE ${String(number).padStart(2, "0")}`}
+      </p>
+      <h3>{baseline ? "Your current rotation" : plan.label}</h3>
+      {baseline && <p>{plan.label}</p>}
       <p>{plan.explanation}</p>
+      {baseline &&
+        plan.violations !== undefined &&
+        (plan.violations.length > 0 ? (
+          <div className="baseline-violations">
+            <h4>Rules your current rotation breaks</h4>
+            <ul>
+              {plan.violations.map((text, index) => (
+                <li key={index}>{text}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="baseline-no-violations">
+            No rule violations were reported.
+          </p>
+        ))}
+      <ScoreMeters scores={plan.scores} baseline={baseline} />
       <ol className="sequence">
         {plan.steps.map((step) => (
           <li key={step.order}>
@@ -50,6 +75,20 @@ export default function PlanCard({
         Confidence level:{" "}
         {{ low: "low", medium: "medium", high: "high" }[plan.confidence]}
       </p>
+      {plan.local_checks !== undefined && (
+        <details className="local-checks">
+          <summary>Check locally before you decide</summary>
+          {plan.local_checks.length ? (
+            <ul>
+              {plan.local_checks.map((text, index) => (
+                <li key={index}>{text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No additional local checks were supplied.</p>
+          )}
+        </details>
+      )}
     </article>
   );
 }

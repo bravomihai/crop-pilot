@@ -13,7 +13,7 @@ team before adding fields or changing request shapes.
 | `apps/web/src/components/dashboard/` | Satellite drawing map, climate controls, KPI cards, crop preview, search, and local PDF selection |
 | `apps/web/src/app/layout.tsx` | Document language, metadata, and global style imports |
 | `apps/web/src/app/globals.css` | Colors, spacing, typography, responsive layouts, and focus styles |
-| `apps/web/src/components/calculator.tsx` | Previous standalone calculator, retained for reference; not mounted on the dashboard |
+| `apps/web/src/components/calculator.tsx` | Full contract-backed form at `/calculator`, linked from the dashboard |
 | `apps/web/src/components/recommendation-results.tsx` | Empty, loading, error, complete, limited, and insufficient-data states |
 | `apps/web/src/components/plan-card.tsx` | One plan's three successive crops, dates, benefits, and trade-offs |
 | `apps/web/src/components/ui/` | Reusable buttons, messages, and form section headings |
@@ -119,6 +119,53 @@ region changes while drawing, tile failures, PDF replacement/removal, and edits
 during a calculation. Confirm demo notices remain visible and limited results
 show only returned plans. The automated checks do not verify browser gestures,
 layout, tile services, or external integrations.
+
+## Optional rotation comparison and full fixture
+
+Open `/calculator` for the complete form. It offers the seven rule-supported crop
+IDs from `src/lib/crop-options.ts`, an optional ordered current rotation (1–5 crops,
+add/remove/move up/move down), a documentary source on each history row, and four
+0–5 engine priorities. Productivity defaults to 0 and means **Relative potential,
+not a yield or profit forecast.** At least one priority must be positive. Empty
+current rotation is omitted from the request; blank soil measurements remain absent.
+`satellite` is not offered as a history source. The dashboard also supports a
+current rotation, history source, and productivity priority. Its existing five
+0–100 presentation sliders still affect only its explicitly fictional crop preview.
+
+In mock mode, use `/calculator?fixture=full`, then **Compare plans**. This loads
+the shared full request example into the form and selects the full result example
+in `src/lib/api.ts`. `/calculator?fixture=default` uses the original result fixture.
+The visible fixture links switch between them. Both remain `mode: demo`; dates,
+scores, and any baseline are fixed examples, not calculated from the form or
+scenario. The mock adapter includes the example baseline only when a current
+rotation was supplied. No shared contract or example files are modified.
+
+New result components:
+
+- `CurrentRotationInput`: accessible ordered selectors, with keyboard-operable
+  move/remove buttons and a five-crop limit.
+- `ScoreMeters` / `ScoreComparison`: optional 0–1 scores displayed on a 0–100 scale.
+  Null and absent criteria are labelled **Unknown** with hatching. A genuine zero
+  remains `0 / 100`. No score UI is added if no score object is supplied.
+- `PlanCard`: a distinct neutral/dashed **Your current rotation** baseline,
+  baseline rule violations, optional compact meters, and collapsible local checks.
+- `RotationTimeline`: all returned plans and the baseline use one monthly time
+  axis with year labels. Light sowing segments and hatched bare-soil gaps are
+  labelled, with a cover-crop suggestion for gaps longer than four calendar months.
+  Horizontal scrolling stays inside the timeline at narrow widths; a text date
+  alternative is provided for assistive technology.
+- `ResultsWhatIf` / `useRecommendations`: temperature −3…+5°C in 0.5°C increments
+  and rain −50…+50% in increments of 5, initialised from the successful request.
+  Recalculate debounces clicks by 300 ms, aborts the previous request, and reuses
+  every other request field. Previous results remain visible and dimmed. Failure
+  or cancellation does not discard a successful earlier result. The hypothetical
+  scenario warning remains visible, and fixture results do not pretend to change.
+- `ThemeControl` / `analysis.css`: System, Light, and Dark options without storing
+  farmer data or preferences. Charts use theme variables, labels, patterns, and
+  text alternatives; no chart library was added.
+
+Baseline is displayed separately from alternative counts. Existing empty,
+loading, error, limited, and insufficient-data states remain; no result is padded.
 
 ## NASA regional context layers
 

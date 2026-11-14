@@ -3,65 +3,99 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   Location,
   RecommendationRequest,
-  RecommendationResult,
+  HistorySource,
 } from "@fieldshift/contracts";
-import { getRecommendations } from "@/lib/api";
 import LocationMap from "./location-map";
 import RecommendationResults from "./recommendation-results";
 import Button from "./ui/button";
 import FormSection from "./ui/form-section";
 import Notice from "./ui/notice";
-const CROPS = [
-  ["winter_wheat", "Winter wheat"],
-  ["maize", "Maize"],
-  ["winter_barley", "Winter barley"],
-  ["pea", "Pea"],
-  ["sunflower", "Sunflower"],
-] as const;
+import CurrentRotationInput from "./current-rotation-input";
+import { RULE_CROPS as CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
+import { useRecommendations } from "@/lib/use-recommendations";
 const today = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
-export default function Calculator() {
+export default function Calculator({
+  initialRequest,
+}: {
+  initialRequest?: RecommendationRequest;
+}) {
   const [query, setQuery] = useState(""),
     [locations, setLocations] = useState<Location[]>([]),
-    [location, setLocation] = useState<Location>();
-  const [date, setDate] = useState(today),
-    [history, setHistory] = useState([
-      { crop_id: "", harvest_year: "" },
-      { crop_id: "", harvest_year: "" },
-      { crop_id: "", harvest_year: "" },
-    ]);
+    [location, setLocation] = useState<Location | undefined>(
+      initialRequest?.location,
+    );
+  const [date, setDate] = useState(
+      () => initialRequest?.available_from ?? today(),
+    ),
+    [history, setHistory] = useState(() =>
+      Array.from(
+        { length: Math.max(3, initialRequest?.history.length ?? 0) },
+        (_, index) => ({
+          crop_id: initialRequest?.history[index]?.crop_id ?? "",
+          harvest_year:
+            initialRequest?.history[index]?.harvest_year?.toString() ?? "",
+          source: (initialRequest?.history[index]?.source ??
+            "typed") as HistorySource,
+        }),
+      ),
+    );
+  const [currentRotation, setCurrentRotation] = useState<
+    NonNullable<RecommendationRequest["current_rotation"]>
+  >(() => [...(initialRequest?.current_rotation ?? [])]);
   const [soil, setSoil] = useState({
-    texture: "unknown",
-    ph: "",
-    organic_carbon_pct: "",
-    source: "unknown",
+    texture: (initialRequest?.soil?.texture ?? "unknown") as string,
+    ph: initialRequest?.soil?.ph?.toString() ?? "",
+    organic_carbon_pct:
+      initialRequest?.soil?.organic_carbon_pct?.toString() ?? "",
+    source: (initialRequest?.soil?.source ?? "unknown") as string,
   });
-  const [priorities, setPriorities] = useState({
-    water: 3,
-    soil: 3,
-    climate: 3,
-  }),
-    [irrigated, setIrrigated] = useState(false),
-    [irrigation, setIrrigation] = useState("");
-  const [excluded, setExcluded] = useState<string[]>([]),
+  const [priorities, setPriorities] = useState<
+      RecommendationRequest["priorities"]
+    >({
+      water: 3,
+      soil: 3,
+      climate: 3,
+      productivity: 0,
+      ...initialRequest?.priorities,
+    }),
+    [irrigated, setIrrigated] = useState(
+      initialRequest?.constraints.irrigated ?? false,
+    ),
+    [irrigation, setIrrigation] = useState(
+      initialRequest?.constraints.max_irrigation_mm?.toString() ?? "",
+    );
+  const [excluded, setExcluded] = useState<string[]>(
+      initialRequest?.constraints.excluded_crops ?? [],
+    ),
     [scenario, setScenario] = useState({
       temp_change_c: 0,
       rain_change_pct: 0,
+      ...initialRequest?.scenario,
     });
   const [searching, setSearching] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [searchError, setSearchError] = useState(""),
-    [result, setResult] = useState<RecommendationResult>();
-  const requestRef = useRef<AbortController | null>(null),
-    searchControllerRef = useRef<AbortController | null>(null),
+    [searchError, setSearchError] = useState("");
+  const {
+    result,
+    lastRequest,
+    busy,
+    error,
+    calculate,
+    recalculate,
+    cancel,
+    clear: clearResults,
+    reportError: setError,
+  } = useRecommendations();
+  const searchControllerRef = useRef<AbortController | null>(null),
     searchRef = useRef(0);
-  useEffect(() => () => {
-    requestRef.current?.abort();
-    searchControllerRef.current?.abort();
-  }, []);
+  useEffect(
+    () => () => {
+      searchControllerRef.current?.abort();
+    },
+    [],
+  );
   function selectLocation(value: Location) {
     searchControllerRef.current?.abort();
     ++searchRef.current;
@@ -69,7 +103,7 @@ export default function Calculator() {
     setLocations([]);
     setSearchError("");
     setError("");
-    setResult(undefined);
+    clearResults();
     setLocation(value);
   }
   async function search() {
@@ -82,16 +116,25 @@ export default function Calculator() {
     setSearchError("");
     setLocations([]);
     try {
-      const res = await fetch(`/api/locations?q=${encodeURIComponent(query.trim())}`, { signal: controller.signal });
+      const res = await fetch(
+        `/api/locations?q=${encodeURIComponent(query.trim())}`,
+        { signal: controller.signal },
+      );
       const data = await res.json();
       if (seq !== searchRef.current) return;
       if (!res.ok) throw new Error(data.error);
       setLocations(data.locations);
       if (!data.locations.length)
-        setSearchError("No locations found. Try another search or choose a point on the map.");
+        setSearchError(
+          "No locations found. Try another search or choose a point on the map.",
+        );
     } catch (e) {
       if (seq === searchRef.current && !controller.signal.aborted)
-        setSearchError(e instanceof Error ? e.message : "The location search failed. Please try again.");
+        setSearchError(
+          e instanceof Error
+            ? e.message
+            : "The location search failed. Please try again.",
+        );
     } finally {
       if (seq === searchRef.current) setSearching(false);
     }
@@ -107,12 +150,6 @@ export default function Calculator() {
     ++searchRef.current;
     setSearching(false);
     setLocations([]);
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setBusy(true);
-    setError("");
-    setResult(undefined);
     const input: RecommendationRequest = {
       schema_version: "1.0",
       location,
@@ -122,8 +159,10 @@ export default function Calculator() {
         .filter((h) => h.crop_id)
         .map((h) => ({
           crop_id: h.crop_id,
+          source: h.source,
           ...(h.harvest_year ? { harvest_year: Number(h.harvest_year) } : {}),
         })),
+      ...(currentRotation.length ? { current_rotation: currentRotation } : {}),
       soil: {
         texture: soil.texture as NonNullable<
           RecommendationRequest["soil"]
@@ -146,40 +185,54 @@ export default function Calculator() {
       },
       scenario,
     };
-    try {
-      const output = await getRecommendations(input, controller.signal);
-      if (requestRef.current === controller) setResult(output);
-    } catch (e) {
-      if (!controller.signal.aborted)
-        setError(e instanceof Error ? e.message : "The request failed. Please try again.");
-    } finally {
-      if (requestRef.current === controller) setBusy(false);
-    }
+    await calculate(input);
   }
   return (
     <>
-      <section id="calculator" className="calculator-section" aria-labelledby="calculator-title">
+      <section
+        id="calculator"
+        className="calculator-section"
+        aria-labelledby="calculator-title"
+      >
         <div className="section-heading">
           <div>
             <p className="eyebrow">BUILD YOUR FIELD'S CONTEXT</p>
             <h2 id="calculator-title">Let's start with your field.</h2>
           </div>
-          <a className="text-link" href="#results">Go to results <span aria-hidden="true">↓</span></a>
+          <a className="text-link" href="#results">
+            Go to results <span aria-hidden="true">↓</span>
+          </a>
         </div>
-        <p className="section-description">Share what you know. You can leave optional details blank.</p>
-        <form onSubmit={submit} className="calculator" onChange={() => {
-          setResult(undefined);
-          setError("");
-        }}>
+        <p className="section-description">
+          Share what you know. You can leave optional details blank.
+        </p>
+        <form
+          onSubmit={submit}
+          className="calculator"
+          onChange={() => {
+            clearResults();
+          }}
+        >
           {process.env.NEXT_PUBLIC_USE_MOCK_API === "true" && (
             <Notice title="Interface demo mode" tone="warning">
-              Results are fictional. The example uses a fixed calendar; your form entries are not evaluated agronomically.
+              Results are fictional. The example uses a fixed calendar; your
+              form entries are not evaluated agronomically.
             </Notice>
           )}
           <fieldset className="calculator-fields" disabled={busy}>
-            <legend className="sr-only">Field information and preferences</legend>
-            <FormSection id="location" step="01" title="Where is your field?" description="Choose a location or a point on the map. No account or field boundary is needed.">
-              <label htmlFor="location-query">Location <span className="field-hint">or choose a point on the map</span></label>
+            <legend className="sr-only">
+              Field information and preferences
+            </legend>
+            <FormSection
+              id="location"
+              step="01"
+              title="Where is your field?"
+              description="Choose a location or a point on the map. No account or field boundary is needed."
+            >
+              <label htmlFor="location-query">
+                Location{" "}
+                <span className="field-hint">or choose a point on the map</span>
+              </label>
               <div className="inline location-search">
                 <input
                   id="location-query"
@@ -210,28 +263,43 @@ export default function Calculator() {
                   {searching ? "Searching…" : "Search"}
                 </Button>
               </div>
-              <p id="location-search-status" className="field-hint" role="status">
-                {searching ? "Searching for locations…" : locations.length ? `${locations.length} locations found. Choose one from the list.` : "Search for a location or click on the map."}
+              <p
+                id="location-search-status"
+                className="field-hint"
+                role="status"
+              >
+                {searching
+                  ? "Searching for locations…"
+                  : locations.length
+                    ? `${locations.length} locations found. Choose one from the list.`
+                    : "Search for a location or click on the map."}
               </p>
-              {searchError && <Notice title="Location search" tone="error" announce>{searchError}</Notice>}
+              {searchError && (
+                <Notice title="Location search" tone="error" announce>
+                  {searchError}
+                </Notice>
+              )}
               {locations.length > 0 && (
                 <ul className="locations">
                   {locations.map((l, i) => (
                     <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => selectLocation(l)}
-                      >
+                      <button type="button" onClick={() => selectLocation(l)}>
                         {l.name}
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
-              <LocationMap location={location} onSelect={selectLocation} disabled={busy} />
+              <LocationMap
+                location={location}
+                onSelect={selectLocation}
+                disabled={busy}
+              />
               {location && (
                 <p className="selected-location">
-                  <strong>{location.name ?? "Selected point"}</strong><br />{location.latitude.toFixed(4)},{" "}
+                  <strong>{location.name ?? "Selected point"}</strong>
+                  <br />
+                  {location.latitude.toFixed(4)},{" "}
                   {location.longitude.toFixed(4)}
                 </p>
               )}
@@ -245,7 +313,12 @@ export default function Calculator() {
                 />
               </label>
             </FormSection>
-            <FormSection id="history" step="02" title="What do you know about your field?" description="Crop history and soil details are optional. List crops from oldest to most recent.">
+            <FormSection
+              id="history"
+              step="02"
+              title="What do you know about your field?"
+              description="Crop history and soil details are optional. List crops from oldest to most recent."
+            >
               {history.map((row, i) => (
                 <div className="inline history-row" key={i}>
                   <label>
@@ -278,21 +351,56 @@ export default function Calculator() {
                       onChange={(e) =>
                         setHistory(
                           history.map((h, j) =>
-                            j === i ? { ...h, harvest_year: e.target.value } : h,
+                            j === i
+                              ? { ...h, harvest_year: e.target.value }
+                              : h,
                           ),
                         )
                       }
                     />
                   </label>
+                  <label className="history-source">
+                    Source
+                    <select
+                      value={row.source}
+                      onChange={(event) =>
+                        setHistory(
+                          history.map((entry, position) =>
+                            position === i
+                              ? {
+                                  ...entry,
+                                  source: event.target.value as HistorySource,
+                                }
+                              : entry,
+                          ),
+                        )
+                      }
+                    >
+                      {HISTORY_SOURCES.map(([id, label]) => (
+                        <option key={id} value={id}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
               ))}
+              <CurrentRotationInput
+                value={currentRotation}
+                onChange={(value) => {
+                  clearResults();
+                  setCurrentRotation(value);
+                }}
+              />
               <details>
                 <summary>Soil and irrigation — if known</summary>
                 <label>
                   Soil texture
                   <select
                     value={soil.texture}
-                    onChange={(e) => setSoil({ ...soil, texture: e.target.value })}
+                    onChange={(e) =>
+                      setSoil({ ...soil, texture: e.target.value })
+                    }
                   >
                     {[
                       ["unknown", "I don't know"],
@@ -337,7 +445,9 @@ export default function Calculator() {
                   Information source
                   <select
                     value={soil.source}
-                    onChange={(e) => setSoil({ ...soil, source: e.target.value })}
+                    onChange={(e) =>
+                      setSoil({ ...soil, source: e.target.value })
+                    }
                   >
                     <option value="unknown">Unknown</option>
                     <option value="farmer_estimate">My estimate</option>
@@ -366,21 +476,32 @@ export default function Calculator() {
                 )}
               </details>
             </FormSection>
-            <FormSection id="priorities" step="03" title="What matters to you?" description="Set each criterion's importance, from 0 (no priority) to 5 (highest priority).">
+            <FormSection
+              id="priorities"
+              step="03"
+              title="What matters to you?"
+              description="Set each criterion's importance, from 0 (no priority) to 5 (highest priority)."
+            >
               {(
                 [
                   ["water", "Water use"],
                   ["soil", "Soil protection"],
                   ["climate", "Climate resilience"],
+                  ["productivity", "Productivity potential"],
                 ] as const
               ).map(([key, label]) => (
                 <label key={key}>
-                  <span className="range-label">{label} <span className="range-value">{priorities[key]} / 5</span></span>
+                  <span className="range-label">
+                    {label}{" "}
+                    <span className="range-value">
+                      {priorities[key] ?? 0} / 5
+                    </span>
+                  </span>
                   <input
                     type="range"
                     min={0}
                     max={5}
-                    value={priorities[key]}
+                    value={priorities[key] ?? 0}
                     onChange={(e) =>
                       setPriorities({
                         ...priorities,
@@ -388,6 +509,11 @@ export default function Calculator() {
                       })
                     }
                   />
+                  {key === "productivity" && (
+                    <small>
+                      Relative potential, not a yield or profit forecast.
+                    </small>
+                  )}
                 </label>
               ))}
               <details>
@@ -430,7 +556,7 @@ export default function Calculator() {
                     type="range"
                     min={-50}
                     max={50}
-                    step={10}
+                    step={5}
                     value={scenario.rain_change_pct}
                     onChange={(e) =>
                       setScenario({
@@ -441,32 +567,39 @@ export default function Calculator() {
                   />
                 </label>
                 <p className="muted">
-                  This is a hypothetical sensitivity scenario, not a weather forecast.
+                  This is a hypothetical sensitivity scenario, not a weather
+                  forecast.
                 </p>
               </details>
             </FormSection>
           </fieldset>
           <div className="actions">
-            <p>Compare the available alternatives.<br /><span className="muted">Missing information will be highlighted in the results.</span></p>
+            <p>
+              Compare the available alternatives.
+              <br />
+              <span className="muted">
+                Missing information will be highlighted in the results.
+              </span>
+            </p>
             <Button loading={busy} type="submit">
               {busy ? "Calculating…" : "Compare plans"}
             </Button>
             {busy && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  requestRef.current?.abort();
-                  requestRef.current = null;
-                  setBusy(false);
-                }}
-              >
+              <Button variant="secondary" onClick={cancel}>
                 Stop waiting
               </Button>
             )}
           </div>
         </form>
       </section>
-      <RecommendationResults result={result} busy={busy} error={error} />
+      <RecommendationResults
+        result={result}
+        busy={busy}
+        error={error}
+        request={lastRequest}
+        onRecalculate={recalculate}
+        onCancel={cancel}
+      />
     </>
   );
 }

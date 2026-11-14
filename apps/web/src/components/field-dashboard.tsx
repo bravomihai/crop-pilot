@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import type {
-  Location,
-  RecommendationRequest,
-  RecommendationResult,
-} from "@fieldshift/contracts";
-import { getRecommendations } from "@/lib/api";
+import { useRef, useState, type FormEvent } from "react";
+import type { Location, RecommendationRequest } from "@fieldshift/contracts";
+import { useRecommendations } from "@/lib/use-recommendations";
+import ThemeControl from "./theme-control";
+import CurrentRotationInput from "./current-rotation-input";
+import { RULE_CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
 import {
   DEMO_CROPS,
   visualScenario,
@@ -58,32 +57,33 @@ export default function FieldDashboard() {
   const [historyPdf, setHistoryPdf] = useState<File | null>(null);
   const [soilPdf, setSoilPdf] = useState<File | null>(null);
   const [previousCrop, setPreviousCrop] = useState("");
+  const [historySource, setHistorySource] =
+    useState<NonNullable<RecommendationRequest["history"][number]["source"]>>(
+      "typed",
+    );
+  const [currentRotation, setCurrentRotation] = useState<
+    NonNullable<RecommendationRequest["current_rotation"]>
+  >([]);
+  const [productivity, setProductivity] = useState(0);
   const [harvestYear, setHarvestYear] = useState("");
   const [texture, setTexture] =
     useState<NonNullable<RecommendationRequest["soil"]>["texture"]>("unknown");
   const [ph, setPh] = useState("");
   const [irrigated, setIrrigated] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [result, setResult] = useState<RecommendationResult>();
-  const request = useRef<AbortController | null>(null);
+  const {
+    result,
+    lastRequest,
+    busy,
+    error,
+    calculate,
+    recalculate,
+    cancel,
+    clear: invalidate,
+    reportError: setError,
+  } = useRecommendations();
   const voiceDialog = useRef<HTMLDialogElement>(null);
   const preview = visualScenario(scenario);
   const cropRanking = rankDemoCrops(priorities, scenario, previousCrop);
-  useEffect(
-    () => () => {
-      request.current?.abort();
-    },
-    [],
-  );
-
-  function invalidate() {
-    request.current?.abort();
-    request.current = null;
-    setBusy(false);
-    setResult(undefined);
-    setError("");
-  }
   function chooseRegion(location: Location) {
     invalidate();
     setSelection(null);
@@ -117,9 +117,6 @@ export default function FieldDashboard() {
       return;
     }
     invalidate();
-    const controller = new AbortController();
-    request.current = controller;
-    setBusy(true);
     const input: RecommendationRequest = {
       schema_version: "1.0",
       location: selection.location,
@@ -129,36 +126,25 @@ export default function FieldDashboard() {
         ? [
             {
               crop_id: previousCrop,
+              source: historySource,
               ...(harvestYear ? { harvest_year: Number(harvestYear) } : {}),
             },
           ]
         : [],
+      ...(currentRotation.length ? { current_rotation: currentRotation } : {}),
       soil: {
         texture,
         source: ph || texture !== "unknown" ? "farmer_estimate" : "unknown",
         ...(ph ? { ph: Number(ph) } : {}),
       },
-      priorities: { water: 3, soil: 3, climate: 3 },
+      priorities: { water: 3, soil: 3, climate: 3, productivity },
       constraints: { irrigated, excluded_crops: [] },
       scenario: {
         temp_change_c: scenario.temperature,
         rain_change_pct: scenario.rainfall,
       },
     };
-    try {
-      const output = await getRecommendations(input, controller.signal);
-      if (request.current === controller && !controller.signal.aborted)
-        setResult(output);
-    } catch (cause) {
-      if (request.current === controller && !controller.signal.aborted)
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "The analysis could not be completed. Please try again.",
-        );
-    } finally {
-      if (request.current === controller) setBusy(false);
-    }
+    await calculate(input);
   }
   return (
     <div className="dashboard-shell" id="dashboard-home">
@@ -215,6 +201,10 @@ export default function FieldDashboard() {
             <Icon name="satellite" />
             NASA data
           </a>
+          <a href="/calculator" title="Full rotation calculator">
+            <Icon name="calendar" />
+            Rotation calculator
+          </a>
         </nav>
         <div className="sidebar-bottom">
           <div className="orbit-mark">
@@ -233,6 +223,7 @@ export default function FieldDashboard() {
         <header className="dashboard-topbar">
           <LocationSearch onSelect={chooseRegion} />
           <div className="topbar-tools">
+            <ThemeControl />
             <span className="nasa-status">
               <i />
               NASA SOURCES · DEMO
@@ -423,6 +414,31 @@ export default function FieldDashboard() {
                     <span>ADD CONTEXT</span>
                     <span>Optional</span>
                   </div>
+                  <CurrentRotationInput
+                    prefix="dashboard-rotation"
+                    value={currentRotation}
+                    onChange={(value) => {
+                      invalidate();
+                      setCurrentRotation(value);
+                    }}
+                  />
+                  <label htmlFor="dashboard-productivity">
+                    Productivity potential: {productivity} / 5
+                    <input
+                      id="dashboard-productivity"
+                      type="range"
+                      min={0}
+                      max={5}
+                      step={1}
+                      value={productivity}
+                      onChange={(event) =>
+                        setProductivity(Number(event.target.value))
+                      }
+                    />
+                  </label>
+                  <p className="planning-note">
+                    Relative potential, not a yield or profit forecast.
+                  </p>
                   <PdfUpload
                     id="crop-history-pdf"
                     label="Previous crop history"
@@ -448,9 +464,27 @@ export default function FieldDashboard() {
                       onChange={(event) => setPreviousCrop(event.target.value)}
                     >
                       <option value="">Unknown / not provided</option>
-                      {DEMO_CROPS.map((crop) => (
-                        <option key={crop.id} value={crop.id}>
-                          {crop.name}
+                      {RULE_CROPS.map(([id, name]) => (
+                        <option key={id} value={id}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="dashboard-history-source">
+                      History source
+                    </label>
+                    <select
+                      id="dashboard-history-source"
+                      value={historySource}
+                      onChange={(event) =>
+                        setHistorySource(
+                          event.target.value as typeof historySource,
+                        )
+                      }
+                    >
+                      {HISTORY_SOURCES.map(([id, name]) => (
+                        <option value={id} key={id}>
+                          {name}
                         </option>
                       ))}
                     </select>
@@ -511,7 +545,7 @@ export default function FieldDashboard() {
                     <button
                       type="button"
                       className="stop-button"
-                      onClick={invalidate}
+                      onClick={cancel}
                     >
                       Stop waiting
                     </button>
@@ -582,7 +616,14 @@ export default function FieldDashboard() {
                 Three crops do not automatically mean three years.
               </p>
             </div>
-            <RecommendationResults result={result} busy={busy} error={error} />
+            <RecommendationResults
+              result={result}
+              busy={busy}
+              error={error}
+              request={lastRequest}
+              onRecalculate={recalculate}
+              onCancel={cancel}
+            />
           </section>
           <section
             className="nasa-data-section"
