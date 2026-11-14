@@ -110,12 +110,26 @@ def _paths():
 
     yield "warnings_clipping_unresolved", recommend(_request(), {"sources": []}, rules, odd)
 
+    full = _request(
+        history=[{"crop_id": "alpha", "harvest_year": 2026, "source": "satellite"}],
+        current_rotation=["alpha", "beta"],
+        priorities={"water": 2, "soil": 1, "climate": 1, "productivity": 3},
+        scenario={"temp_change_c": 1.5, "rain_change_pct": -10},
+    )
+    yield "all_new_fields", recommend(
+        full, {"sources": []}, rules,
+        FakeEvaluator(scenario_aware=True, infeasible_with_calendar=[("beta", "alpha", "beta")], local_checks=["check drainage"]),
+    )
+    yield "current_rotation_omitted", recommend(_request(current_rotation=["alpha"]), {"sources": []}, rules, FakeEvaluator())
+    yield "current_rotation_unaligned", recommend(_request(current_rotation=["beta", "gamma"]), {"sources": []}, rules, FakeEvaluator())
+
 
 def _user_facing(outcome) -> list[str]:
     texts = list(outcome.assumptions) + list(outcome.data_gaps)
-    for plan in outcome.plans:
+    for plan in outcome.plans + ([outcome.baseline] if outcome.baseline else []):
         texts += [plan["label"], plan["explanation"], *plan["benefits"], *plan["tradeoffs"]]
         texts += [step["reason"] for step in plan["steps"]]
+        texts += plan.get("local_checks", []) + plan.get("violations", [])
     return texts
 
 

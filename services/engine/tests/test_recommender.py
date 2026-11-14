@@ -173,7 +173,7 @@ def fake_rules_ids():
 
 def test_priority_normalization():
     weights = normalize_priorities({"water": 3, "soil": 1, "climate": 0})
-    assert weights == {"water": 0.75, "soil": 0.25, "climate": 0.0}
+    assert weights == {"water": 0.75, "soil": 0.25, "climate": 0.0, "productivity": 0.0}
     assert sum(normalize_priorities({"water": 5, "soil": 5, "climate": 5}).values()) == pytest.approx(1)
 
 
@@ -475,7 +475,7 @@ def test_request_is_not_mutated_by_evaluator():
 # 18. Scenarios --------------------------------------------------------------------------
 
 
-def test_scenario_triggers_baseline_reevaluation_of_same_candidates():
+def test_scenario_triggers_reference_climate_reevaluation_of_same_candidates():
     request = make_request(scenario={"temp_change_c": 3, "rain_change_pct": -20})
     evaluator = FakeEvaluator(scenario_aware=True)
     outcome = recommend(request, ENV, fake_rules(), evaluator)
@@ -484,9 +484,9 @@ def test_scenario_triggers_baseline_reevaluation_of_same_candidates():
     assert scen == base and len(scen) == 125
     assert outcome.diagnostics["scenario_status"] == "computed"
     assert any("hypothetical assumption, not a NASA forecast" in a for a in outcome.assumptions)
-    assert any("baseline" in t for p in outcome.plans for t in p["tradeoffs"] + p["benefits"])
-    baseline = recommend(make_request(), ENV, fake_rules(), FakeEvaluator(scenario_aware=True))
-    assert sequences(outcome.plans) != sequences(baseline.plans)
+    assert any("reference climate" in t for p in outcome.plans for t in p["tradeoffs"] + p["benefits"])
+    reference = recommend(make_request(), ENV, fake_rules(), FakeEvaluator(scenario_aware=True))
+    assert sequences(outcome.plans) != sequences(reference.plans)
 
 
 def test_unsupported_scenario_is_reported_not_simulated():
@@ -494,7 +494,7 @@ def test_unsupported_scenario_is_reported_not_simulated():
     evaluator = FakeEvaluator(scenario_aware=False)
     outcome = recommend(request, ENV, fake_rules(), evaluator)
     assert outcome.diagnostics["scenario_status"] == "unsupported"
-    assert len(evaluator.calls) == 125  # no baseline pass
+    assert len(evaluator.calls) == 125  # no reference-climate pass
     assert any("did not confirm that the hypothetical scenario was applied" in g for g in outcome.data_gaps)
 
 

@@ -6,8 +6,10 @@ evaluations returned by P3. They never change feasibility, calendars or criterio
 
 from dataclasses import dataclass
 
-CRITERIA: tuple[str, ...] = ("water", "soil", "climate")
-CRITERION_LABELS = {"water": "Water", "soil": "Soil", "climate": "Climate"}
+CRITERIA: tuple[str, ...] = ("water", "soil", "climate", "productivity")
+# Required in every request; `productivity` is optional (absent = not weighted).
+REQUIRED_CRITERIA: tuple[str, ...] = ("water", "soil", "climate")
+CRITERION_LABELS = {"water": "Water", "soil": "Soil", "climate": "Climate", "productivity": "Productivity"}
 SEQUENCE_LENGTH = 3  # contract: crop_count is the literal 3
 PLAN_COUNT = 3  # contract: at most three plans
 

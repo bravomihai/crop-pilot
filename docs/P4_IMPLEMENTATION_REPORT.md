@@ -8,8 +8,11 @@ Branch: `alexia` · Date: 2026-11-14 · Scope: `services/engine/fieldshift/recom
 The P4 recommender is implemented as deterministic Python code inside the existing engine
 service. It generates candidate sequences, calls the P3 evaluator, rejects infeasible or
 under-documented candidates, ranks them by the farmer's priorities, runs Pareto analysis,
-picks up to three distinct alternatives, compares climate scenarios against a baseline
-when P3 supports that, and writes explanations based only on what the evaluator returned.
+picks up to three distinct alternatives, compares climate scenarios against the reference
+climate when P3 supports that, and writes explanations based only on what the evaluator
+returned. Since the merge of `main` (contract update of 2026-11-14) it also supports the
+optional `productivity` priority, `current_rotation` → `baseline`, `history[].source`,
+and the plan fields `scores`, `local_checks` and `violations` (see section 9).
 
 **Computed mode is not functional yet.** P3 (`load_rules`, `evaluate`) and the P2 data
 switch are still stubs. `ENGINE_MODE=computed` keeps returning HTTP 503, and a test checks
@@ -30,16 +33,18 @@ calendar or score is agronomically correct.
 | `fieldshift/recommender/ranking.py` | new | Priority normalization; interval scoring for missing data; ranking |
 | `fieldshift/recommender/pareto.py` | new | Dominance check and Pareto status (pruned, same result as the naive check) |
 | `fieldshift/recommender/selection.py` | new | Picks diverse alternatives (MMR-style, with disclosure tiers) |
-| `fieldshift/recommender/scenarios.py` | new | Scenario detection, baseline request, robustness record |
+| `fieldshift/recommender/scenarios.py` | new | Scenario detection, reference-climate request, robustness record |
+| `fieldshift/recommender/rotation.py` | new | Continues `current_rotation` from the crop history (sequence bookkeeping only) |
 | `fieldshift/recommender/explanations.py` | new | Benefits, trade-offs, explanation, labels and qualitative confidence |
-| `fieldshift/recommender/engine.py` | new | Orchestration; returns `RecommendationOutcome` |
-| `fieldshift/pipeline.py` | modified | Computed mode uses the full outcome (sources, assumptions, data gaps), refuses fixture evaluations, checks result semantics. Same function interface, `request_id`, modes and status rules |
+| `fieldshift/recommender/engine.py` | new | Orchestration; returns `RecommendationOutcome` (with optional `baseline`) and `PlanList` |
+| `fieldshift/pipeline.py` | modified | Calls the team interface `recommend_rotations`; uses `PlanList.outcome` for sources, assumptions, data gaps and `baseline`, or falls back to environment/rules metadata for a plain list. Refuses fixture evaluations, checks result semantics. Same function interface, `request_id`, modes and status rules |
 | `tests/fake_evaluator.py` | new | Synthetic, clearly labelled P3 replacement for tests |
 | `tests/test_recommender.py` | new | 47 test cases for P4 |
-| `tests/test_p4_english.py` | new | 25 test cases checking that P4 output contains no Romanian |
+| `tests/test_p4_english.py` | new | 29 test cases checking that P4 output (including baseline, local checks and violations) contains no Romanian |
+| `tests/test_p4_contract_extensions.py` | new | 28 test cases for the old request format and every new optional field |
 | `docs/status.md` | modified | Status updated |
 
-No changes to Zod, the JSON Schemas, the examples, P2/P3 modules, the web app or the infrastructure.
+No changes to Zod, the JSON Schemas, the examples, P2/P3 modules, the P5 tests, the web app or the infrastructure.
 
 ## Algorithms
 
@@ -199,6 +204,76 @@ Every plan `source_id` exists in `sources`. Sources the evaluation provides are 
 the response only when a plan cites them. IDs that can't be resolved are dropped and
 reported.
 
+### 9. Contract extensions from `main` (2026-11-14)
+
+All of these are optional in the contract. Requests without them behave exactly as
+before, and tests check that.
+
+**`priorities.productivity`**
+- A 4th criterion in parsing, weights, ranking intervals, Pareto objectives, selection
+  strengths, confidence, explanations and scenario score changes.
+- Absent means weight 0. An old request's ranking is identical even when P3 returns
+  productivity scores.
+- Productivity-only priorities are valid. All-zero priorities are still rejected.
+- When weighted, an assumption states that it is a relative production-potential score,
+  not a yield or profit forecast.
+
+**`current_rotation` → `baseline`**
+- `rotation.py` continues the cycle from the crop history, ordered by `harvest_year` when
+  every entry has one, otherwise in the farmer's list order.
+- It takes the cycle position with the longest consecutive match against the most recent
+  history crops.
+- With no match, it starts from the first listed crop. That case is disclosed, adds a
+  local check, and caps confidence at medium. A tie between positions is reported as
+  ambiguous.
+- The sequence is evaluated by P3 with the same request. The candidate evaluation is
+  reused if the sequence was already in the search.
+- It never enters selection and never counts toward `status`. It may repeat a plan's
+  sequence, and it is shown even if it contains excluded crops (disclosed).
+- An **infeasible** current rotation is shown with P3's `violations`, a "Breaks an
+  agronomic rule" trade-off and an explicit sentence. This happens only if P3 supplied a
+  temporally valid calendar and at least one resolvable source.
+- If the feasibility is unknown, the calendar is missing or invalid, or no source can be
+  resolved, the baseline is **omitted**. A data gap then explains why and repeats any
+  violations. Nothing is fabricated.
+- Recommended plans compare their weighted score with the current rotation's ("Higher",
+  "Lower", "Not clearly different"), using intervals when data is missing.
+
+**`history[].source`**
+- `typed`, `apia` and `spray_records` count as documented.
+- `satellite` on the most recent entry caps confidence at medium, adds a data gap, and
+  adds a local check.
+- `unknown` or absent does **not** lower confidence, because that would assume the record
+  is wrong. It adds a data gap and a local check asking the farmer to confirm the
+  previous crop.
+
+**Plan fields**
+- `scores` holds all four criteria, with `null` when P3 gave no score (never a neutral
+  value). Recommended plans and the baseline both carry it.
+- `local_checks` lists P4's checks (windows, previous crop, soil, irrigation, estimated
+  criteria, current-rotation position) followed by P3's own checks.
+- `violations` is set only on `baseline`. Recommended plans omit it, because P4 never
+  recommends a sequence with violations.
+
+**Two separate comparisons**
+- The climate-scenario comparison now uses the term **reference climate** in code
+  (`reference_request`, `CandidateRobustness.reference_*`) and in text.
+- "Baseline" and "current rotation" refer only to the farmer's rotation. A test checks
+  that plan text never says "baseline" and that the current rotation is never ranked.
+
+**Pipeline and P5 tests**
+- `pipeline.computed_result` calls `recommend_rotations`. P5's `tests/test_api.py`
+  monkeypatches that function and needs it.
+- The P4 implementation returns a `PlanList`: a real `list` of plans with an `.outcome`
+  attribute. For a plain list, as from P5's stubs, the pipeline uses the original
+  assembly from environment and rules metadata.
+- The full P4 engine is still the default. The stubs only replace it inside that test.
+
+**Validator**
+- `validate_result_semantics` now also ports the Zod rules "Recommended plans cannot break
+  agronomic rules", "Unknown source reference in baseline" and "Baseline steps must be
+  ordered 1, 2, 3".
+
 ## Proposed P3–P4 intermediate contract (team approval needed)
 
 `docs/team.md` asks P3 and P4 to agree on this contract. P4 currently reads the shape
@@ -214,8 +289,9 @@ below. It is documented in `evaluation.py`, and anything missing is treated as u
 
 - `feasibility`: `"feasible" | "infeasible" | "unknown"`
 - `violations`: `[str]`
-- `criteria`: for each of water, soil and climate:
-  - `score`: 0–1 or null (higher is better)
+- `criteria`: for each of water, soil, climate and productivity:
+  - `score`: 0–1 or null (higher is better; productivity = relative production potential,
+    not a yield or profit forecast)
   - `basis`: `observed | derived | estimated | assumed`
   - `summary`
   - `source_ids`
@@ -223,6 +299,7 @@ below. It is documented in `evaluation.py`, and anything missing is treated as u
   `harvest_window`, `source_ids` and `reason`
 - `warnings`: strings or `{message, severity}`
 - `data_gaps`
+- `local_checks`: `[str]` (optional; shown to the farmer prefixed with "P3:")
 - `source_ids`
 - `sources`
 - `scenario_applied`: bool
@@ -234,10 +311,13 @@ Questions for P3:
    physical indicators (mm deficit, stress days) that P4 would rank directly?
 2. Can P3 confirm `scenario_applied` on every reply, infeasible ones included?
 3. Can the rules expose crop families, so diversity can account for agronomic similarity?
+4. For an infeasible sequence (for example the farmer's current rotation), can P3 still
+   return its calendar, criterion scores and sources? Without them P4 can only report the
+   violations in `data_gaps`, not show the rotation as `baseline`.
 
-No change to the public Zod/JSON contracts is needed or proposed. One optional future
-extension would need approval from P1, P3 and P5: structured robustness and score
-fields on the plan. Today that information is carried in plan text.
+No change to the public Zod/JSON contracts is needed or proposed. Criterion scores now go
+in `plan.scores`. Score intervals and climate robustness are still carried only in plan
+text; structured fields for them would need approval from P1, P3 and P5.
 
 ## Tests
 
@@ -251,9 +331,21 @@ services/engine/.venv/Scripts/python.exe -m pytest services/engine/tests
 `uv` was not installed on this machine. The pinned `uv==0.9.5` was installed into a
 temporary folder only to run the sync. The `.venv` it created is gitignored.
 
-**Result: 76 passed**: 4 existing contract tests, 47 P4 algorithm test cases, and 25
-English-output regression test cases. The one warning is a Starlette deprecation notice
-for `TestClient`.
+**Result: 120 passed** after merging `main`, across these files:
+
+- `test_contracts.py`: 4 original contract tests;
+- `test_contract_extensions.py`: 4 tests from P5;
+- `test_api.py`: 8 HTTP/API tests from P5;
+- `test_recommender.py`: 47 P4 algorithm test cases;
+- `test_p4_contract_extensions.py`: 28 P4 contract-extension test cases;
+- `test_p4_english.py`: 29 English-output test cases.
+
+The one warning is a Starlette deprecation notice for `TestClient`.
+
+Not run: `pnpm contracts:generate`, `pnpm typecheck` and `pnpm test:backend`. pnpm and
+`node_modules` are not installed on this machine, and the contracts and web code were
+not changed. The Python contract tests validate the generated JSON Schemas, including
+the new full examples.
 
 | Required area | Tests |
 | --- | --- |
@@ -279,7 +371,13 @@ for `TestClient`.
 | 20 Contract output | `test_computed_result_matches_contract_and_semantics`, `test_semantic_validator_matches_typescript_rules` |
 | 21 Status for 0/1/2/3 plans | `test_status_semantics_for_each_plan_count` (4 cases) |
 | 22 `request_id` | `test_request_id_is_preserved_in_both_modes` |
-| English output | `tests/test_p4_english.py`: detector self-check, static scan of 12 P4 source files, 11 generated-output paths, computed-result disclaimer |
+| English output | `tests/test_p4_english.py`: detector self-check, static scan of 13 P4 source files, 14 generated-output paths, computed-result disclaimer |
+| Old request format | `test_old_request_format_is_unchanged_in_behaviour`, `test_old_request_ranking_ignores_productivity_scores` |
+| `productivity` | weight and ranking, productivity-only and all-zero priorities, null score and interval, confidence when requested but unweighted, Pareto participation |
+| `history[].source` | documented sources, satellite, unknown or absent source, most recent entry and ordering |
+| `current_rotation` → `baseline` | alignment rules, separate and not counted, infeasible with violations, omitted without calendar, unknown or sources, position assumed, excluded crops, evaluation reuse, kept separate from the scenario comparison, full contract example |
+| `scores` / `local_checks` / validator | null scores, evaluator checks, new Zod semantic rules, `PlanList` compatibility |
+| P5 integration | `tests/test_api.py` (module stubs returning plain lists) now passes against the P4 pipeline |
 
 Not run: `pnpm` typechecks and contract generation (contracts unchanged), Next.js,
 FastAPI server, Docker, PostgreSQL, live NASA calls.
@@ -301,6 +399,16 @@ FastAPI server, Docker, PostgreSQL, live NASA calls.
 - User-facing text is English only. There is no localization layer.
 - The Romanian-detection tests are heuristic. They catch Romanian diacritics and a list of
   common Romanian words, not every possible Romanian word.
+- Current-rotation alignment is sequence matching on crop IDs. It cannot tell winter and
+  spring sowing apart unless P3 uses distinct crop IDs for them. It cannot read numeric
+  APIA crop codes: the contract's `crop_id` pattern requires them to be mapped to crop
+  IDs first, for example in P3's rules. `source: "apia"` only marks where an entry came
+  from.
+- The current rotation is shown only when P3 returns a calendar and sources for it. If
+  P3 returns infeasible replies without a calendar, only the violations appear, in
+  `data_gaps`.
+- `history[].source` is used only for the most recent entry (the previous crop). Older
+  entries' sources do not change confidence.
 
 ## English-language output
 
@@ -361,13 +469,17 @@ user-facing Romanian, for the owners to translate:
   - implement `evaluate` with the fields above, including regional calendars, criterion
     scores with provenance, `scenario_applied`, and source IDs that resolve to
     `rules.sources`, `environment.sources` or `evaluation.sources`;
-  - agree on or amend the proposal above.
+  - agree on or amend the proposal above;
+  - return `productivity` scores when available, `local_checks` when useful, and a
+    calendar plus sources for infeasible sequences, so the current rotation can be shown
+    with its violations.
 - **P2:**
   - `build_environment` must be enabled and validated, and must return `sources` (plus
     optional `assumptions` and `data_gaps`), which the pipeline merges.
 - **P5/P1:**
-  - nothing is required. The result contract is unchanged. P1 may want to show the score
-    interval and robustness notes, which are already in the plan text.
+  - nothing is required. The result contract is unchanged.
+  - P1 may want to render `baseline`, `scores`, `local_checks` and `violations`. The
+    score interval and robustness notes are already in the plan text.
 
 ## Remaining work
 

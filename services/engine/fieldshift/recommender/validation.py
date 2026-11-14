@@ -59,7 +59,11 @@ def history_issues(request: dict, catalog_ids) -> list[str]:
 
 
 def validate_result_semantics(result: dict) -> list[str]:
-    """Python port of `validateResultSemantics` from packages/contracts/src/index.ts."""
+    """Python port of `validateResultSemantics` from packages/contracts/src/index.ts.
+
+    Keep in sync with the Zod source, including the optional `baseline` and `violations`
+    rules. Like the TypeScript version, baseline calendars are not checked here.
+    """
     errors: list[str] = []
     plans = result.get("plans", [])
     status = result.get("status")
@@ -86,4 +90,26 @@ def validate_result_semantics(result: dict) -> list[str]:
                 errors.append("Invalid crop calendar.")
             if i > 0 and plan["steps"][i - 1]["harvest_window"]["end"] >= sw["start"]:
                 errors.append("Crop windows overlap.")
+        if plan.get("violations"):
+            errors.append("Recommended plans cannot break agronomic rules.")
+    baseline = result.get("baseline")
+    if baseline:
+        if any(i not in ids for i in baseline["source_ids"]):
+            errors.append("Unknown source reference in baseline.")
+        for i, step in enumerate(baseline["steps"]):
+            if step["order"] != i + 1:
+                errors.append("Baseline steps must be ordered 1, 2, 3.")
     return errors
+
+
+def ordered_history(history: list[dict]) -> list[dict]:
+    """History oldest → newest.
+
+    If every entry has `harvest_year`, entries are sorted by it (stable, so same-year
+    entries keep their list order). Otherwise the list order given by the farmer is used,
+    because mixing dated and undated entries would require guessing.
+    """
+    history = list(history or [])
+    if history and all(e.get("harvest_year") is not None for e in history):
+        return sorted(history, key=lambda e: e["harvest_year"])
+    return history

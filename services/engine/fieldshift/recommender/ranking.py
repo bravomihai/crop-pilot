@@ -1,6 +1,7 @@
 """Transparent weighted ranking with explicit missing-data intervals.
 
-Weights: the farmer's priorities (0–5 each) normalized to sum to 1. All-zero priorities
+Weights: the farmer's priorities (0–5 each) normalized to sum to 1. `productivity` is
+optional; when absent it has weight 0 (old requests rank exactly as before). All-zero priorities
 are invalid input per docs/api.md ("at least one positive priority") and raise.
 
 Scores: P3 criterion scores in [0, 1] (higher = better). An unknown score is NOT
@@ -21,7 +22,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .config import CRITERIA
+from .config import CRITERIA, REQUIRED_CRITERIA
 from .evaluation import Evaluation
 
 ALL_ZERO_MESSAGE = "At least one priority must be positive"
@@ -33,6 +34,9 @@ def normalize_priorities(priorities: dict) -> dict[str, float]:
     values = {}
     for name in CRITERIA:
         value = priorities.get(name)
+        if value is None and name not in REQUIRED_CRITERIA:
+            values[name] = 0.0  # optional criterion absent = not weighted
+            continue
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"priority {name} must be a number")
         if not math.isfinite(value) or value < 0:

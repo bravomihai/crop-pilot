@@ -15,11 +15,11 @@ FAKE_SOURCE = {"id": "fake-p3", "title": "Synthetic test evaluator — no agrono
 
 # crop_id: (display name, sowing month start, sowing month end, harvest month, scores)
 FAKE_CROPS = {
-    "alpha": ("Alpha (synthetic)", 3, 4, 7, {"water": 0.9, "soil": 0.4, "climate": 0.6}),
-    "beta": ("Beta (synthetic)", 4, 5, 9, {"water": 0.3, "soil": 0.8, "climate": 0.5}),
-    "gamma": ("Gamma (synthetic, autumn)", 10, 10, 7, {"water": 0.6, "soil": 0.6, "climate": 0.9}),
-    "delta": ("Delta (synthetic, autumn)", 9, 10, 6, {"water": 0.5, "soil": 0.5, "climate": 0.4}),
-    "epsilon": ("Epsilon (synthetic)", 4, 4, 8, {"water": 0.2, "soil": 0.3, "climate": 0.2}),
+    "alpha": ("Alpha (synthetic)", 3, 4, 7, {"water": 0.9, "soil": 0.4, "climate": 0.6, "productivity": 0.5}),
+    "beta": ("Beta (synthetic)", 4, 5, 9, {"water": 0.3, "soil": 0.8, "climate": 0.5, "productivity": 0.9}),
+    "gamma": ("Gamma (synthetic, autumn)", 10, 10, 7, {"water": 0.6, "soil": 0.6, "climate": 0.9, "productivity": 0.7}),
+    "delta": ("Delta (synthetic, autumn)", 9, 10, 6, {"water": 0.5, "soil": 0.5, "climate": 0.4, "productivity": 0.3}),
+    "epsilon": ("Epsilon (synthetic)", 4, 4, 8, {"water": 0.2, "soil": 0.3, "climate": 0.2, "productivity": 0.2}),
 }
 
 
@@ -67,6 +67,9 @@ class FakeEvaluator:
     - `missing`: criteria returned as unknown (score None).
     - `unknown_for`: rotations returned with feasibility "unknown".
     - `scenario_aware`: applies a synthetic climate shift and sets scenario_applied.
+    - `infeasible_with_calendar`: rotations returned infeasible WITH a calendar and scores
+      (to exercise the current-rotation baseline with violations).
+    - `local_checks`: evaluator-provided checks added to feasible replies.
     """
 
     def __init__(
@@ -79,6 +82,8 @@ class FakeEvaluator:
         scenario_aware=False,
         overrides=None,
         fixture=True,
+        infeasible_with_calendar=(),
+        local_checks=(),
     ):
         self.forbid_repeat = forbid_repeat
         self.forbid_after_history = forbid_after_history
@@ -88,6 +93,8 @@ class FakeEvaluator:
         self.scenario_aware = scenario_aware
         self.overrides = overrides or {}
         self.fixture = fixture
+        self.infeasible_with_calendar = {tuple(r) for r in infeasible_with_calendar}
+        self.local_checks = list(local_checks)
         self.calls: list[tuple[tuple[str, ...], dict]] = []
 
     def __call__(self, rotation, request, environment, rules):
@@ -104,12 +111,14 @@ class FakeEvaluator:
         history = request.get("history") or []
         if self.forbid_after_history and history and history[-1]["crop_id"] == rotation[0]:
             violations.append("synthetic: same crop as the previous one")
-        if violations:
+        if rotation in self.infeasible_with_calendar:
+            violations = violations or ["synthetic: rule broken"]
+        if violations and rotation not in self.infeasible_with_calendar:
             return {**base, "feasibility": "infeasible", "violations": violations}
         temp = (request.get("scenario") or {}).get("temp_change_c", 0)
         missing = self.missing | set(self.missing_for.get(rotation, ()))
         criteria = {}
-        for name in ("water", "soil", "climate"):
+        for name in ("water", "soil", "climate", "productivity"):
             if name in missing:
                 criteria[name] = {"score": None, "basis": "assumed"}
                 continue
@@ -126,7 +135,9 @@ class FakeEvaluator:
             }
         return {
             **base,
-            "feasibility": "feasible",
+            "feasibility": "infeasible" if violations else "feasible",
+            "violations": violations,
+            "local_checks": self.local_checks,
             "criteria": criteria,
             "calendar": fake_calendar(rotation, date.fromisoformat(request["available_from"])),
             "warnings": [],

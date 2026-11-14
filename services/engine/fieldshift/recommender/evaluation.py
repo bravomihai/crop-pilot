@@ -8,8 +8,10 @@ UNKNOWN — never as a passing constraint and never as a neutral score:
       "feasibility": "feasible" | "infeasible" | "unknown",
       "violations": ["mandatory constraint that failed", ...],
       "criteria": {
-        "water" | "soil" | "climate": {
+        "water" | "soil" | "climate" | "productivity": {
           "score": float in [0, 1] | null,      # higher = better for that objective
+                                                # productivity = relative production
+                                                # potential, not a yield/profit forecast
           "basis": "observed" | "derived" | "estimated" | "assumed",
           "summary": "short evidence statement",
           "source_ids": ["..."]
@@ -23,6 +25,7 @@ UNKNOWN — never as a passing constraint and never as a neutral score:
       ],
       "warnings": ["..."] | [{"message": "...", "severity": "low|medium|high"}],
       "data_gaps": ["..."],
+      "local_checks": ["what a local agronomist should verify"],
       "source_ids": ["..."],
       "sources": [{"id": "...", "title": "...", "url": "https://...", "resolution": "..."}],
       "scenario_applied": bool,   # true only if request["scenario"] changed the evaluation
@@ -88,6 +91,7 @@ class Evaluation:
     calendar_error: str | None = None
     warnings: tuple[EvalWarning, ...] = ()
     data_gaps: tuple[str, ...] = ()
+    local_checks: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
     sources: tuple[dict, ...] = ()
     scenario_applied: bool = False
@@ -263,6 +267,7 @@ def parse_evaluation(raw, rotation) -> Evaluation:
         calendar_error=calendar_error,
         warnings=_warnings(raw.get("warnings"), errors),
         data_gaps=_strings(raw.get("data_gaps"), errors, "data_gaps"),
+        local_checks=_strings(raw.get("local_checks"), errors, "local_checks"),
         source_ids=_strings(raw.get("source_ids"), errors, "source_ids"),
         sources=tuple(sources),
         scenario_applied=raw.get("scenario_applied") is True,
