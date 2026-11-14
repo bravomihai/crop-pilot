@@ -1,11 +1,21 @@
-# Put Caddy in the same container network, replace domain, and expose only 80/443.
+# Reference only; production Compose uses infra/Caddyfile.
+{
+	email operations@example.com
+	log default {
+		exclude http.log.access http.log.error
+	}
+}
 fieldshift.example.com {
-  request_body {
-    max_size 64KB
-  }
-  reverse_proxy web:3000 {
-    transport http {
-      response_header_timeout 110s
-    }
-  }
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	reverse_proxy gateway:80 {
+		# Override any client-supplied IP header before the rate limiter sees it.
+		header_up X-Real-IP {remote_host}
+		transport http {
+			response_header_timeout 115s
+		}
+	}
 }
