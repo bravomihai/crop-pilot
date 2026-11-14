@@ -118,7 +118,10 @@ pnpm dev
 ```
 
 Open `http://localhost:3000`. The internal token must be the same in both env files.
-The default is `ENGINE_MODE=demo`.
+The example settings run the real engine (`ENGINE_MODE=computed` with
+`ENABLE_NASA_POWER=true`). Set `ENGINE_MODE=demo` for clearly labelled fictional plans without
+internet access. Before a demo, download the demo field once:
+`FIELDSHIFT_CACHE_DIR=cache .venv/bin/python -m fieldshift.warm 44.45,26.5` (from `services/engine`).
 
 **Frontend only:** set `NEXT_PUBLIC_USE_MOCK_API=true` in `apps/web/.env.local` and run
 only `pnpm dev`; the app reads the shared example.
