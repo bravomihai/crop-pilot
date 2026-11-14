@@ -8,6 +8,7 @@ PARAMETERS = [
     "T2M",
     "T2M_MIN",
     "T2M_MAX",
+    "T2MDEW",
     "PRECTOTCORR",
     "RH2M",
     "WS2M",
@@ -32,7 +33,7 @@ def fetch_power(
         "format": "JSON",
         "time-standard": "UTC",
     }
-    key = cache.key_for({"provider": "power-daily-v1", "query": query})
+    key = cache.key_for({"provider": "power-daily-v2", "query": query})
     cached = cache.read(key)
     if cached:
         return cached
@@ -44,6 +45,11 @@ def fetch_power(
     values = raw["properties"]["parameter"]
     fill = raw.get("header", {}).get("fill_value", -999)
     coordinates = raw.get("geometry", {}).get("coordinates", [])
+    elevation = (
+        coordinates[2]
+        if len(coordinates) > 2 and coordinates[2] not in (None, fill)
+        else None
+    )
     dates = sorted(set().union(*(set(v) for v in values.values())))
     daily = [
         {
@@ -60,7 +66,7 @@ def fetch_power(
     result = {
         "location": {"latitude": latitude, "longitude": longitude},
         "period": {"start_year": start_year, "end_year": end_year},
-        "elevation_m": coordinates[2] if len(coordinates) > 2 else None,
+        "elevation_m": elevation,
         "daily": daily,
         "parameters": raw.get("parameters", {}),
         "sources": [

@@ -31,12 +31,15 @@ C→A după ultimul pas. Culturile de acoperire și plantele multianuale sunt ex
 ## Date și incertitudine
 
 Fermierul poate trimite un contur GeoJSON de tip Polygon; limita este verificată să rămână
-în România. Pentru moment, NASA POWER și SoilGrids sunt interogate într-un punct
-reprezentativ, nu agregate pe întreaga parcelă; răspunsul semnalează această limitare.
+în România. Sistemul acceptă puncte din întreaga țară. NASA POWER, SoilGrids și SRTM sunt
+interogate pentru punctul reprezentativ, nu agregate pe întreaga parcelă; răspunsul semnalează
+această limitare.
 POWER este context regional. Datele zilnice și metadatele sunt păstrate pentru ferestre
 specifice culturilor; mediile anuale nu înlocuiesc expunerea din perioade sensibile.
 Solul introdus de utilizator își păstrează sursa. Istoricul absent duce la reguli neverificate,
 nu la presupunerea unui teren fără culturi anterioare.
+Panta este estimată dintr-un vecin de 3×3 puncte SRTM de aproximativ 30 m, prin OpenTopoData;
+API-ul primește coordonatele, are limite publice de utilizare și nu reprezintă panta întregii parcele.
 
 ## Moduri
 
@@ -60,9 +63,14 @@ pentru culturile selectate, adaugă și numărul istoric al zilelor peste pragur
 din lunile sensibile estimate, cu numărul anilor observați. Pragurile sunt literatură generală,
 ferestrele sunt estimări provizorii pentru profilul termic selectat; aceste avertismente explicative nu schimbă
 clasarea și nu reprezintă predicții validate ale vătămării termice.
-SoilGrids furnizează context opțional, dar pH-ul și carbonul organic nu intră în scor până
-când nu există praguri locale validate. Nu se estimează producția, profitul sau schimbarea
-fertilității; precipitația efectivă, scurgerea și stocarea apei în sol nu sunt modelate.
+SoilGrids oferă estimări modelate pentru profilul 0–30 cm. Textura și capacitatea de apă
+disponibilă estimată intră în bilanțul hidric, iar pH-ul în potențialul relativ de producție;
+carbonul organic influențează estimarea capacității de apă, nu un scor al schimbării
+fertilității. Valorile SoilGrids nu înlocuiesc analiza de laborator. Nu se estimează producția
+sau profitul; precipitația efectivă și scurgerea nu sunt încă modelate.
+SRTMGL1 v003 acoperă latitudinile 60°S–60°N, inclusiv toată România. Accesul public
+OpenTopoData este limitat la 1 cerere/secundă și 1000 cereri/zi; pentru trafic mai mare
+va fi necesară o strategie de date cu capacitate potrivită.
 
 ## Date păstrate
 

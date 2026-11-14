@@ -97,7 +97,9 @@ def computed_result(
     }
     if outcome is not None and outcome.baseline is not None:
         result["baseline"] = outcome.baseline
-    climate = climate_context(environment, request["location"])
+    climate = environment.get("climate_context")
+    if climate is None:
+        climate = climate_context(environment, request["location"])
     if climate is not None:
         listed = {source["id"] for source in result["sources"]}
         climate["source_ids"] = [i for i in climate["source_ids"] if i in listed]
