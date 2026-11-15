@@ -324,9 +324,7 @@ def build_texts(
 
 
 def _common_tail(evaluation: Evaluation, confidence: str, confidence_reasons: list[str], checks: list[str], ctx: PlanContext) -> list[str]:
-    parts = [
-        "Scores compare the options with each other; they are not yields, profits or probabilities."
-    ]
+    parts: list[str] = []
     if ctx.scenario_text and ctx.scenario_status == COMPUTED:
         parts.append(f"The ranking uses {ctx.scenario_text}, compared with the current climate.")
     elif ctx.scenario_text and ctx.scenario_status == UNSUPPORTED:
@@ -338,7 +336,7 @@ def _common_tail(evaluation: Evaluation, confidence: str, confidence_reasons: li
     if gaps:
         parts.append(
             f"{gaps} piece{'s' if gaps != 1 else ''} of information {'are' if gaps != 1 else 'is'} missing or estimated for this plan; "
-            "see Missing data."
+            "see Missing data under How this was calculated."
         )
     if checks:
         parts.append(

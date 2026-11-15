@@ -70,7 +70,7 @@ PostgreSQL cache stores public data only.
 ## Map page behaviour
 
 - Search for a place or click the map to place one field point; drag it to move it.
-  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` opens with that point
+  A shared link such as `/?lat=44.45&lon=26.5&name=Example%20field` opens with that point
   chosen (limited to Romania's bounding box). No field outline is sent: the contract's
   optional `field_boundary` is supported by the engine but not offered here.
 - The form sends the shared request: availability date (not before today), previous

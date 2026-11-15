@@ -6,7 +6,7 @@ Examples: `packages/contracts/examples/`.
 
 | Method | Web route | Purpose |
 | --- | --- | --- |
-| GET | `/api/locations?q=Slobozia` | Locality options with coordinates from Open-Meteo/GeoNames |
+| GET | `/api/locations?q=Calarasi` | Locality options with coordinates from Open-Meteo/GeoNames |
 | POST | `/api/recommendations` | Complete form → result in the same request |
 | GET | `/api/engine/status` | Engine connectivity, mode, and contract compatibility; no agronomic calculation |
 | GET | `/api/health` | Service identity/contract version; does not check external services |

@@ -22,6 +22,8 @@ const paths = {
   arrow: "M4 12h16m-6-6 6 6-6 6",
   check: "m5 12 4 4L19 6",
   close: "m6 6 12 12M6 18 18 6",
+  expand: "M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5",
+  shrink: "M9 4v5H4m11-5v5h5m0 6h-5v5M4 15h5v5",
   info: "M12 8h.01M12 11v6M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20",
 } as const;
 

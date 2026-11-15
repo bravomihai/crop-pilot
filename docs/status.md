@@ -362,3 +362,57 @@ Deployment verification now compares platform manifests using API 1.49+.
 Six deployment regression tests include distinct legacy config/index/platform
 IDs and a negative case that still rejects a genuinely stale running image.
 The remaining main/actor, migration and health gates are unchanged.
+
+## Easier-to-read results — 2026-11-15 (branch `tudor`)
+
+The results panel now opens with an **At a glance** card built from the result itself,
+without AI. It shows:
+- the best plan and its first sowing window;
+- the score comparison with the current rotation;
+- the main risks and the checks to do before deciding;
+- one line for each other plan;
+- the missing data a farmer can act on.
+
+Plan cards show the crops, dates, scores and one sentence. Benefits, trade-offs, the
+reason for each crop and the local checks are under "Why this plan?". Assumptions,
+all missing data and sources are collapsed under "How this was calculated". "Back to
+summary" links close the long sections. The results panel has a full-screen toggle,
+and Escape exits it.
+
+Engine text fixes:
+- the ET₀ wording is fixed;
+- the duplicate score, weather and ET₀ lines are removed;
+- the replay is described in one line;
+- the winterkill notes are merged into one line;
+- the soil note says when regional SoilGrids estimates were used.
+
+Unexpected engine failures are logged by error type before the 502; exception
+messages and tracebacks are omitted because provider URLs can contain field coordinates.
+Slobozia/Fundulea were removed from tracked files: the INCDA source lost its place name
+and URL, and the examples use a neutral name.
+
+Verified: Python 231 passed; web backend 97/97, UI 35/35, TypeScript; schemas unchanged.
+**Live** (real NASA POWER, SoilGrids, SRTM from the local cache; engine via
+`pnpm dev:engine`, web via `pnpm dev`, in a browser): a computed result with the current
+rotation maize → winter wheat showed the summary, collapsed details and full screen
+correctly. Known on Windows only: `scripts/env.test.mjs` expects `/` path separators
+and fails 1 of 3 checks; the uvicorn `--reload` supervisor can crash on file changes.
+
+### Integration review with current VPS deployment
+
+Preserved the current CI/CD and deployment records while merging Tudor's
+commits. Replaced exception tracebacks with error-type-only logging because
+provider URLs can include field coordinates or credentials, and added an HTTP
+regression test proving those values do not reach logs or error responses.
+Cancelled summary responses are ignored.
+
+Verified: 232 Python tests, 97 backend tests, 35 UI tests, 3 configuration
+checks, TypeScript, unchanged generated schemas, and a production build.
+Browser checks with an explicitly local demo engine covered the At a glance
+card, collapsed details, full-screen toggle, return navigation and Escape;
+paid AI and NASA calls were disabled for that UI check. No scientific
+validation is implied.
+
+The CI/CD correction was independently verified by the successful automatic
+main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
+returned three computed plans of three crops each and passed the shared schema.
