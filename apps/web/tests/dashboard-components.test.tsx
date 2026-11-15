@@ -552,6 +552,18 @@ test("the glance helpers use the result as it is", () => {
   );
 });
 
+/** The full example with its pea made unknown: no price, no costs, no plan totals. */
+function withUnknownPea() {
+  const fixture = structuredClone(fullFixture);
+  const economics = fixture.plans[0].economics!;
+  for (const crop of economics.crops.filter((c) => c.crop_id === "pea")) {
+    Object.assign(crop, { price_lei_per_t: null, price_basis: null, income: null, costs: null, cost_basis: null });
+  }
+  Object.assign(economics.per_year, { income: null, costs: null, margin: null });
+  economics.notes = ["Pea: no official recent price series. Add the price you get to complete the estimate."];
+  return fixture;
+}
+
 test("plan cards show money per hectare a year as an estimate, with unknowns spelled out", () => {
   const [plan] = fullFixture.plans;
   const baseline = fullFixture.baseline!;
@@ -560,11 +572,16 @@ test("plan cards show money per hectare a year as an estimate, with unknowns spe
   assert.match(html, /Money per hectare a year/);
   assert.match(html, /estimate/);
   assert.match(html, /Subsidies and their conditions/);
-  // The example plan includes pea, which has no official price: totals are unknown, not 0.
-  assert.equal(plan.economics.per_year.margin, null);
-  assert.match(html, /plan-money-unknown/);
-  assert.match(html, /Pea: no official recent price series/);
-  assert.match(marginLine(plan.economics)!, /^unknown, because there are no official prices or costs for pea$/);
+  // Pea has no official price; the example uses a labelled market estimate and a stand-in budget.
+  assert.ok(plan.economics.per_year.margin);
+  assert.match(html, /\(market estimate\)/);
+  assert.match(html, /stand-in budget of a similar crop/);
+  // A crop with no figures at all keeps the totals unknown, never 0.
+  const unknown = withUnknownPea().plans[0];
+  const unknownHtml = renderToStaticMarkup(createElement(PlanCard, { plan: unknown, number: 1 }));
+  assert.match(unknownHtml, /plan-money-unknown/);
+  assert.match(unknownHtml, /Pea: no official recent price series/);
+  assert.match(marginLine(unknown.economics)!, /^unknown, because there are no official prices or costs for pea$/);
   assert.match(marginLine(baseline.economics)!, /^about -?[\d,]+ lei per hectare a year \(range -?[\d,]+ – -?[\d,]+ lei\)$/);
   assert.equal(marginLine(undefined), null);
   assert.equal(leiRange(null), "Unknown");
@@ -577,7 +594,7 @@ test("plan cards show money per hectare a year as an estimate, with unknowns spe
 });
 
 test("crops without official figures get a price and cost form; crop order is spelled out", () => {
-  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const result = resultSchema.parse({ ...withUnknownPea(), mode: "computed" });
   const crops = moneyCrops(result);
   assert.equal(crops[0].id, "pea");
   assert.ok(crops[0].missing && crops[0].price === undefined);

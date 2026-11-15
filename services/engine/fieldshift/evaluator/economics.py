@@ -111,7 +111,11 @@ def _price(data: dict, region: str | None, crop_id: str, own: dict) -> tuple[dic
         return {"low": value, "typical": value, "high": value}, "farmer", None
     prices = data["prices_lei_per_t"]
     latest = _latest_price_year(data)
+    market = (data.get("market_prices_lei_per_t") or {}).get(crop_id)
     for oldest in (latest - PRICE_YEARS + 1, latest - MAX_PRICE_AGE + 1):
+        if market and oldest < latest - PRICE_YEARS + 1:
+            # No recent official price: a dated market estimate beats an old statistic.
+            return ({k: market[k] for k in ("low", "typical", "high")}, "market_estimate", market.get("year"))
         for basis, series in (("regional", (prices.get(region or "") or {}).get(crop_id)),
                               ("national", (prices.get("TOTAL") or {}).get(crop_id))):
             recent = sorted((int(y), v) for y, v in (series or {}).items() if int(y) >= oldest)[-PRICE_YEARS:]
@@ -230,6 +234,10 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
 
         if price is None:
             notes.append(f"{name}: no official recent price series. Add the price you get to complete the estimate.")
+        elif price_basis == "market_estimate":
+            basis = ((data.get("market_prices_lei_per_t") or {}).get(crop_id) or {}).get("basis", "market reports")
+            notes.append(f"{name}: no recent official price; a market estimate from {basis} is used "
+                         f"({price['low']:,}-{price['high']:,} lei/t). Add the price you get for a better estimate.")
         elif price_year is not None and price_year <= _latest_price_year(data) - PRICE_YEARS:
             notes.append(f"{name}: the latest official price is from {price_year}; prices may have changed since. "
                          "Add the price you get for a better estimate.")

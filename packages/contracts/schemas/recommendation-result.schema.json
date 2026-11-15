@@ -651,6 +651,7 @@
                           "enum": [
                             "regional",
                             "national",
+                            "market_estimate",
                             "farmer"
                           ]
                         },
@@ -1452,6 +1453,7 @@
                         "enum": [
                           "regional",
                           "national",
+                          "market_estimate",
                           "farmer"
                         ]
                       },

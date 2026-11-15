@@ -78,7 +78,7 @@ These factors are the project's own agronomic assumptions and need review by a l
 | Years used | The last 3 data years (2023–2025 in the 2026 data file). A crop with no price in those years may use its latest price from up to 5 years back, and the card says from which year ("the latest official price is from 2022"). Older prices count as unknown |
 | Value used for income | **Median** of those years (typical). The range of the 3 years is listed in the details, but it does not widen the income range |
 | Farmer's own price | Replaces the price for that crop completely |
-| No series | The price is unknown, so the crop's income and the plan's totals are unknown. Today this is **pea** (INS stopped dry pea prices in 2007), **grain sorghum** and **rye** (no INS or Eurostat price for Romania) |
+| No official series | A labelled **market estimate** is used (see section 9): pea (INS stopped dry pea prices in 2007), grain sorghum and rye (no INS or Eurostat price), and sugar beet (latest official price 2022). Without any figure, the crop's income and the plan's totals are unknown |
 
 Income range: `yield (bad year / typical / good year) × typical price`. Price swings are shown
 separately so that one bad year of weather and one bad year of prices are not stacked.
@@ -94,7 +94,7 @@ separately so that one bad year of weather and one bad year of prices are not st
 | Index now | Nitrogen +8.4 %, diesel −7.9 %, so the factor is **1.001** (costs barely change) |
 | Farmer's own cost | Replaces the budget cost for that crop |
 | Stand-in budget ("proxy") | Crops ICEADR has no budget for use the budget of the closest crop, and the card says so: oats and spring barley ← winter barley; triticale and rye ← winter wheat; grain sorghum ← maize; dry beans ← soybean. These pairings are expert choices pending agronomist review |
-| No budget | Costs are unknown. Today this is **pea**: ICEADR has no pea budget |
+| No budget | Costs are unknown. Pea now uses the soybean budget as a stand-in |
 | Yield far below the budget | If the yields used are under 70 % of the yield the budget is written for (for example all-farm potato yields of about 10 t/ha against a 16.7 t/ha budget), the card warns that the margin is probably too low for a commercial farm |
 
 Other costs are not counted: land rent, loans, taxes, storage, drying, transport and the
@@ -130,7 +130,7 @@ campaign year (**5.2788** for 2026).
 | Soybean coupled support (PD-09) | 141.98 €/ha (2025 claim year) | Counted for each soybean season in the plan, divided by the plan's years |
 | Eco-scheme for arable land (PD-04) | 56.28 €/ha | **Only in the high estimate**, because it depends on the whole farm meeting the scheme. The card says whether the plan grows a legume or 3 different crops, which helps meet its optional requirements |
 | Coupled support for legumes for processing (PD-11) | 209.70 €/ha (2025 claim year) | Dry beans only; **only in the high estimate**, because it needs a processing contract |
-| Coupled support for sugar beet (PD-16) | 818.19 €/ha (as reported for 2025; sources disagree) | **Only in the high estimate**, because it needs a contract with a sugar factory |
+| Coupled support for sugar beet (PD-16) | 818.19 €/ha (as reported for 2025; sources disagree) | Counted for each sugar-beet season, divided by the plan's years: sugar beet is only grown under a factory contract |
 | Redistributive payment, CRISS (PD-02) | depends on farm size | Listed, **never counted**: farm size is not asked |
 
 Low and typical subsidies are the sure payments; high adds the eco-scheme.
@@ -209,24 +209,37 @@ The same wheat **after pea** (a good previous crop):
 | Crop | Yield | Price | Cost |
 |---|---|---|---|
 | Winter wheat, winter barley, maize, sunflower, rapeseed, soybean | County (commercial farms) | Regional | ICEADR |
-| Pea | County | **none** | **none** |
+| Pea | County | Market estimate (feed-pea listings, 2026) | Proxy (soybean) |
 | Oats | County | National | Proxy (winter barley) |
 | Spring barley | County (derived) | Regional | Proxy (winter barley) |
 | Triticale | **National** | National (2025 only) | Proxy (winter wheat) |
-| Winter rye | County (mostly all farms) | **none** | Proxy (winter wheat) |
-| Grain sorghum | County (mostly all farms) | **none** | Proxy (maize) |
+| Winter rye | County (mostly all farms) | Market estimate (derived from wheat) | Proxy (winter wheat) |
+| Grain sorghum | County (mostly all farms) | Market estimate (reference price and listings, 2026) | Proxy (maize) |
 | Dry beans | County (all farms) | National | Proxy (soybean) |
-| Sugar beet | County where grown, else national | National, **latest 2022** | ICEADR |
+| Sugar beet | County where grown, else national | Market estimate (factory contracts 2025-2026) | ICEADR |
 | Potato (main crop) | County (mostly all farms) | Regional | ICEADR |
 
-"None" means the plan shows the money as unknown until the farmer enters a figure.
+Every crop now has a figure. "Market estimate" means no recent official price exists: the value comes
+from contracts, reference prices or sale listings, is labelled on the plan, and should be replaced by
+the farmer's own price where known:
+
+| Crop | Low / typical / high (lei/t) | Basis |
+|---|---|---|
+| Field pea | 1,100 / 1,300 / 1,800 | Feed-pea sale listings for the 2026 harvest, mostly 1.30-2.00 lei/kg asking prices |
+| Grain sorghum | 900 / 1,000 / 1,200 | 2026 county reference price 1.00 lei/kg; listings 1.10-1.20 lei/kg; close to maize |
+| Winter rye | 750 / 850 / 1,000 | No rye quote found; derived from bread wheat (850-1,017 lei/t on the exchange, July 2025), which rye trades below |
+| Sugar beet | 140 / 160 / 190 | Factory contracts 2025-2026: 26.2 EUR/t base, up to about 36 EUR/t with sugar bonuses |
+
+Price order: a recent official price (last 3 data years) wins; otherwise the market estimate;
+otherwise an official price up to 5 years old, with its year shown; otherwise unknown.
 
 ## 10. Known limits
 
 - **Averages, not your field.** County and regional statistics; a good farm can do better and
   a poor soil worse. Use your own prices and costs where you know them.
-- **Pea has no official price or cost**, so plans with pea are unknown until the farmer enters
-  figures. Its yield still comes from the county statistics.
+- **Market estimates are not statistics.** Pea, sorghum, rye and sugar beet prices come from contracts,
+  reference prices and sale listings (asking prices run above what farmers are paid); the rye price is
+  derived from wheat. Replace them with your own prices where you know them.
 - **Costs are from 2022–2023**, indexed only for nitrogen and diesel up to 2024. Fertiliser
   prices rose again in 2026 (press reports of +40 %), which the data does not yet show.
 - **The farmer's own cost and the nitrogen saving can overlap.** If a farmer enters a cost for

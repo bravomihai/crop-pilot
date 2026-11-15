@@ -97,6 +97,7 @@ export default function PlanMoney({ economics }: { economics?: PlanEconomics }) 
               {" × "}
               {crop.price_lei_per_t ? `${lei(crop.price_lei_per_t.typical)}/t` : "price unknown"}
               {crop.price_basis === "farmer" && " (your price)"}
+              {crop.price_basis === "market_estimate" && " (market estimate)"}
               {" = "}
               {crop.income ? lei(crop.income.typical) : "income unknown"}; costs{" "}
               {crop.costs ? lei(crop.costs.typical) : "unknown"}

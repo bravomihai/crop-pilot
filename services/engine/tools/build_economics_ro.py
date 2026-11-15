@@ -71,11 +71,82 @@ ICEADR_COSTS = {
     "sugar_beet": {"rainfed": 12268, "irrigated": 16802, "yield_rainfed": 38700, "yield_irrigated": 54200},
 }
 
+# Market price estimates (lei/t) for crops without a recent official price. They come from
+# contracts, reference prices and sale listings, not statistics, and the plan labels them so.
+MARKET_PRICES = {
+    "pea": {
+        "low": 1100,
+        "typical": 1300,
+        "high": 1800,
+        "year": 2026,
+        "source": "market-pea-2026",
+        "basis": "feed-pea sale listings for the 2026 harvest (mostly 1.30-2.00 lei/kg asking prices)"
+    },
+    "sorghum": {
+        "low": 900,
+        "typical": 1000,
+        "high": 1200,
+        "year": 2026,
+        "source": "market-sorghum-2026",
+        "basis": "the 2026 county reference price (1.00 lei/kg) and sale listings (1.10-1.20 lei/kg)"
+    },
+    "winter_rye": {
+        "low": 750,
+        "typical": 850,
+        "high": 1000,
+        "year": 2025,
+        "source": "market-rye-derived",
+        "basis": "no rye quote was found; derived from bread-wheat prices (850-1,017 lei/t in July 2025), which rye usually trades below"
+    },
+    "sugar_beet": {
+        "eur_low": 26.2,
+        "eur_typical": 30.0,
+        "eur_high": 36.0,
+        "year": 2026,
+        "source": "market-sugar-beet-2026",
+        "basis": "factory contracts for 2025 and 2026 (26.2 EUR/t base, up to about 36 EUR/t with sugar bonuses)"
+    },
+}
+MARKET_SOURCES = [
+    {
+        "id": "market-pea-2026",
+        "title": "Market estimate: feed-pea sale listings for the 2026 harvest (asking prices, not statistics)",
+        "url": "https://www.olx.ro/anunturi-agricole/seminte-plante-pomi/cereale-furaje-fan/q-mazare-furajera/"
+    },
+    {
+        "id": "market-sorghum-2026",
+        "title": "Market estimate: 2026 county reference price and sale listings for grain sorghum (not statistics)",
+        "url": "https://agro-market24.eu/ro/cereale-sorg-pret-cumpar-vand-92"
+    },
+    {
+        "id": "market-rye-derived",
+        "title": "Market estimate for rye derived from bread-wheat prices on the Romanian Commodities Exchange, July 2025 (no rye quote found)",
+        "url": "https://agroteca.ro/pret-grau-2025-romania/"
+    },
+    {
+        "id": "market-sugar-beet-2026",
+        "title": "Market estimate: sugar-beet contract prices of the Ludus factory for 2025 and 2026 (base and sugar bonuses)",
+        "url": "https://agrointel.ro/345439/fabrica-de-zahar-ludus-a-inceput-semnarea-contractelor"
+    }
+]
+
+
+def market_prices(eur_ron: float) -> dict:
+    out = {}
+    for crop, entry in MARKET_PRICES.items():
+        entry = dict(entry)
+        if "eur_typical" in entry:
+            for key in ("low", "typical", "high"):
+                entry[key] = round(entry.pop(f"eur_{key}") * eur_ron / 10) * 10
+        out[crop] = entry
+    return out
+
+
 # ICEADR publishes no budget for these crops; the closest budgeted crop stands in for them
 # and the estimate says so ("proxy"). Expert choices pending agronomist review.
 COST_PROXIES = {
     "oats": "winter_barley", "spring_barley": "winter_barley", "triticale": "winter_wheat",
-    "winter_rye": "winter_wheat", "sorghum": "maize", "dry_beans": "soybean",
+    "winter_rye": "winter_wheat", "sorghum": "maize", "dry_beans": "soybean", "pea": "soybean",
 }
 
 # Shares of the ICEADR rainfed wheat budget (2022-2023) used to index costs to the latest year:
@@ -114,9 +185,10 @@ PAYMENTS = [
     },
     {
         "id": "PD-16", "label": "Coupled support for sugar beet", "eur_per_ha": 818.19,
-        "crops": ["sugar_beet"], "applies": "crop_contract", "source": "apia-coupled-2025",
-        "condition": "For sugar beet delivered under a contract with a sugar factory; rate reported for "
-                     "the 2025 claim year (sources disagree: check the Order).",
+        "crops": ["sugar_beet"], "applies": "crop", "source": "apia-coupled-2025",
+        "condition": "For each hectare of sugar beet delivered under a contract with a sugar factory (sugar beet "
+                     "is only grown under such contracts); rate reported for the 2025 claim year (sources "
+                     "disagree: check the Order).",
     },
     {
         "id": "PD-02", "label": "Redistributive payment (CRISS)", "eur_per_ha": None,
@@ -387,6 +459,7 @@ def main() -> None:
         "yields_national_t_per_ha": national["yields_t_per_ha"],
         "prices_lei_per_t": prices,
         "costs_lei_per_ha": costs,
+        "market_prices_lei_per_t": market_prices(rate),
         "cost_level_years": "2022-2023",
         "cost_index": index,
         "input_prices": inputs,
@@ -410,6 +483,7 @@ def main() -> None:
              "url": "https://apia.org.ro/wp-content/uploads/2026/03/Anexa-2.pdf"},
             {"id": "ins-agr108a-109a", "title": "INS TEMPO AGR108A and AGR109A: cultivated area and production by county and type of holding (commercial farms = total minus individual holdings)",
              "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table", "resolution": "county, yearly"},
+            *MARKET_SOURCES,
             {"id": "eurostat-crop-yields", "title": "Eurostat apro_cpsh1: crop yields in Romania (national, EU standard humidity), used where county data is missing or thin",
              "url": "https://ec.europa.eu/eurostat/databrowser/view/apro_cpsh1/default/table"},
             {"id": "eurostat-input-prices", "title": "Eurostat apri_ap_ina: purchase prices of agricultural inputs in Romania (ammonium nitrate, urea, diesel)",

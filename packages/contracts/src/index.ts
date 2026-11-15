@@ -252,7 +252,8 @@ export const economicsSchema = z
             yield_t_per_ha: valueRangeSchema.nullable(),
             yield_basis: z.enum(["commercial_farms", "all_farms", "national"]).nullable().optional(),
             price_lei_per_t: valueRangeSchema.nullable(),
-            price_basis: z.enum(["regional", "national", "farmer"]).nullable().optional(),
+            // "market_estimate": no recent official price; contracts, reference prices or listings.
+            price_basis: z.enum(["regional", "national", "market_estimate", "farmer"]).nullable().optional(),
             income: moneyRangeSchema.nullable(),
             costs: moneyRangeSchema.nullable(),
             // "proxy": no budget exists for this crop; the closest crop's budget stands in.

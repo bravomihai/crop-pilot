@@ -594,3 +594,10 @@ keeping the simplified interface. Both implementation records are preserved.
 Verified on the merged tree: TypeScript, 43 UI tests, contract generation with
 no generated schema changes, and whitespace checks. Required CI will verify
 the full integrated build before merge; no additional visual review was run.
+
+Market price estimates, 2026-11-15 (branch `tudor`): pea, grain sorghum, winter rye and sugar
+beet, which have no recent official price, now use labelled market estimates from factory
+contracts, a county reference price and sale listings (rye derived from wheat prices). Pea uses
+the soybean cost budget as a stand-in. Sugar-beet coupled support counts fully, since the crop is
+only grown under contract. Every crop of Maria's 15-crop rules now gets a money estimate on the
+demo field. Verified: Python 253 passed; web backend 118/118, UI 43/43, TypeScript.

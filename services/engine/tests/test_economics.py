@@ -38,13 +38,14 @@ def test_known_crops_give_ranges_per_year_with_low_below_high():
 
 
 def test_a_crop_without_price_makes_totals_unknown_not_zero():
-    result = plan_economics(plan(("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+    # A crop the season file has no data for at all (hemp) keeps the totals unknown.
+    result = plan_economics(plan(("hemp", "Hemp"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
                             REQUEST, "calarasi", DATA)
     assert result["per_year"]["income"] is None and result["per_year"]["margin"] is None
     assert result["per_year"]["subsidies"] is not None
-    pea = result["crops"][0]
-    assert pea["price_lei_per_t"] is None and pea["income"] is None and pea["yield_t_per_ha"] is not None
-    assert any(n.startswith("Pea: no official recent price series") for n in result["notes"])
+    hemp = result["crops"][0]
+    assert hemp["price_lei_per_t"] is None and hemp["income"] is None and hemp["costs"] is None
+    assert any(n.startswith("Hemp: no official recent price series") for n in result["notes"])
     assert result["crops"][1]["income"] is not None  # the other crops are still shown
 
 
@@ -132,12 +133,12 @@ def test_the_last_crop_in_the_history_is_the_first_previous_crop():
     assert result["crops"][0]["previous_crop"] == "Pea" and result["crops"][0]["nitrogen_saving"] is not None
 
 
-def test_farmer_prices_and_costs_complete_an_unknown_crop():
-    crops = (("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize"))
-    unknown = plan_economics(plan(*crops), REQUEST, "calarasi", DATA, RULES)
-    assert unknown["per_year"]["margin"] is None
+def test_farmer_prices_and_costs_replace_estimates_and_complete_unknown_crops():
+    crops = (("hemp", "Hemp"), ("winter_wheat", "Winter wheat"), ("maize", "Maize"))
+    assert plan_economics(plan(*crops), REQUEST, "calarasi", DATA, RULES)["per_year"]["margin"] is None
     own = {"constraints": {}, "money_inputs": {"prices_lei_per_t": {"pea": 1500}, "costs_lei_per_ha": {"pea": 4000}}}
-    known = plan_economics(plan(*crops), own, "calarasi", DATA, RULES)
+    known = plan_economics(plan(("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                           own, "calarasi", DATA, RULES)
     pea = known["crops"][0]
     assert pea["price_basis"] == "farmer" and pea["price_lei_per_t"]["typical"] == 1500
     assert pea["cost_basis"] == "farmer" and pea["costs"]["typical"] == 4000
@@ -167,20 +168,34 @@ def test_the_eight_new_crops_have_data_or_say_why_not():
     assert all(c["yield_t_per_ha"] and c["price_lei_per_t"] for c in cereals["crops"])
     assert cereals["per_year"]["margin"] is not None
     assert any("winter barley budget stands in" in n for n in cereals["notes"])
-    # Sorghum and rye: no official price, so the totals are unknown and the plan asks for one.
-    no_price = plan_economics(plan(("sorghum", "Grain sorghum"), ("winter_rye", "Winter rye"), ("maize", "Maize")),
-                              REQUEST, "calarasi", DATA)
-    assert no_price["per_year"]["margin"] is None
-    assert no_price["crops"][0]["price_lei_per_t"] is None and no_price["crops"][1]["price_lei_per_t"] is None
-    assert no_price["crops"][0]["costs"] is not None  # the maize budget stands in
+    # Sorghum and rye have no official price: a labelled market estimate completes the plan.
+    estimated = plan_economics(plan(("sorghum", "Grain sorghum"), ("winter_rye", "Winter rye"), ("maize", "Maize")),
+                               REQUEST, "calarasi", DATA)
+    sorghum, rye, _ = estimated["crops"]
+    assert sorghum["price_basis"] == rye["price_basis"] == "market_estimate"
+    assert sorghum["price_lei_per_t"]["typical"] == DATA["market_prices_lei_per_t"]["sorghum"]["typical"]
+    assert estimated["per_year"]["margin"] is not None
+    assert any(n.startswith("Winter rye: no recent official price; a market estimate") for n in estimated["notes"])
 
 
-def test_old_prices_are_used_only_with_their_year():
+def test_a_recent_market_estimate_beats_an_old_official_price():
     beet = plan_economics(plan(("sugar_beet", "Sugar beet"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
                           REQUEST, "calarasi", DATA)
-    assert beet["crops"][0]["price_lei_per_t"] is not None
-    assert any(n.startswith("Sugar beet: the latest official price is from 20") for n in beet["notes"])
-    assert any(p["id"] == "PD-16" and p["included"] == "if_eligible" for p in beet["payments"])
+    price = beet["crops"][0]["price_lei_per_t"]
+    assert beet["crops"][0]["price_basis"] == "market_estimate"
+    assert price == {k: DATA["market_prices_lei_per_t"]["sugar_beet"][k] for k in ("low", "typical", "high")}
+    # Sugar beet is only grown under a factory contract, so its coupled support always counts.
+    pd16 = next(p for p in beet["payments"] if p["id"] == "PD-16")
+    assert pd16["included"] == "always"
+    assert beet["per_year"]["subsidies"]["typical"] > 530 + pd16["lei_per_ha_year"] - 20
+
+
+def test_pea_now_has_a_market_price_and_the_soybean_budget():
+    result = plan_economics(plan(("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                            REQUEST, "calarasi", DATA, RULES)
+    pea = result["crops"][0]
+    assert pea["price_basis"] == "market_estimate" and pea["cost_basis"] == "proxy"
+    assert result["per_year"]["margin"] is not None
 
 
 def test_dry_beans_leave_nitrogen_and_get_contract_support_only_in_the_high_case():

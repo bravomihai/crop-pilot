@@ -10888,6 +10888,13 @@
    "yield_rainfed": 2430,
    "yield_irrigated": 3400,
    "proxy_of": "soybean"
+  },
+  "pea": {
+   "rainfed": 5399,
+   "irrigated": 7113,
+   "yield_rainfed": 2430,
+   "yield_irrigated": 3400,
+   "proxy_of": "soybean"
   }
  },
  "cost_level_years": "2022-2023",
@@ -11024,9 +11031,9 @@
    "crops": [
     "sugar_beet"
    ],
-   "applies": "crop_contract",
+   "applies": "crop",
    "source": "apia-coupled-2025",
-   "condition": "For sugar beet delivered under a contract with a sugar factory; rate reported for the 2025 claim year (sources disagree: check the Order)."
+   "condition": "For each hectare of sugar beet delivered under a contract with a sugar factory (sugar beet is only grown under such contracts); rate reported for the 2025 claim year (sources disagree: check the Order)."
   },
   {
    "id": "PD-02",
@@ -11038,6 +11045,26 @@
   }
  ],
  "sources": [
+  {
+   "id": "market-pea-2026",
+   "title": "Market estimate: feed-pea sale listings for the 2026 harvest (asking prices, not statistics)",
+   "url": "https://www.olx.ro/anunturi-agricole/seminte-plante-pomi/cereale-furaje-fan/q-mazare-furajera/"
+  },
+  {
+   "id": "market-sorghum-2026",
+   "title": "Market estimate: 2026 county reference price and sale listings for grain sorghum (not statistics)",
+   "url": "https://agro-market24.eu/ro/cereale-sorg-pret-cumpar-vand-92"
+  },
+  {
+   "id": "market-rye-derived",
+   "title": "Market estimate for rye derived from bread-wheat prices on the Romanian Commodities Exchange, July 2025 (no rye quote found)",
+   "url": "https://agroteca.ro/pret-grau-2025-romania/"
+  },
+  {
+   "id": "market-sugar-beet-2026",
+   "title": "Market estimate: sugar-beet contract prices of the Ludus factory for 2025 and 2026 (base and sugar bonuses)",
+   "url": "https://agrointel.ro/345439/fabrica-de-zahar-ludus-a-inceput-semnarea-contractelor"
+  },
   {
    "id": "ins-agr110a",
    "title": "INS TEMPO AGR110A: average yield per hectare by county (updated 29-06-2026)",
@@ -11101,5 +11128,39 @@
    "title": "Eurostat GISCO NUTS 2021 county boundaries (© EuroGeographics)",
    "url": "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"
   }
- ]
+ ],
+ "market_prices_lei_per_t": {
+  "pea": {
+   "low": 1100,
+   "typical": 1300,
+   "high": 1800,
+   "year": 2026,
+   "source": "market-pea-2026",
+   "basis": "feed-pea sale listings for the 2026 harvest (mostly 1.30-2.00 lei/kg asking prices)"
+  },
+  "sorghum": {
+   "low": 900,
+   "typical": 1000,
+   "high": 1200,
+   "year": 2026,
+   "source": "market-sorghum-2026",
+   "basis": "the 2026 county reference price (1.00 lei/kg) and sale listings (1.10-1.20 lei/kg)"
+  },
+  "winter_rye": {
+   "low": 750,
+   "typical": 850,
+   "high": 1000,
+   "year": 2025,
+   "source": "market-rye-derived",
+   "basis": "no rye quote was found; derived from bread-wheat prices (850-1,017 lei/t in July 2025), which rye usually trades below"
+  },
+  "sugar_beet": {
+   "year": 2026,
+   "source": "market-sugar-beet-2026",
+   "basis": "factory contracts for 2025 and 2026 (26.2 EUR/t base, up to about 36 EUR/t with sugar bonuses)",
+   "low": 140,
+   "typical": 160,
+   "high": 190
+  }
+ }
 }

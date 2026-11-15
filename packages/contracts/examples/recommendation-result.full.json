@@ -216,15 +216,27 @@
         "covered_years": 2.8,
         "county": "Calarasi",
         "per_year": {
-          "income": null,
-          "costs": null,
+          "income": {
+            "low": 4150,
+            "typical": 4850,
+            "high": 5200
+          },
+          "costs": {
+            "low": 5700,
+            "typical": 5750,
+            "high": 5750
+          },
           "subsidies": {
             "low": 530,
             "typical": 530,
             "high": 830
           },
-          "margin": null,
-          "crop_order_effect": 150
+          "margin": {
+            "low": -1070,
+            "typical": -370,
+            "high": 330
+          },
+          "crop_order_effect": 200
         },
         "crops": [
           {
@@ -269,13 +281,25 @@
               "high": 2.46
             },
             "yield_basis": "commercial_farms",
-            "price_lei_per_t": null,
-            "price_basis": null,
-            "income": null,
-            "costs": null,
-            "cost_basis": null,
+            "price_lei_per_t": {
+              "low": 1100,
+              "typical": 1300,
+              "high": 1800
+            },
+            "price_basis": "market_estimate",
+            "income": {
+              "low": 1900,
+              "typical": 2890,
+              "high": 3200
+            },
+            "costs": {
+              "low": 5400,
+              "typical": 5400,
+              "high": 5400
+            },
+            "cost_basis": "proxy",
             "nitrogen_saving": null,
-            "crop_order_effect": null
+            "crop_order_effect": 140
           },
           {
             "crop_id": "winter_wheat",
@@ -338,10 +362,14 @@
         ],
         "warnings": [],
         "notes": [
-          "Pea: no official recent price series. Add the price you get to complete the estimate.",
-          "Pea: no published cost budget. Add your cost per hectare to complete the estimate."
+          "Pea: no recent official price; a market estimate from feed-pea sale listings for the 2026 harvest (mostly 1.30-2.00 lei/kg asking prices) is used (1,100-1,800 lei/t). Add the price you get for a better estimate.",
+          "Pea: no published cost budget; the soybean budget stands in for it. Add your own cost for a better estimate."
         ],
         "source_ids": [
+          "market-pea-2026",
+          "market-sorghum-2026",
+          "market-rye-derived",
+          "market-sugar-beet-2026",
           "ins-agr110a",
           "ins-ppa102c",
           "iceadr-budgets",
@@ -709,6 +737,10 @@
       "warnings": [],
       "notes": [],
       "source_ids": [
+        "market-pea-2026",
+        "market-sorghum-2026",
+        "market-rye-derived",
+        "market-sugar-beet-2026",
         "ins-agr110a",
         "ins-ppa102c",
         "iceadr-budgets",
@@ -797,6 +829,26 @@
       "id": "eurostat-crop-yields",
       "title": "Eurostat apro_cpsh1: crop yields in Romania (national, EU standard humidity), used where county data is missing or thin",
       "url": "https://ec.europa.eu/eurostat/databrowser/view/apro_cpsh1/default/table"
+    },
+    {
+      "id": "market-pea-2026",
+      "title": "Market estimate: feed-pea sale listings for the 2026 harvest (asking prices, not statistics)",
+      "url": "https://www.olx.ro/anunturi-agricole/seminte-plante-pomi/cereale-furaje-fan/q-mazare-furajera/"
+    },
+    {
+      "id": "market-sorghum-2026",
+      "title": "Market estimate: 2026 county reference price and sale listings for grain sorghum (not statistics)",
+      "url": "https://agro-market24.eu/ro/cereale-sorg-pret-cumpar-vand-92"
+    },
+    {
+      "id": "market-rye-derived",
+      "title": "Market estimate for rye derived from bread-wheat prices on the Romanian Commodities Exchange, July 2025 (no rye quote found)",
+      "url": "https://agroteca.ro/pret-grau-2025-romania/"
+    },
+    {
+      "id": "market-sugar-beet-2026",
+      "title": "Market estimate: sugar-beet contract prices of the Ludus factory for 2025 and 2026 (base and sugar bonuses)",
+      "url": "https://agrointel.ro/345439/fabrica-de-zahar-ludus-a-inceput-semnarea-contractelor"
     }
   ],
   "disclaimer": "Invented example values. Not a recommendation.",
