@@ -45,8 +45,12 @@ if(a[0]==='compose'&&a.includes('ps')) console.log(a.at(-1)+'-id');
 else if(a[0]==='compose'&&a.includes('run')&&process.env.FAIL_MIGRATIONS==='1') process.exit(1);
 else if(a[0]==='inspect') {
   const f=a[a.indexOf('--format')+1];
-  console.log(f.includes('.State.')?'running/healthy':f.includes('.Config.Image')?'croppilot-fixture:production':'sha256:built');
-} else if(a[0]==='image'&&a[1]==='inspect') console.log('sha256:built');
+  console.log(f.includes('.State.')?'running/healthy':
+    f.includes('.Config.Image')?'croppilot-fixture:production':
+    f.includes('.ImageManifestDescriptor.Platform')?'linux/amd64':
+    f.includes('.ImageManifestDescriptor.Digest')?(process.env.STALE_IMAGE==='1'?'sha256:stale':'sha256:platform'):
+    'sha256:legacy-config');
+} else if(a[0]==='image'&&a[1]==='inspect') console.log(a.includes('--platform')?'sha256:platform':'sha256:index');
 `, { mode: 0o755 });
   const run = (sha, mode = "deploy", extra = {}) => spawnSync("bash", [script, repo, sha, mode], {
     encoding: "utf8", env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH, DOCKER_LOG: log, ...extra },
@@ -97,4 +101,11 @@ test("local edits are preserved and prevent deployment", (t) => {
   assert.match(result.stderr, /Resolve local changes/);
   assert.equal(readFileSync(path.join(f.repo, "compose.yaml"), "utf8"), "local configuration\n");
   assert.equal(f.git(f.repo, "rev-parse", "HEAD"), f.initial);
+});
+
+test("a genuinely stale platform manifest fails even when containers are healthy", (t) => {
+  const f = fixture(t), result = f.run(f.next, "deploy", { STALE_IMAGE: "1" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /engine is not running the image just built/);
+  assert.doesNotMatch(result.stdout, /CROPPILOT_VPS_COMPLETE/);
 });
