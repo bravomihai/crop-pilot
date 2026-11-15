@@ -33,8 +33,10 @@ export default function Icon({
   name: IconName;
   size?: number;
 }) {
+  // Dark Reader adds SVG attributes before hydration; keep suppression on this element.
   return (
     <svg
+      suppressHydrationWarning
       width={size}
       height={size}
       viewBox="0 0 24 24"

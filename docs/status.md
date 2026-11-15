@@ -322,3 +322,13 @@ scores and per-crop evidence. No new agronomic calculation; no AI model involved
 - **Not verified:** screen-reader software (markup checked by tests: labelled radio
   group, `aria-pressed`, bar text alternatives, live region); other Romanian locations;
   Docker/AWS deployment.
+
+## SVG extension hydration compatibility — 2026-11-15
+
+The shared dashboard Icon component now suppresses hydration attribute warnings
+on its SVG element, where Dark Reader injects inline stroke attributes before
+React hydrates. The existing root HTML exception does not cover nested icons.
+The exception is local to the icon element; its path remains normally checked.
+
+Verified: contracts/web TypeScript, all 27 existing UI checks, and whitespace
+validation. A browser reload with Dark Reader enabled was not verified.
