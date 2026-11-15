@@ -142,12 +142,3 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
     </section>
   );
 }
-
-/** Returns to the summary at the top of the results. */
-export function BackToSummary() {
-  return (
-    <a className="back-to-summary" href="#results-summary" onClick={(event) => jumpTo(event, "results-summary")}>
-      ↑ Back to summary
-    </a>
-  );
-}

@@ -11,6 +11,15 @@ import LocationSearch from "./dashboard/location-search";
 import FieldMap from "./dashboard/field-map";
 import RecommendationResults from "./recommendation-results";
 
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <a className={`map-brand${compact ? " map-brand--compact" : ""}`} href="#main" aria-label="CropPilot home">
+      <span className="map-brand-symbol"><Icon name="leaf" size={23} /></span>
+      <span>CropPilot<small>Crop planning</small></span>
+    </a>
+  );
+}
+
 type Focus = "balanced" | "water" | "soil" | "climate" | "productivity";
 
 type Panel = "details" | "results" | null;
@@ -40,7 +49,6 @@ export default function FieldDashboard() {
   const [today, setToday] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
   const { result, lastRequest, busy, error, calculate, recalculate, recalculateMoney, cancel, clear } = useRecommendations();
-  const info = useRef<HTMLDialogElement>(null);
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const detailsHeading = useRef<HTMLHeadingElement>(null);
 
@@ -107,15 +115,8 @@ export default function FieldDashboard() {
       <FieldMap view={view} zoom={mapZoom} selection={selection} onSelect={selectField} />
 
       <header className="map-header">
-        <a className="map-brand" href="#main" aria-label="CropPilot home">
-          <span className="map-brand-symbol"><Icon name="leaf" size={23} /></span>
-          <span>CropPilot<small>Crop planning</small></span>
-        </a>
+        <Brand />
         <LocationSearch onSelect={chooseLocation} />
-        <div className="map-header-end">
-          <span className="prototype-pill"><i />Prototype</span>
-          <button className="map-icon-button" type="button" aria-label="About CropPilot" onClick={() => info.current?.showModal()}><Icon name="info" /></button>
-        </div>
       </header>
 
       <section className={`map-planner ${selection ? "has-field" : ""}`} id="field-details" aria-labelledby="planner-title" hidden={panel !== "details"}>
@@ -179,7 +180,10 @@ export default function FieldDashboard() {
         onKeyDown={(event) => { if (event.key === "Escape" && fullscreen) { event.stopPropagation(); setFullscreen(false); } }}
       >
         <header className="results-panel-header">
-          <div><span className="planner-eyebrow">THE NEXT CHAPTER</span><h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2></div>
+          <div className="results-panel-title">
+            <Brand compact />
+            <h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2>
+          </div>
           <div className="results-panel-actions">
             <button type="button" className="fullscreen-toggle" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
               <Icon name={fullscreen ? "shrink" : "expand"} size={16} />{fullscreen ? "Exit full screen" : "Full screen"}
@@ -194,13 +198,6 @@ export default function FieldDashboard() {
       </section>
 
       <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
-      <dialog className="map-about" ref={info} aria-labelledby="about-title">
-        <div className="planner-heading"><h2 id="about-title">CropPilot</h2><button type="button" className="quiet-icon" aria-label="Close about CropPilot" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
-        <p>Crop planning prototype. No account; your field stays in this tab.</p>
-        <p>Map: Esri / OpenStreetMap. NASA layers show regional context, not field measurements.</p>
-        <p>Demo results are fictional. Review computed plans with a local agronomist.</p>
-        <a href="https://power.larc.nasa.gov/" target="_blank" rel="noreferrer">NASA POWER ↗</a>
-      </dialog>
     </main>
   );
 }

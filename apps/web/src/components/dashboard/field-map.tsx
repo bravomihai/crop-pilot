@@ -8,6 +8,9 @@ import RegionalMapContext from "../regional-map-context";
 
 // Avoid imagery levels where the basemap can return unavailable-data tiles.
 const MAX_MAP_ZOOM = 17;
+// Keep the map at country scale or closer, avoiding repeated world tiles.
+const MIN_MAP_ZOOM = 6;
+const clampZoom = (zoom: number) => Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, zoom));
 // Street level for a chosen place; the default view shows the whole country.
 const FIELD_ZOOM = 13;
 
@@ -37,21 +40,17 @@ export default function FieldMap(props: Props) {
     void import("leaflet").then(L => {
       if (disposed || !container.current) return;
       const location = latest.current.view;
-      const instance = L.map(container.current, { zoomControl: false, preferCanvas: true, maxZoom: MAX_MAP_ZOOM }).setView([location.latitude, location.longitude], latest.current.zoom ?? FIELD_ZOOM);
+      const instance = L.map(container.current, { zoomControl: false, attributionControl: false, preferCanvas: true, minZoom: MIN_MAP_ZOOM, maxZoom: MAX_MAP_ZOOM, maxBounds: [[-85, -180], [85, 180]], maxBoundsViscosity: 1 }).setView([location.latitude, location.longitude], clampZoom(latest.current.zoom ?? FIELD_ZOOM));
       map.current = instance;
-      L.control.zoom({ position: "bottomright" }).addTo(instance);
       const imagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: MAX_MAP_ZOOM,
+        noWrap: true,
         attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
       });
       const labels = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: MAX_MAP_ZOOM, attribution: "Labels &copy; Esri", pane: "overlayPane",
+        maxZoom: MAX_MAP_ZOOM, noWrap: true, attribution: "Labels &copy; Esri", pane: "overlayPane",
       });
-      const satellite = L.layerGroup([imagery, labels]).addTo(instance);
-      const streets = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: MAX_MAP_ZOOM, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      });
-      L.control.layers({ Satellite: satellite, "Street map": streets }, {}, { position: "bottomright" }).addTo(instance);
+      L.layerGroup([imagery, labels]).addTo(instance);
       imagery.on("tileerror", () => { if (!disposed) setTileError(true); });
       const pin = L.divIcon({ className: "field-map-marker", html: '<span class="field-pin"><span></span></span>', iconSize: [38, 48], iconAnchor: [19, 46], tooltipAnchor: [0, -48] });
       let marker: ReturnType<typeof L.marker> | null = null;
@@ -95,7 +94,7 @@ export default function FieldMap(props: Props) {
   }, []);
 
   useEffect(() => {
-    if (ready) map.current?.setView([props.view.latitude, props.view.longitude], props.zoom ?? FIELD_ZOOM);
+    if (ready) map.current?.setView([props.view.latitude, props.view.longitude], clampZoom(props.zoom ?? FIELD_ZOOM));
   }, [props.view, props.zoom, ready]);
   useEffect(() => { renderSelection.current?.(); revealPin.current?.(); }, [props.selection, ready]);
 
@@ -113,7 +112,7 @@ export default function FieldMap(props: Props) {
         {props.selection && <button type="button" className="map-clear" aria-label="Clear field location" onClick={() => props.onSelect(null)}><Icon name="trash" size={17} /></button>}
       </div>
       <p className={`map-instructions ${failed ? "has-error" : ""}`} id="map-instructions" role="status">{failed ? "Map unavailable. Try a location search." : !ready ? "Loading map…" : ""}</p>
-      {tileError && <p className="tile-warning" role="status">Imagery unavailable. Choose Street map in the layer control.</p>}
+      {tileError && <p className="tile-warning" role="status">Satellite imagery is unavailable. Try reloading the page or use a location search.</p>}
       <details className="map-context-menu" onToggle={e => setContextOpen(e.currentTarget.open)}>
         <summary aria-label="NASA layers"><Icon name="satellite" size={17} /><span>NASA layers</span></summary>
         {contextOpen && <div className="map-context-content"><RegionalMapContext map={ready ? map.current : null} location={props.selection ?? undefined} /></div>}

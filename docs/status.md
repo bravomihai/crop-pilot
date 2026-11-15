@@ -554,3 +554,34 @@ Verified: a built wheel now contains both economics files and the Romania bounda
 248 passed; web backend 118/118, UI 43/43; configuration 3/3; TypeScript; schemas
 regenerated with no content change; production build. Not verified here: a Docker image
 build and a live run of the money estimate inside a container.
+
+## System theme and interface consistency — 2026-11-15
+
+The map workspace now follows the operating system's light/dark appearance without
+a theme selector or saved preference. Shared tokens use white, black and forest
+green; planner, results and NASA layer panels have consistent card corners,
+borders, form controls, selection states and keyboard focus indicators. CropPilot
+branding sits at the top right of the map and results header.
+
+Removed the Prototype badge, project-info button/dialog, Back to summary links,
+plan-count badge and missing-rotation prompt when no rotation was supplied. A
+supplied rotation that cannot be evaluated still produces its existing warning.
+Heading focus remains available to assistive technology without a visible box.
+The map is limited to zoom levels 6–17, with non-wrapping basemaps and world bounds.
+
+Verified: both workspace TypeScript checks, all 40 UI tests, the production web
+build and `git diff --check`. The separate preview server started successfully.
+Visual browser checks could not be completed: the in-app browser initialization
+timed out, and native browser access stopped because the automation tool could not
+confidently determine its current URL. Responsive appearance, live system-theme
+changes and runtime map interaction therefore remain visually unverified. No
+scientific validation or deployment is implied.
+
+
+### Interface changes integrated with latest main
+
+Resolved the dashboard conflict by retaining financial recalculation while
+keeping the simplified interface. Both implementation records are preserved.
+Verified on the merged tree: TypeScript, 43 UI tests, contract generation with
+no generated schema changes, and whitespace checks. Required CI will verify
+the full integrated build before merge; no additional visual review was run.
