@@ -38,6 +38,7 @@ jobs:
       - run: pnpm db:generate
       - run: pnpm typecheck
       - run: pnpm test:backend
+      - run: pnpm --filter @fieldshift/web test:ui
       - run: pnpm db:deploy
       - run: pnpm test:cache
       - run: pnpm build

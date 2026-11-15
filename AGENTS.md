@@ -118,7 +118,8 @@ startup or agronomic validation.
 
 ## Git
 
-Do not overwrite `main`. Current work is on `mihail`; the user integrates it later.
+Do not overwrite `main`. Each contributor works on their own branch and merges through
+pull requests; do not push to another contributor's branch.
 Do not force-push without an explicit request for that branch. Preserve teammates'
 changes. Never commit `.env`, passwords, tokens, cache, or installed dependencies.
 Update `docs/status.md` when a component becomes functional, stating exactly what

@@ -2,29 +2,36 @@
 
 The interface lives in `apps/web`. It uses Next.js, React, TypeScript, and plain
 CSS. Start with the existing shared contract; confirm input details with the
-team before adding fields or changing request shapes.
+team before adding fields or changing request shapes. Interface text is English.
 
 ## Where to work
 
 | File | Responsibility |
 | --- | --- |
-| `apps/web/src/app/page.tsx` | Entry point for the single-page dashboard |
-| `apps/web/src/components/field-dashboard.tsx` | Dashboard state, navigation, metadata, planning form, and API submission |
-| `apps/web/src/components/dashboard/` | Satellite drawing map, climate controls, KPI cards, crop preview, search, and local PDF selection |
-| `apps/web/src/app/layout.tsx` | Document language, metadata, and global style imports |
-| `apps/web/src/app/globals.css` | Colors, spacing, typography, responsive layouts, and focus styles |
-| `apps/web/src/components/calculator.tsx` | Full contract-backed form at `/calculator`, linked from the dashboard |
-| `apps/web/src/components/recommendation-results.tsx` | Empty, loading, error, complete, limited, and insufficient-data states |
-| `apps/web/src/components/plan-card.tsx` | One plan's three successive crops, dates, benefits, and trade-offs |
-| `apps/web/src/components/ui/` | Reusable buttons, messages, and form section headings |
-| `apps/web/src/lib/api.ts` | The frontend calculation adapter and explicit mock mode |
-| `apps/web/src/lib/parcel-geometry.ts` | Hybrid trace segments, freehand simplification, polygon validation, hectares, and centre |
-| `apps/web/src/lib/dashboard-scenario.ts` | Explicitly fictional KPI and crop-score fixtures |
-| `apps/web/tests/` | Geometry, scenario, PDF-selection, and in-memory component checks |
+| `src/app/page.tsx` | Entry point: the single full-screen map page |
+| `src/components/field-dashboard.tsx` | Map page state, planning form, request building and the results panel |
+| `src/components/dashboard/field-map.tsx` | Leaflet map with one draggable field point, zoom capped at 17 |
+| `src/components/dashboard/location-search.tsx` | Place search through `/api/locations` |
+| `src/components/recommendation-results.tsx` | Loading, error, complete, limited and insufficient-data states |
+| `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
+| `src/components/results-what-if.tsx` | Hypothetical scenario recalculation from the results panel |
+| `src/components/results-evidence.tsx` | Past-season replay (`plan.replay`) and observed yearly climate with trends (`climate_context`) |
+| `src/components/ai-summary.tsx` | Optional AI summary (English/Romanian) and the print button; `lib/summary-payload.ts` trims what is sent |
+| `src/components/glossary.tsx` | Plain explanations of the terms used in the results |
+| `src/components/charts/` | Score meters and comparison, rotation timeline, replay and climate charts |
+| `src/components/regional-map-context.tsx` | Optional NASA GIBS layers, POWER cell and rule-zone outlines |
+| `src/lib/api.ts` | The only frontend entry for calculations; explicit mock mode |
+| `src/lib/use-recommendations.ts` | Calculation state, cancellation and debounced recalculation |
+| `src/lib/planning-dates.ts` | Autumn-sowing hint and the `?lat=&lon=&name=` demo field link |
+| `tests/` | Pure-data, server and in-memory component checks |
 
-The interface and demonstration content use English. Values returned by future
-data providers should also use English for display text. Do not translate IDs
-or change shared contract keys to change presentation text.
+`/calculator` and `/chart-previews` redirect to `/`. The components of the earlier
+dashboard and calculator (`calculator.tsx`, `dashboard/parcel-map.tsx`,
+`priority-panel.tsx`, `compatibility-card.tsx`, `kpi-cards.tsx`, `pdf-upload.tsx`,
+`scenario-panel.tsx`, `theme-control.tsx`, `lib/demo-priorities.ts`,
+`lib/dashboard-scenario.ts`, `lib/parcel-geometry.ts`, `location-map.tsx`) are no
+longer used by any page. They are kept until the open `maria` branch, which edits
+some of them, is settled; then they should be removed together with their tests.
 
 ## Preview the frontend locally
 
@@ -61,116 +68,49 @@ evaluated. It does not require Python or PostgreSQL. The map and location search
 use the internet. Never present demo output as real NASA observations or
 calculated agronomic advice.
 
-## Dashboard behavior and integration boundaries
+## Map page behaviour
 
-- The satellite basemap uses Esri World Imagery with road and place overlays. The layer
-  control offers OpenStreetMap streets as an alternative. Imagery needs network
-  access and is not supplied by NASA.
-  The reference overlays are legacy services: Esri lists World Transportation
-  for retirement in March 2028 and World Boundaries and Places in December 2029.
-  Replace these overlays before that timeline; see the
-  [provider's migration notice](https://www.esri.com/arcgis-blog/products/arcgis-living-atlas/announcements/sunsetting-legacy-basemaps).
-- Use **Draw field**: click for straight corners; hold and drag for a freehand
-  segment. Finish by clicking the first point, double-clicking, pressing Enter,
-  or using **Finish outline**. Ctrl/Cmd+Z undoes the last gesture; Escape cancels.
-  The toolbar also offers undo, clear, redraw, and **Use map centre**.
-- Only freehand segments are simplified. Crossed, self-touching, and degenerate
-  outlines are rejected. Area is an approximate WGS84 measurement, not a survey.
-  A point selection leaves area unknown.
-- Climate sliders update the polygon colour/opacity, all four example KPI
-  values, and example crop rankings locally. These formulas are presentation
-  fixtures. The 75% water-saving baseline is not a measured saving.
-- Each PDF selection accepts one `.pdf` up to 10 MB and checks its header. Files
-  stay in tab memory and can be removed/replaced. They are not parsed, uploaded,
-  persisted, or used to calibrate scores. Manual soil/history entries are
-  separate from file selection.
-- **Analyse compatibility & plan** calls `getRecommendations()` with the existing
-  shared request shape. The selected field's centre, available date, hypothetical
-  scenario, irrigation flag, and manual soil/history entries are sent. Boundaries,
-  area, crop-preview choice, and files are not part of that contract. Changing
-  inputs or location aborts any pending request and clears older results.
-- The crop preview always remains an explicitly labelled demonstration, even if
-  the planner is configured for computed mode. Planner errors and limited or
-  insufficient-data results are displayed without manufacturing alternatives.
-- Phone reports are an informational **Coming soon** dialog, without a phone
-  number, calls, or messaging integration. The interface is English; RO is
-  visibly unavailable in the language control.
+- Search for a place or click the map to place one field point; drag it to move it.
+  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` opens with that point
+  chosen (limited to Romania's bounding box). No field outline is sent: the contract's
+  optional `field_boundary` is supported by the engine but not offered here.
+- The form sends the shared request: availability date (not before today), previous
+  crop with source and harvest year (not after the current year), current rotation,
+  soil texture and pH, irrigation, excluded crops and a hypothetical scenario.
+- **What matters most?** maps to the four engine priorities: all at 3, with the chosen
+  focus at 5 ("A balanced plan" keeps all four at 3).
+- Scenario steps are the same in the form and in the results what-if (−3…+5 °C in
+  0.5 °C steps, −50…+50 % rain in 5 % steps). After a what-if recalculation the form
+  shows the scenario of the displayed result.
+- Changing any form input clears older results. A calculation can be cancelled.
 
-Source references: [NASA POWER](https://power.larc.nasa.gov/),
-[SMAP](https://smap.jpl.nasa.gov/), and
-[MODIS vegetation indices](https://modis.gsfc.nasa.gov/data/dataprod/mod13.php).
-Geometry uses Turf's [area](https://turfjs.org/docs/api/area),
-[centre of mass](https://turfjs.org/docs/api/centerOfMass),
-[simplification](https://turfjs.org/docs/api/simplify), and
-[intersection checks](https://turfjs.org/docs/api/kinks).
+## Results panel
 
-## Check changes
-
-```powershell
-corepack pnpm --recursive typecheck
-corepack pnpm --filter @fieldshift/web test:ui
-git diff --check
-```
-
-For a manual browser review, check keyboard navigation and narrow and wide
-screens. Try straight-only, freehand-only, and mixed outlines; close them with
-each finishing method. Test undo, cancel, pointer release outside the map,
-region changes while drawing, tile failures, PDF replacement/removal, and edits
-during a calculation. Confirm demo notices remain visible and limited results
-show only returned plans. The automated checks do not verify browser gestures,
-layout, tile services, or external integrations.
-
-## Optional rotation comparison and full fixture
-
-Open `/calculator` for the complete form. It offers the seven rule-supported crop
-IDs from `src/lib/crop-options.ts`, an optional ordered current rotation (1–5 crops,
-add/remove/move up/move down), a documentary source on each history row, and four
-0–5 engine priorities. Productivity defaults to 0 and means **Relative potential,
-not a yield or profit forecast.** At least one priority must be positive. Empty
-current rotation is omitted from the request; blank soil measurements remain absent.
-`satellite` is not offered as a history source. The dashboard also supports a
-current rotation, history source, and productivity priority. Its existing five
-0–100 presentation sliders still affect only its explicitly fictional crop preview.
-
-In mock mode, use `/calculator?fixture=full`, then **Compare plans**. This loads
-the shared full request example into the form and selects the full result example
-in `src/lib/api.ts`. `/calculator?fixture=default` uses the original result fixture.
-The visible fixture links switch between them. Both remain `mode: demo`; dates,
-scores, and any baseline are fixed examples, not calculated from the form or
-scenario. The mock adapter includes the example baseline only when a current
-rotation was supplied. No shared contract or example files are modified.
-
-New result components:
-
-- `CurrentRotationInput`: accessible ordered selectors, with keyboard-operable
-  move/remove buttons and a five-crop limit.
-- `ScoreMeters` / `ScoreComparison`: optional 0–1 scores displayed on a 0–100 scale.
-  Null and absent criteria are labelled **Unknown** with hatching. A genuine zero
-  remains `0 / 100`. No score UI is added if no score object is supplied.
-- `PlanCard`: a distinct neutral/dashed **Your current rotation** baseline,
-  baseline rule violations, optional compact meters, and collapsible local checks.
-- `RotationTimeline`: all returned plans and the baseline use one monthly time
-  axis with year labels. Light sowing segments and hatched bare-soil gaps are
-  labelled, with a cover-crop suggestion for gaps longer than four calendar months.
-  Horizontal scrolling stays inside the timeline at narrow widths; a text date
-  alternative is provided for assistive technology.
-- `ResultsWhatIf` / `useRecommendations`: temperature −3…+5°C in 0.5°C increments
-  and rain −50…+50% in increments of 5, initialised from the successful request.
-  Recalculate debounces clicks by 300 ms, aborts the previous request, and reuses
-  every other request field. Previous results remain visible and dimmed. Failure
-  or cancellation does not discard a successful earlier result. The hypothetical
-  scenario warning remains visible, and fixture results do not pretend to change.
-- `ThemeControl` / `analysis.css`: System, Light, and Dark options without storing
-  farmer data or preferences. Charts use theme variables, labels, patterns, and
-  text alternatives; no chart library was added.
-
-Baseline is displayed separately from alternative counts. Existing empty,
-loading, error, limited, and insufficient-data states remain; no result is padded.
+- Up to three alternatives and, when a current rotation was given and could be
+  evaluated, a separate **Your current rotation** card with any rule violations.
+  If a given rotation could not be evaluated, the panel says so and points to
+  **Missing data** instead of asking for a rotation again.
+- Scores are shown on a 0–100 scale; unknown is labelled **Unknown**, never 0.
+- **How each plan would have done** charts each plan's per-season score (water,
+  climate or productivity) from `plan.replay`. When a hypothetical scenario was
+  applied, the note says every season includes it. **Your field's climate** charts
+  observed yearly indicators from `climate_context` (hot days, rain, ET₀, dry spells,
+  frost days) with the engine's trend; it is never scenario-adjusted.
+- **AI summary** (optional, computed results only): rewords the calculated result in
+  English or Romanian. It needs `ANTHROPIC_API_KEY` on the server; without it the page
+  says the summary is not set up and everything else works. The page sends a trimmed
+  result (no replay, monthly or yearly climate rows, no coordinates reach the model);
+  numbers not found in the result make the server reject the summary.
+- **Print for your agronomist** prints only the results (plans, current rotation,
+  scores, calendar, charts, local checks, sources, assumptions, missing data and the
+  disclaimer); the map, form, what-if and buttons are left out, and the AI summary is
+  printed only when one was written.
+- `mode: demo` results carry a visible **Demo · fictional results** notice.
+- `monthly_climate` is returned by the engine but not displayed yet.
 
 ## NASA regional context layers
 
-`RegionalMapContext` is shared by the dashboard parcel map and the calculator's
-point map. It reads the EPSG:3857
+`RegionalMapContext` opens from the map page's **NASA layers** menu. It reads the EPSG:3857
 [GIBS capabilities document](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml)
 in the browser. The following exact identifiers were verified on 2026-11-14:
 
@@ -194,59 +134,23 @@ Daily interval gaps are respected; an unavailable month shows a message and send
 no tile request. Play/pause advances months. Each layer has its own toggle,
 opacity slider, and official legend. Attribution is **NASA GIBS / EOSDIS** and the
 interface labels the overlays **Regional context (km-scale), not a field
-measurement.** They are independent of the fictional dashboard KPI cards.
+measurement.**
 
 The weather-cell rectangle snaps to 0.5° latitude / 0.625° longitude and extends
 ±0.25° / ±0.3125°. Four dashed crop-rule boxes are copied into
 `src/lib/regional-context.ts` from `ro_south.json` (`region.boxes`), with a source
-comment. An outside-zone point displays the coverage warning; it does not claim
-that the engine can compute a plan there. Capabilities, legend, and tile failures
+comment. An outside-zone point displays a warning that plans there use provisional
+Romania-wide temperature-profile rules and need local review. Capabilities, legend, and tile failures
 are isolated from the base map and form.
 
-## Future chart components — not wired to result fields
+## Check changes
 
-`ReplayChart` takes plain display series (`id`, `label`, optional `baseline`,
-and `{year,value}` points on a 0–100 scale). It has labelled lines, a dashed
-baseline, gaps for unknown values, a crosshair/readout, a keyboard year selector,
-and a text data table. It is waiting for the engine team's optional `plan.replay`.
+```powershell
+corepack pnpm --recursive typecheck
+corepack pnpm --filter @fieldshift/web test:ui
+corepack pnpm --filter @fieldshift/web test:backend
+git diff --check
+```
 
-`ClimateTrendChart` takes plain yearly `{year,value}` points, a title, and unit.
-It displays bars, hatched unknowns, and a simple least-squares trend computed
-only from known observations. The year readout and data table provide text
-alternatives. It is waiting for `result.climate_context` and agreed series units.
-
-Preview both at `/chart-previews`. This route uses hard-coded, visibly labelled
-sample data. These components do not inspect plans or results, do not infer
-missing fields, and are not connected to recommendation results. No contract
-fields or chart-library dependencies were added.
-
-## Verification for this update
-
-- Before feature work, the separate `Merge main into andrei` commit passed frozen
-  install, contract generation, Prisma generation, TypeScript, and 75 backend
-  checks. The three conflicted server files were kept exactly from main.
-- The feature work passed the production mock-mode build, 82 backend/pure-data
-  checks, and 25 UI/component checks. No protected contract, engine, API route,
-  or server implementation was edited after the merge.
-- Headless installed Edge exercised both basic and full mock fixtures; the full
-  calculator and future preview pages were checked at 1440 px and 375 px in
-  Light and Dark themes. No page-wide horizontal overflow was found. Timeline
-  overflow is contained in its explicitly labelled scroll region.
-- Browser keyboard interactions checked rotation move/remove, the five-crop
-  limit, source choices (without satellite), productivity default 0, all-zero
-  priority validation, local-check disclosure, and chart year inspection.
-- Recalculation checks confirmed old results remain rendered and dimmed, a newer
-  scenario cancels the earlier pending calculation, and both temperature and
-  rainfall settings survive the successful response. The basic fixture renders
-  three alternatives without optional score UI or a fabricated baseline; the
-  full fixture renders exactly one alternative plus its separate baseline.
-- Browser checks read the live GIBS capabilities and official legend URLs,
-  verified the POWER cell and four rule-zone outlines, observed HTTP 200 snapshot
-  tiles for all three advertised layers and NASA attribution, and tested month
-  playback. Simulated tile and capabilities failures did not break the base map,
-  form, or dashboard drawing. All three toggles issue capability-derived URLs.
-- Screenshots of the narrow dark calculator and narrow dark future-chart page
-  and the narrow dark dashboard were visually inspected. The pointer/mouse/keyboard tests were automated;
-  physical touchscreen and screen-reader testing were not performed. NASA pixel
-  values, full spatial/temporal coverage, and agronomic correctness were not
-  validated. Demo scores and fixture responses are never scientific validation.
+The automated checks do not verify browser gestures, layout, tile services, or
+external integrations; check those manually in a browser at narrow and wide widths.

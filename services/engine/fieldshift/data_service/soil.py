@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import math
+import os
 
 import httpx
 
 from . import cache
 
 URL = "https://rest.isric.org/soilgrids/v2.0/properties/query"
+# SoilGrids is often slow; a short timeout keeps the request responsive. A miss is a data gap.
+TIMEOUT_SECONDS = float(os.getenv("SOILGRIDS_TIMEOUT_S", "8"))
 PROPERTIES = ("clay", "sand", "silt", "phh2o", "soc")
 DEPTHS = {"0-5cm": 5, "5-15cm": 10, "15-30cm": 15}
 SOURCE = {
@@ -100,7 +103,7 @@ def fetch_soil(
     payload = cache.read(key)
     if not payload:
         try:
-            response = httpx.get(URL, params=params, timeout=60)
+            response = httpx.get(URL, params=params, timeout=TIMEOUT_SECONDS)
             response.raise_for_status()
             payload = response.json()
         except (httpx.HTTPError, ValueError) as error:

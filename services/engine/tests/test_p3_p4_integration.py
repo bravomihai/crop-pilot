@@ -144,7 +144,7 @@ def test_plan_scores_are_exactly_p3_scores_and_weighted_score_is_correct():
         criteria = p3(sequences([plan])[0], request)["criteria"]
         assert plan["scores"] == {n: criteria[n]["score"] for n in CRITERIA}
         expected = sum(weights[n] * criteria[n]["score"] for n in CRITERIA)
-        assert f"a weighted score of {expected:.2f} out of 1" in plan["explanation"]
+        assert f"an overall score of {expected * 100:.0f}/100" in plan["explanation"]
 
 
 @pytest.mark.parametrize("criterion", ["water", "soil", "climate", "productivity"])
@@ -215,7 +215,7 @@ def test_scenario_reaches_p3_and_is_compared_with_the_reference_climate():
     for seq in shared:
         assert p3(seq, request)["criteria"]["water"]["score"] < p3(seq, make_request())["criteria"]["water"]["score"]
     text = " ".join(t for p in warmer["plans"] for t in p["benefits"] + p["tradeoffs"] + [p["explanation"]])
-    assert "reference climate" in text and "baseline" not in text.lower()
+    assert "current climate" in text and "baseline" not in text.lower()
     assert any("not a NASA forecast" in a for a in warmer["assumptions"])
 
 
@@ -242,7 +242,7 @@ def test_infeasible_current_rotation_keeps_p3_violations_and_explains_them():
     baseline = result["baseline"]
     expected = p3(("sunflower", "sunflower", "sunflower"), request)["violations"]
     assert expected and baseline["violations"] == expected
-    assert baseline["tradeoffs"][0].startswith("Breaks an agronomic rule (P3)")
+    assert baseline["tradeoffs"][0].startswith("Breaks a crop rotation rule")
     assert "not a recommendation" in baseline["explanation"]
     assert ("sunflower", "sunflower", "sunflower") not in sequences(result["plans"])
 
@@ -276,9 +276,9 @@ def test_local_checks_warnings_gaps_and_assumptions_carry_p3_evidence():
     for plan in result["plans"]:
         evaluation = p3(sequences([plan])[0], request)
         for check in evaluation["local_checks"]:
-            assert f"P3: {check}" in plan["local_checks"]
+            assert check in plan["local_checks"]
         for warning in evaluation["warnings"]:
-            assert f"Evaluator warning: {warning['message']}" in plan["tradeoffs"]
+            assert f"Watch out: {warning['message']}" in plan["tradeoffs"]
         for gap in evaluation["data_gaps"]:
             assert gap in result["data_gaps"]
         for assumption in evaluation["assumptions"]:
@@ -292,7 +292,7 @@ def test_texts_never_contradict_the_numbers_they_print():
     for request in (make_request(), make_request(scenario={"temp_change_c": 2, "rain_change_pct": -20})):
         for plan in cached_run(request)["plans"]:
             for line in plan["benefits"] + plan["tradeoffs"]:
-                match = re.search(r"P3 score ([\d.]+), (below|at or above) the median of feasible candidates \(([\d.]+)\)", line)
+                match = re.search(r"([\d.]+)/100, (below|as good as or better than) the typical option \(([\d.]+)/100\)", line)
                 if match:
                     score, relation, median = float(match[1]), match[2], float(match[3])
                     assert (score < median) if relation == "below" else (score >= median), line

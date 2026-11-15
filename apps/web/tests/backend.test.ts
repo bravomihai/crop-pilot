@@ -217,7 +217,14 @@ test("engine 422 for an unsupported location is a 422, not 'unavailable'", async
     ),
   );
   const body = await check(await POST(request()), 422, "unsupported_location");
-  assert.match(body.error, /inside Romania/);
+  assert.equal(body.error, "The computed crop-screening model currently supports locations inside Romania.");
+});
+test("engine 422 with a structured or odd detail falls back to a generic message", async () => {
+  for (const detail of [{ code: "validation_error", errors: ["x"] }, "<script>alert(1)</script>", "x".repeat(400)]) {
+    fetchMock.mock.mockImplementation(async () => Response.json({ detail }, { status: 422 }));
+    const body = await check(await POST(request()), 422, "unsupported_location");
+    assert.equal(body.error, "Computed plans are currently available only for points inside Romania.");
+  }
 });
 test("browser cancellation aborts the engine call instead of waiting for it", async () => {
   let engineSignal: AbortSignal | undefined;

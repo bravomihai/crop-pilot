@@ -166,6 +166,29 @@ def _merge_sources(*groups) -> list[dict]:
     return merged
 
 
+# Above this, the lowland/plateau crop rules may not describe what is grown (disclosure only).
+HIGH_ELEVATION_M = 800
+
+
+def _ignored_input_notes(constraints: dict, catalog: dict, excluded: set) -> list[str]:
+    """Say when a request input has no effect, instead of ignoring it silently."""
+    notes = []
+    label = lambda c: crop_label({k: v.name for k, v in catalog.items() if v.name}, c)
+    if constraints.get("max_irrigation_mm") is not None and not constraints.get("irrigated"):
+        notes.append("An irrigation limit was given, but irrigation is off; the plans are rain-fed.")
+    selected = list(dict.fromkeys(constraints.get("selected_crops") or []))
+    if selected and not constraints.get("selected_crops_only", False):
+        notes.append("A crop shortlist was given but not applied (shortlist-only is off); all regional crops were considered.")
+    elif selected:
+        unknown = [c for c in selected if c not in catalog]
+        if unknown:
+            notes.append(f"Shortlisted crop(s) without regional rules were skipped: {', '.join(label(c) for c in unknown)}.")
+        both = [c for c in selected if c in excluded]
+        if both:
+            notes.append(f"Crop(s) both shortlisted and excluded were excluded: {', '.join(label(c) for c in both)}.")
+    return notes
+
+
 def _dedupe(items) -> list[str]:
     return list(dict.fromkeys(i for i in items if i))
 
@@ -174,7 +197,7 @@ def _steps(evaluation: Evaluation, ctx: PlanContext) -> list[dict]:
     steps = []
     for index, step in enumerate(evaluation.calendar):
         sowing_start = step.sowing_start
-        reason = step.reason or "Window taken from the regional calendar supplied by the P3 evaluator."
+        reason = step.reason or "Window taken from the regional crop calendar."
         if index == 0 and sowing_start < ctx.available_from:
             sowing_start = ctx.available_from
             reason += f" The start of sowing was moved to the field availability date ({ctx.available_from.isoformat()})."
@@ -221,11 +244,11 @@ def recommend(
     assumptions = [
         "Each plan contains three successive main crops; this does not mean three years, and the plan does not repeat automatically.",
         f"Priorities were normalized to: {weights_text(weights)}.",
-        "Criterion scores (0–1) come from the P3 evaluator; they are not yields, profits or probabilities.",
+        "Scores (0–100) compare the options with each other; they are not yields, profits or probabilities.",
         "Unknown values are not replaced with zero or an average value; the score becomes an interval instead.",
     ]
     if weights.get("productivity", 0) > 0:
-        assumptions.append("Productivity is a relative production-potential score from P3, not a yield or profit forecast.")
+        assumptions.append("Productivity is a relative production-potential score, not a yield or profit forecast.")
     if scenario_text:
         assumptions.append(f"Requested {scenario_text}; this is a hypothetical assumption, not a NASA forecast.")
     data_gaps: list[str] = []
@@ -252,6 +275,13 @@ def recommend(
         }
     data_gaps.extend(g for g in (rules.get("data_gaps") or []) if isinstance(g, str))
     data_gaps.extend(catalog_issues)
+    assumptions.extend(_ignored_input_notes(constraints, catalog, excluded))
+    elevation = ((environment.get("static") or {}).get("elevation_m"))
+    if isinstance(elevation, (int, float)) and not isinstance(elevation, bool) and elevation > HIGH_ELEVATION_M:
+        data_gaps.append(
+            f"The weather data's elevation is about {elevation:.0f} m. The regional crop rules describe lowland "
+            "and plateau field crops; check locally that these crops are grown at this altitude."
+        )
     data_gaps.extend(history_issues(request, set(catalog)))
     diagnostics: dict = {
         "crops": sorted(candidate_catalog),
@@ -288,13 +318,16 @@ def recommend(
     # Primary evaluation: the request as given (including any scenario).
     candidates = _evaluate_all(candidate_set.candidates, request, environment, rules, evaluate, available_from)
 
-    # The farmer's current rotation is evaluated with the same evaluator and request.
+    # The farmer's current rotation is evaluated with the same evaluator and request, but
+    # without the exclusion list: its `violations` must be agronomic rules only, and the
+    # farmer's own exclusions are reported separately ("Includes crop(s) you excluded").
     continuation = None
     current = None
+    agronomy_request = {**request, "constraints": {**constraints, "excluded_crops": []}}
     if request.get("current_rotation"):
         continuation = continue_rotation(request["current_rotation"], history)
         seq = continuation.sequence
-        current = candidates.get(seq) or _evaluate_all([seq], request, environment, rules, evaluate, available_from)[seq]
+        current = candidates.get(seq) or _evaluate_all([seq], agronomy_request, environment, rules, evaluate, available_from)[seq]
         diagnostics["current_rotation_sequence"] = list(seq)
 
     evaluated = list(candidates.values()) + ([current] if current else [])
@@ -328,11 +361,11 @@ def recommend(
             f"{counts[CALENDAR_INVALID]} with an invalid calendar."
         )
     if counts[UNKNOWN]:
-        data_gaps.append(f"{counts[UNKNOWN]} sequences could not be fully evaluated by P3 and were excluded; missing evidence is not treated as feasibility.")
+        data_gaps.append(f"{counts[UNKNOWN]} crop sequences could not be fully evaluated and were left out; missing evidence is never treated as a pass.")
     if counts[CALENDAR_INVALID]:
         data_gaps.append(f"{counts[CALENDAR_INVALID]} sequences had overlapping calendars or calendars incompatible with the field availability date and were excluded.")
     if counts["low_coverage"]:
-        data_gaps.append(f"{counts['low_coverage']} feasible sequences had P3 scores for less than {config.min_coverage * 100:.0f}% of the priority weight and were not proposed.")
+        data_gaps.append(f"{counts['low_coverage']} crop sequences that fit the rules had scores for less than {config.min_coverage * 100:.0f}% of the priority weight and were not proposed.")
     if counts["no_sources"]:
         data_gaps.append(f"{counts['no_sources']} feasible sequences cited no verifiable sources and were not proposed.")
 
@@ -350,7 +383,7 @@ def recommend(
         ref_req = reference_request(request)
         reference = _evaluate_all(candidate_set.candidates, ref_req, environment, rules, evaluate, available_from)
         if current is not None and current.sequence not in reference:
-            reference.update(_evaluate_all([current.sequence], ref_req, environment, rules, evaluate, available_from))
+            reference.update(_evaluate_all([current.sequence], reference_request(agronomy_request), environment, rules, evaluate, available_from))
         ref_known = known_ids | {s["id"] for c in reference.values() for s in c.evaluation.sources}
         _score_and_filter(reference, weights, ref_known, config)
         ref_ranked = rank({seq: c.score for seq, c in reference.items() if c.eligible and seq in candidates})
@@ -438,8 +471,9 @@ def _build_current_baseline(continuation, current: Candidate, weights, known_ids
     if problem:
         message = f"Your current rotation ({cycle_text}) could not be shown for comparison: {problem}."
         if evaluation.violations:
-            message += " P3 reported these rule violations: " + join_sentences(evaluation.violations)
+            message += " It breaks these crop rotation rules: " + join_sentences(evaluation.violations)
         data_gaps.append(message)
+        data_gaps.extend(evaluation.data_gaps)  # P3's own reason, e.g. a crop without rules
         return None
     robustness = None
     if reference and current.sequence in reference:
