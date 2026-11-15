@@ -5,6 +5,9 @@ const number = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
 /** "4,300 lei" */
 export const lei = (value: number) => `${number.format(value)} lei`;
 
+/** "+350 lei" / "-120 lei" */
+export const signedLei = (value: number) => `${value > 0 ? "+" : ""}${lei(value)}`;
+
 /** "4,300 – 7,250 lei" (typical shown separately), or "Unknown". */
 export function leiRange(range: MoneyRange | null | undefined): string {
   if (!range) return "Unknown";

@@ -51,6 +51,16 @@ ICEADR_COSTS = {
     "soybean": {"rainfed": 5399, "irrigated": 7113, "yield_rainfed": 2430, "yield_irrigated": 3400},
 }
 
+# Shares of the ICEADR rainfed wheat budget (2022-2023) used to index costs to the latest year:
+# chemical fertilisers 2,023 and mechanised work 2,069 of 5,419 lei/ha. Mechanised work follows
+# the diesel price as a proxy; the rest of the budget is kept at its level.
+COST_SHARES = {"fertiliser": 0.373, "mechanised_work": 0.382}
+
+# Nitrogen a legume leaves for the next crop, kg N/ha (low, typical, high). Romanian practice
+# lowers the next crop's N dose by 30-50 kg N/ha after soybean or pea (worked example: 35);
+# a long-term study found about 20 kg N/ha less fertiliser for wheat after pea (Soon, 2005).
+NITROGEN_CREDIT_KG = {"pea": [20, 35, 50], "soybean": [20, 35, 50]}
+
 # CAP Strategic Plan 2023-2027 payments relevant to a single arable field (EUR/ha/year).
 PAYMENTS = [
     {
@@ -172,6 +182,90 @@ def build_counties(names: set[str]) -> dict:
     }
 
 
+def build_commercial_yields(this_year: int) -> dict:
+    """Yields of commercial farms: (total - individual holdings) production / area, per county."""
+    out: dict = {}
+    series: dict = {}
+    for matrix, key in (("AGR108A", "area"), ("AGR109A", "production")):
+        meta = get_json(f"{TEMPO}/matrix/{matrix}")
+        items = {o["label"].strip(): o["nomItemId"] for o in options(meta, 0)}
+        wanted = {}
+        for crop, (name, _) in CROPS.items():
+            item = items.get(name) or items.get(name.replace(" boabe", ""))
+            if item:
+                wanted[item] = crop
+            else:
+                print(f"{matrix}: no item for {name}", file=sys.stderr)
+        forms = [o["nomItemId"] for o in options(meta, 1)
+                 if o["label"].strip().lower().startswith(("total", "din care"))]
+        counties = [o["nomItemId"] for o in options(meta, 2)
+                    if not o["label"].strip().upper().startswith(("TOTAL", "MACRO", "REGIUNEA", "MUN"))]
+        years = [o["nomItemId"] for o in options(meta, 3)
+                 if this_year - 10 <= int(o["label"].split()[-1]) < this_year]
+        labels = {o["nomItemId"]: o["label"].strip() for o in options(meta, 0)}
+        rows = tempo(matrix, [list(wanted), forms, counties, years, [options(meta, 4)[0]["nomItemId"]]], 5)
+        by_label = {labels[i]: c for i, c in wanted.items()}
+        for crop_label, form, county, year, _unit, value in rows:
+            amount = number(value)
+            if amount is None:
+                continue
+            kind = "total" if form.lower().startswith("total") else "individual"
+            cell = series.setdefault((plain(county), by_label[crop_label], year.split()[-1]), {})
+            cell[f"{key}_{kind}"] = amount
+    for (county, crop, year), cell in series.items():
+        try:
+            area = cell["area_total"] - cell["area_individual"]
+            production = cell["production_total"] - cell["production_individual"]
+        except KeyError:
+            continue
+        # Too little commercial area makes the ratio noisy; leave those years out.
+        if area < max(200, 0.1 * cell["area_total"]) or production <= 0:
+            continue
+        out.setdefault(county, {}).setdefault(crop, {})[year] = round(production / area, 2)
+    return out
+
+
+def eurostat_input_prices() -> dict:
+    """Romanian purchase prices of fertiliser nitrogen and diesel, national currency, by year."""
+    url = ("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/apri_ap_ina"
+           "?format=JSON&lang=EN&geo=RO&currency=NAC")
+    data = get_json(url)
+    ids, size = data["id"], data["size"]
+    index = {k: data["dimension"][k]["category"]["index"] for k in ids}
+
+    def value(product: str, year: str):
+        position = {"currency": index["currency"]["NAC"], "prod_inp": index["prod_inp"][product],
+                    "time": index["time"][year]}
+        flat = 0
+        for name, dim_size in zip(ids, size):
+            flat = flat * dim_size + position.get(name, 0)
+        return data["value"].get(str(flat))
+
+    nitrogen, diesel = {}, {}
+    for year in sorted(index["time"], key=int):
+        n_prices = [v for v in (value("20311301", year), value("20311400", year)) if v]
+        if n_prices:
+            nitrogen[year] = round(sum(n_prices) / len(n_prices) / 100, 2)  # lei per kg N
+        d = value("20232000", year)
+        if d:
+            diesel[year] = round(d / 100, 2)  # lei per litre
+    return {"nitrogen_lei_per_kg": nitrogen, "diesel_lei_per_l": diesel, "updated": data.get("updated")}
+
+
+def cost_index(inputs: dict) -> dict:
+    nitrogen, diesel = inputs["nitrogen_lei_per_kg"], inputs["diesel_lei_per_l"]
+    latest = max(set(nitrogen) & set(diesel), key=int)
+
+    def base(series):
+        return (series["2022"] + series["2023"]) / 2
+
+    n_ratio, d_ratio = nitrogen[latest] / base(nitrogen), diesel[latest] / base(diesel)
+    rest = 1 - COST_SHARES["fertiliser"] - COST_SHARES["mechanised_work"]
+    factor = COST_SHARES["fertiliser"] * n_ratio + COST_SHARES["mechanised_work"] * d_ratio + rest
+    return {"factor": round(factor, 3), "from": "2022-2023", "to": latest, "nitrogen_ratio": round(n_ratio, 3),
+            "diesel_ratio": round(d_ratio, 3), "shares": COST_SHARES}
+
+
 def ecb_rate(year: int) -> tuple[float, str]:
     url = (f"https://data-api.ecb.europa.eu/service/data/EXR/D.RON.EUR.SP00.A?startPeriod={year}-09-20"
            f"&endPeriod={year}-09-30&format=jsondata")
@@ -187,6 +281,10 @@ def main() -> None:
     yields, county_region, yields_updated = build_yields(this_year)
     prices, prices_updated = build_prices(this_year)
     rate, rate_day = ecb_rate(CAMPAIGN)
+    commercial = build_commercial_yields(this_year)
+    inputs = eurostat_input_prices()
+    index = cost_index(inputs)
+    n_year = max(inputs["nitrogen_lei_per_kg"], key=int)
     retrieved = date.today().isoformat()
     data = {
         "campaign": CAMPAIGN,
@@ -195,9 +293,15 @@ def main() -> None:
         "crops": {crop: {"ins_yield_item": y, "ins_price_item": p} for crop, (y, p) in CROPS.items()},
         "county_region": county_region,
         "yields_t_per_ha": yields,
+        "yields_commercial_t_per_ha": commercial,
         "prices_lei_per_t": prices,
         "costs_lei_per_ha": ICEADR_COSTS,
         "cost_level_years": "2022-2023",
+        "cost_index": index,
+        "input_prices": inputs,
+        "nitrogen_price_lei_per_kg": {"value": inputs["nitrogen_lei_per_kg"][n_year], "year": n_year,
+                                      "source": "eurostat-input-prices"},
+        "nitrogen_credit_kg_per_ha": NITROGEN_CREDIT_KG,
         "eur_ron": {"rate": rate, "date": rate_day, "source": "ecb-eur-ron"},
         "payments": PAYMENTS,
         "sources": [
@@ -213,6 +317,12 @@ def main() -> None:
              "url": "https://www.bzi.ro/s-a-stabilit-cuantumul-pe-hectar-pentru-sprijinul-cuplat-vegetal-fermierii-asteapta-banii-de-anul-trecut-5517994"},
             {"id": "apia-ecoscheme-2026", "title": "APIA: 2026 payment application instructions, eco-scheme PD-04 (Annex 2)",
              "url": "https://apia.org.ro/wp-content/uploads/2026/03/Anexa-2.pdf"},
+            {"id": "ins-agr108a-109a", "title": "INS TEMPO AGR108A and AGR109A: cultivated area and production by county and type of holding (commercial farms = total minus individual holdings)",
+             "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table", "resolution": "county, yearly"},
+            {"id": "eurostat-input-prices", "title": "Eurostat apri_ap_ina: purchase prices of agricultural inputs in Romania (ammonium nitrate, urea, diesel)",
+             "url": "https://ec.europa.eu/eurostat/databrowser/view/apri_ap_ina/default/table"},
+            {"id": "nitrogen-credit", "title": "Nitrogen left by pea and soybean for the next crop: Romanian fertilisation practice (30-50 kg N/ha) and Soon (2005), about 20 kg N/ha for wheat after pea",
+             "url": "https://www.bzi.ro/ce-influenteaza-necesarul-de-azot-la-porumb-si-cum-se-stabileste-fertilizarea-culturii-5571958"},
             {"id": "ecb-eur-ron", "title": f"European Central Bank EUR/RON reference rate, {rate_day}",
              "url": "https://data.ecb.europa.eu/data/datasets/EXR"},
             {"id": "gisco-nuts3", "title": "Eurostat GISCO NUTS 2021 county boundaries (© EuroGeographics)",
@@ -223,7 +333,8 @@ def main() -> None:
     (OUT / f"ro_{CAMPAIGN}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     counties = build_counties(set(yields))
     (OUT / "ro_counties.json").write_text(json.dumps(counties, separators=(",", ":")) + "\n", encoding="utf-8")
-    print(f"{len(yields)} counties with yields, {len(prices)} price regions, EUR/RON {rate} on {rate_day}")
+    print(f"{len(yields)} counties with yields, {len(commercial)} with commercial-farm yields, "
+          f"{len(prices)} price regions, EUR/RON {rate} on {rate_day}, cost index {index}")
     for crop in CROPS:
         known = sum(1 for c in yields.values() if crop in c)
         print(f"  {crop:16} yields in {known} counties, median price SUD-MUNTENIA "

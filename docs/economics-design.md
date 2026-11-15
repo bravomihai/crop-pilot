@@ -24,8 +24,30 @@ never change the ranking.
   Order. CRISS is listed but not counted (no farm-size input yet).
 - No new request inputs yet (farm size, young farmer, own prices and costs).
 
-Follow-up worth discussing: let the farmer type their own price and cost for crops without
-data (pea today), and their own costs generally.
+### Second version (same day): crop order and a fairer estimate
+
+- **Crop order counts in money.** The regional rules' rating of each previous crop -> crop
+  pair (good / ok / poor, with yield factors 1.0 / 0.95 / 0.85) adjusts the yield, taking county
+  averages as the "ok" level (+5 % after a good previous crop, about -10 % after a poor one).
+  After pea or soybean, the next non-legume needs 20 / 35 / 50 kg less nitrogen per hectare
+  (Romanian practice 30-50 kg; Soon, 2005: about 20 kg for wheat after pea), valued at the
+  official nitrogen price (Eurostat, 5.34 lei/kg N in 2024). The plan card shows "of which
+  from crop order" and the effect per crop. The first crop uses the last crop in the history.
+- **Yields of commercial farms**: (total - individual holdings) production / area from INS
+  AGR108A and AGR109A, which fits ICEADR's modern-technology costs better than all-farm
+  averages (Calarasi maize 5.26 t/ha instead of 4.47). All farms are used where commercial
+  area is too small.
+- **Costs indexed to official input prices**: fertiliser nitrogen and diesel (Eurostat
+  apri_ap_ina) from 2022-2023 to the latest year. The 2024 index is 1.001: nitrogen +8.4 %,
+  diesel -7.9 %, so costs barely move, but the index updates with the data.
+- **Range = weather, not every bad case at once**: bad (20th percentile), typical and good
+  (80th) years at the median price. Price swings of the last 3 years are listed per crop.
+- **Farmer's own prices and costs** (`money_inputs` in the request): a form under the plans
+  lists crops without official figures first (pea) and lets the farmer replace any average.
+  Values are used for that calculation only and not stored.
+
+Effect on the demo field (Calarasi): the current rotation maize -> winter wheat went from about
+-520 to +330 lei/ha/year typical; the plans without pea show +880 and +1,370.
 
 ## Goal
 

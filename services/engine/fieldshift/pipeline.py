@@ -121,7 +121,7 @@ def computed_result(
         climate["source_ids"] = [i for i in climate["source_ids"] if i in listed]
         result["climate_context"] = climate
     try:
-        add_economics(result, request)
+        add_economics(result, request, rules)
     except Exception:  # optional estimate: never block the agronomic result
         result["data_gaps"].append("Money estimate unavailable because of an internal error.")
         for plan in result["plans"] + ([result["baseline"]] if result.get("baseline") else []):

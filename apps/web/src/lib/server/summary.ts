@@ -90,7 +90,10 @@ function planInput(plan: RotationPlan) {
     rule_violations: plan.violations ?? [],
     money_estimate_lei_per_ha_year: plan.economics
       ? Object.fromEntries(
-          Object.entries(plan.economics.per_year).map(([name, range]) => [name, range ? range.typical : null]),
+          Object.entries(plan.economics.per_year).map(([name, value]) => [
+            name,
+            value == null ? null : typeof value === "number" ? value : value.typical,
+          ]),
         )
       : null,
     confidence: plan.confidence,

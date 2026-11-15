@@ -362,3 +362,12 @@ about −520 lei/ha/year typical (range −3,120 to 4,530). Every recommended pl
 contained pea, so their income and margin showed as unknown, with subsidies only.
 Not verified: payment rates against the official Order; the yield and price figures as
 farm-level reality (they are county and regional averages).
+
+Same day, second version: crop order now changes the money (yield effect from the regional
+previous-crop ratings, nitrogen saved after pea or soybean at the official Eurostat nitrogen
+price), yields are those of commercial farms, costs are indexed to official input prices,
+the range shows bad and good years only, and the farmer can enter their own price and cost
+per crop. Verified: engine money tests 12/12, web UI 37/37, backend 97/97, TypeScript, schemas
+regenerated. **Live**: the current rotation shows about +330 lei/ha/year typical; with test
+values entered for pea (not real prices), all three plans got a full estimate and the
+crop-order line showed both gains and losses.

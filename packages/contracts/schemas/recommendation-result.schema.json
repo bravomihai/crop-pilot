@@ -520,6 +520,12 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "crop_order_effect": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
                   }
                 },
                 "required": [
@@ -541,6 +547,28 @@
                     },
                     "crop_name": {
                       "type": "string"
+                    },
+                    "previous_crop": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "previous_rating": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "good",
+                            "ok",
+                            "poor",
+                            "forbidden"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "yield_t_per_ha": {
                       "anyOf": [
@@ -569,6 +597,20 @@
                         }
                       ]
                     },
+                    "yield_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "commercial_farms",
+                            "all_farms"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "price_lei_per_t": {
                       "anyOf": [
                         {
@@ -590,6 +632,21 @@
                             "high"
                           ],
                           "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "price_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "regional",
+                            "national",
+                            "farmer"
+                          ]
                         },
                         {
                           "type": "null"
@@ -648,6 +705,53 @@
                         {
                           "type": "null"
                         }
+                      ]
+                    },
+                    "cost_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "iceadr",
+                            "farmer"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "nitrogen_saving": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "crop_order_effect": {
+                      "type": [
+                        "number",
+                        "null"
                       ]
                     }
                   },
@@ -1210,6 +1314,12 @@
                       "type": "null"
                     }
                   ]
+                },
+                "crop_order_effect": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
                 }
               },
               "required": [
@@ -1231,6 +1341,28 @@
                   },
                   "crop_name": {
                     "type": "string"
+                  },
+                  "previous_crop": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "previous_rating": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "good",
+                          "ok",
+                          "poor",
+                          "forbidden"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "yield_t_per_ha": {
                     "anyOf": [
@@ -1259,6 +1391,20 @@
                       }
                     ]
                   },
+                  "yield_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "commercial_farms",
+                          "all_farms"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "price_lei_per_t": {
                     "anyOf": [
                       {
@@ -1280,6 +1426,21 @@
                           "high"
                         ],
                         "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "price_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "regional",
+                          "national",
+                          "farmer"
+                        ]
                       },
                       {
                         "type": "null"
@@ -1338,6 +1499,53 @@
                       {
                         "type": "null"
                       }
+                    ]
+                  },
+                  "cost_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "iceadr",
+                          "farmer"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nitrogen_saving": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "crop_order_effect": {
+                    "type": [
+                      "number",
+                      "null"
                     ]
                   }
                 },

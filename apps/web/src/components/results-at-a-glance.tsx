@@ -1,5 +1,4 @@
 "use client";
-import type { MouseEvent } from "react";
 import type { RecommendationResult } from "@croppilot/contracts";
 import {
   compareWithCurrent,
@@ -10,22 +9,9 @@ import {
   strongest,
 } from "@/lib/result-glance";
 import { marginLine } from "@/lib/money";
+import { jumpTo } from "@/lib/jump";
 import PlainWordsSummary, { PrintSheetButton } from "./ai-summary";
 
-/**
- * Scrolls only the results list to a section. A plain anchor jump also scrolls the
- * panel around the list, which pushed the panel header (full screen, edit) out of view.
- */
-function jumpTo(event: MouseEvent<HTMLAnchorElement>, id: string) {
-  const target = document.getElementById(id);
-  const list = target?.closest<HTMLElement>(".map-results-scroll");
-  if (!target || !list) return;
-  event.preventDefault();
-  const top = target.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - 12;
-  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  list.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
-  target.focus({ preventScroll: true });
-}
 
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(
@@ -78,6 +64,15 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
             <dt>Money (estimate)</dt>
             <dd>
               Left after costs, with subsidies: {marginLine(best.economics)}.
+              {!best.economics.per_year.margin && (
+                <>
+                  {" "}
+                  <a href="#money-inputs" onClick={(event) => jumpTo(event, "money-inputs")}>
+                    Add your prices
+                  </a>
+                  .
+                </>
+              )}
               {result.baseline?.economics && <> Your current rotation: {marginLine(result.baseline.economics)}.</>}{" "}
               <span className="glance-note">Not a forecast; it does not change the ranking.</span>
             </dd>

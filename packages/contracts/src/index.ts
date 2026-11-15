@@ -71,6 +71,15 @@ export const requestSchema = z
     // When present, the result also contains `baseline`: that cycle continued for the
     // next three main crops and evaluated like the plans, so they can be compared.
     current_rotation: z.array(cropIdSchema).min(1).max(5).optional(),
+    // The farmer's own prices and costs for the money estimate, per crop id. Used only for
+    // this calculation and never stored.
+    money_inputs: z
+      .object({
+        prices_lei_per_t: z.record(cropIdSchema, z.number().positive().max(100000)).optional(),
+        costs_lei_per_ha: z.record(cropIdSchema, z.number().positive().max(100000)).optional(),
+      })
+      .strict()
+      .optional(),
     soil: soilSchema.optional(),
     priorities: z
       .object({
@@ -220,6 +229,9 @@ export const economicsSchema = z
         costs: moneyRangeSchema.nullable(),
         subsidies: moneyRangeSchema.nullable(),
         margin: moneyRangeSchema.nullable(),
+        // Part of the typical margin that comes from crop order (yield effect of the previous
+        // crop and nitrogen left by a legume), lei per hectare and year; null when none applies.
+        crop_order_effect: z.number().nullable().optional(),
       })
       .strict(),
     // Per crop, for its one season (not per year).
@@ -229,10 +241,20 @@ export const economicsSchema = z
           .object({
             crop_id: z.string(),
             crop_name: z.string(),
+            previous_crop: z.string().nullable().optional(),
+            // Rating of the previous crop for this crop in the regional rules.
+            previous_rating: z.enum(["good", "ok", "poor", "forbidden"]).nullable().optional(),
             yield_t_per_ha: valueRangeSchema.nullable(),
+            yield_basis: z.enum(["commercial_farms", "all_farms"]).nullable().optional(),
             price_lei_per_t: valueRangeSchema.nullable(),
+            price_basis: z.enum(["regional", "national", "farmer"]).nullable().optional(),
             income: moneyRangeSchema.nullable(),
             costs: moneyRangeSchema.nullable(),
+            cost_basis: z.enum(["iceadr", "farmer"]).nullable().optional(),
+            // Fertiliser saved because a legume came before, lei per hectare.
+            nitrogen_saving: moneyRangeSchema.nullable().optional(),
+            // Typical lei per hectare gained (or lost) from the previous crop, for this season.
+            crop_order_effect: z.number().nullable().optional(),
           })
           .strict(),
       )

@@ -1,9 +1,15 @@
 """Rough money estimate per plan, in lei per hectare and year (Romania).
 
 Built from a dated season file (see services/engine/tools/build_economics_ro.py):
-- yields: the field's county, INS yields of the last 10 years (20th, 50th, 80th percentile);
-- prices: the region's INS farm-gate prices of the last 3 years (lowest, median, highest);
-- costs: ICEADR per-hectare budgets (2022-2023 cost level), plus or minus 15 %;
+- yields: the field's county, INS yields of commercial farms over the last 10 years
+  (all farms when commercial figures are too thin); the range is the 20th, 50th and 80th
+  percentile, i.e. bad, typical and good years;
+- crop order: the regional rules rate each previous crop -> crop pair (good, ok, poor); the
+  rating adjusts the yield, and a legume before a non-legume saves nitrogen fertiliser
+  (kg N left by the legume x the official nitrogen price);
+- prices: the region's INS farm-gate prices, median of the last 3 years (or the farmer's own);
+- costs: ICEADR per-hectare budgets (2022-2023), indexed to the latest official fertiliser and
+  diesel prices (or the farmer's own);
 - CAP payments reported for the campaign, converted at the ECB rate of 30 September.
 
 It is an estimate, not a forecast, and it never changes the ranking. Anything missing is
@@ -20,11 +26,12 @@ from functools import lru_cache
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent / "rules" / "economics"
-COST_BAND = 0.15
 PRICE_YEARS = 3
 YIELD_YEARS = 10
 MIN_YIELD_YEARS = 5
 LEGUMES = {"pea", "soybean"}
+# County averages mix fields after every kind of previous crop; they are taken as the "ok" level.
+AVERAGE_CLASS = "ok"
 
 
 def _plain(text: str) -> str:
@@ -60,44 +67,61 @@ def county_at(latitude: float, longitude: float, counties: list[dict]) -> str | 
     return None
 
 
+def _round(value: float, step: int = 10) -> int:
+    return round(value / step) * step
+
+
 def _range(low: float, typical: float, high: float, step: int = 10) -> dict:
-    r = lambda v: round(v / step) * step  # noqa: E731
-    return {"low": r(low), "typical": r(typical), "high": r(high)}
+    return {"low": _round(low, step), "typical": _round(typical, step), "high": _round(high, step)}
 
 
-def _yield_range(data: dict, county: str, crop_id: str, irrigated: bool) -> dict | None:
-    series = (data["yields_t_per_ha"].get(county) or {}).get(crop_id) or {}
-    values = [v for _, v in sorted(series.items())][-YIELD_YEARS:]
-    if len(values) < MIN_YIELD_YEARS:
-        return None
-    q = statistics.quantiles(values, n=5, method="inclusive")
-    low, typical, high = q[0], statistics.median(values), q[3]
-    budget = data["costs_lei_per_ha"].get(crop_id)
-    if irrigated and budget:
-        # County averages are mostly rainfed; ICEADR's irrigated/rainfed yield ratio lifts them.
-        factor = budget["yield_irrigated"] / budget["yield_rainfed"]
-        low, typical, high = low * factor, typical * factor, high * factor
-    return {"low": round(low, 2), "typical": round(typical, 2), "high": round(high, 2)}
+def _yields(data: dict, county: str, crop_id: str) -> tuple[list[float], str] | None:
+    for key, basis in (("yields_commercial_t_per_ha", "commercial_farms"), ("yields_t_per_ha", "all_farms")):
+        series = ((data.get(key) or {}).get(county) or {}).get(crop_id) or {}
+        values = [v for _, v in sorted(series.items())][-YIELD_YEARS:]
+        if len(values) >= MIN_YIELD_YEARS:
+            return values, basis
+    return None
 
 
-def _price_range(data: dict, region: str | None, crop_id: str) -> tuple[dict | None, bool]:
+def _price(data: dict, region: str | None, crop_id: str, own: dict) -> tuple[dict | None, str | None]:
+    if isinstance(own.get(crop_id), (int, float)) and own[crop_id] > 0:
+        value = float(own[crop_id])
+        return {"low": value, "typical": value, "high": value}, "farmer"
     prices = data["prices_lei_per_t"]
-    series = (prices.get(region or "") or {}).get(crop_id)
-    national = False
+    series, basis = (prices.get(region or "") or {}).get(crop_id), "regional"
     if not series:
-        series, national = (prices.get("TOTAL") or {}).get(crop_id), True
+        series, basis = (prices.get("TOTAL") or {}).get(crop_id), "national"
     if not series:
-        return None, False
+        return None, None
     values = [v for _, v in sorted(series.items())][-PRICE_YEARS:]
-    return {"low": min(values), "typical": statistics.median(values), "high": max(values)}, national
+    return {"low": min(values), "typical": statistics.median(values), "high": max(values)}, basis
 
 
-def _cost_range(data: dict, crop_id: str, irrigated: bool) -> dict | None:
+def _base_cost(data: dict, crop_id: str, irrigated: bool, own: dict) -> tuple[float | None, str | None]:
+    if isinstance(own.get(crop_id), (int, float)) and own[crop_id] > 0:
+        return float(own[crop_id]), "farmer"
     budget = data["costs_lei_per_ha"].get(crop_id)
     if not budget:
-        return None
-    cost = budget["irrigated" if irrigated else "rainfed"]
-    return _range(cost * (1 - COST_BAND), cost, cost * (1 + COST_BAND))
+        return None, None
+    factor = (data.get("cost_index") or {}).get("factor", 1.0)
+    return budget["irrigated" if irrigated else "rainfed"] * factor, "iceadr"
+
+
+def _previous_effect(rules: dict, data: dict, previous: str | None, crop_id: str) -> dict:
+    """Yield factor from the previous-crop rating, and kg N left by a previous legume."""
+    effect = {"previous": previous, "rating": None, "yield_factor": 1.0, "nitrogen_kg": None}
+    if previous is None:
+        return effect
+    rating = ((rules.get("successor") or {}).get(previous) or {}).get(crop_id)
+    factors = (rules.get("settings") or {}).get("successor_yield_factor") or {}
+    if rating in factors and AVERAGE_CLASS in factors:
+        effect["rating"] = rating
+        effect["yield_factor"] = factors[rating] / factors[AVERAGE_CLASS]
+    credit = (data.get("nitrogen_credit_kg_per_ha") or {}).get(previous)
+    if credit and crop_id not in LEGUMES:
+        effect["nitrogen_kg"] = credit
+    return effect
 
 
 def _sum(ranges: list[dict | None]) -> dict | None:
@@ -112,35 +136,98 @@ def _per_year(total: dict | None, years: float) -> dict | None:
     return _range(total["low"] / years, total["typical"] / years, total["high"] / years, step=50)
 
 
-def plan_economics(plan: dict, request: dict, county: str | None, data: dict) -> dict:
+def _previous_crop(request: dict) -> str | None:
+    history = request.get("history") or []
+    dated = [h for h in history if h.get("harvest_year")]
+    last = max(dated, key=lambda h: h["harvest_year"]) if dated else (history[-1] if history else None)
+    return last["crop_id"] if last else None
+
+
+def plan_economics(plan: dict, request: dict, county: str | None, data: dict, rules: dict | None = None) -> dict:
+    rules = rules or {}
     irrigated = bool((request.get("constraints") or {}).get("irrigated"))
+    own = request.get("money_inputs") or {}
+    own_prices, own_costs = own.get("prices_lei_per_t") or {}, own.get("costs_lei_per_ha") or {}
     region = data["county_region"].get(county or "")
     rate = data["eur_ron"]["rate"]
+    n_price = (data.get("nitrogen_price_lei_per_kg") or {}).get("value")
+    names = {c["id"]: c["name"] for c in rules.get("crops") or []}
     steps = plan["steps"]
     start = min(date.fromisoformat(s["sowing_window"]["start"]) for s in steps)
     end = max(date.fromisoformat(s["harvest_window"]["end"]) for s in steps)
     years = max((end - start).days / 365.25, 0.5)
-    crops, notes, used_national = [], [], False
+
+    crops, notes, order_effects = [], [], []
+    previous = _previous_crop(request)
     for step in steps:
         crop_id, name = step["crop_id"], step["crop_name"]
-        yields = _yield_range(data, county, crop_id, irrigated) if county else None
-        price, national = _price_range(data, region, crop_id)
-        used_national |= national
+        effect = _previous_effect(rules, data, previous, crop_id)
+        found = _yields(data, county, crop_id) if county else None
+        yields, yield_basis = None, None
+        if found:
+            values, yield_basis = found
+            q = statistics.quantiles(values, n=5, method="inclusive")
+            low, typical, high = q[0], statistics.median(values), q[3]
+            budget = data["costs_lei_per_ha"].get(crop_id)
+            if irrigated and budget:
+                # County yields are mostly rainfed; ICEADR's irrigated/rainfed yield ratio lifts them.
+                ratio = budget["yield_irrigated"] / budget["yield_rainfed"]
+                low, typical, high = low * ratio, typical * ratio, high * ratio
+            f = effect["yield_factor"]
+            yields = {"low": round(low * f, 2), "typical": round(typical * f, 2), "high": round(high * f, 2)}
+        price, price_basis = _price(data, region, crop_id, own_prices)
+        base_cost, cost_basis = _base_cost(data, crop_id, irrigated, own_costs)
+
         income = None
         if yields and price:
-            income = _range(yields["low"] * price["low"], yields["typical"] * price["typical"],
-                            yields["high"] * price["high"])
-        costs = _cost_range(data, crop_id, irrigated)
+            # Bad, typical and good years at the typical price: the range shows weather risk,
+            # not every bad case at once. Price swings are listed separately.
+            income = _range(yields["low"] * price["typical"], yields["typical"] * price["typical"],
+                            yields["high"] * price["typical"])
+        saving = None
+        if effect["nitrogen_kg"] and n_price:
+            kg = effect["nitrogen_kg"]
+            saving = _range(kg[0] * n_price, kg[1] * n_price, kg[2] * n_price)
+        costs = None
+        if base_cost is not None:
+            s = saving or {"low": 0, "typical": 0, "high": 0}
+            # A bigger nitrogen saving means a lower cost: low cost pairs with the high saving.
+            costs = _range(base_cost - s["high"], base_cost - s["typical"], base_cost - s["low"])
+
+        order_value = None
+        if price and found and (effect["yield_factor"] != 1.0 or saving):
+            unadjusted = yields["typical"] / effect["yield_factor"]
+            extra_income = (yields["typical"] - unadjusted) * price["typical"]
+            order_value = _round(extra_income + (saving["typical"] if saving else 0))
+            order_effects.append(order_value)
+
         if price is None:
-            notes.append(f"{name}: no official recent price series, so its income is unknown.")
-        if costs is None:
-            notes.append(f"{name}: no published cost budget, so its costs are unknown.")
-        if yields is None:
+            notes.append(f"{name}: no official recent price series. Add the price you get to complete the estimate.")
+        elif price_basis == "national":
+            notes.append(f"{name}: national average price; no regional price for this region.")
+        if base_cost is None:
+            notes.append(f"{name}: no published cost budget. Add your cost per hectare to complete the estimate.")
+        if found is None:
             notes.append(f"{name}: not enough county yield statistics, so its income is unknown.")
-        crops.append({"crop_id": crop_id, "crop_name": name, "yield_t_per_ha": yields,
-                      "price_lei_per_t": price, "income": income, "costs": costs})
-    if used_national:
-        notes.append("Some prices are national averages: no regional price for this region.")
+        elif yield_basis == "all_farms":
+            notes.append(f"{name}: commercial-farm yields are too thin in this county; all farms are used.")
+
+        crops.append({
+            "crop_id": crop_id,
+            "crop_name": name,
+            "previous_crop": names.get(previous, previous) if previous else None,
+            "previous_rating": effect["rating"],
+            "yield_t_per_ha": yields,
+            "yield_basis": yield_basis,
+            "price_lei_per_t": price,
+            "price_basis": price_basis,
+            "income": income,
+            "costs": costs,
+            "cost_basis": cost_basis,
+            "nitrogen_saving": saving,
+            "crop_order_effect": order_value,
+        })
+        previous = crop_id
 
     income_total = _sum([c["income"] for c in crops])
     costs_total = _sum([c["costs"] for c in crops])
@@ -194,11 +281,18 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict) ->
             "typical": income_year["typical"] - costs_year["typical"] + subsidies["typical"],
             "high": income_year["high"] - costs_year["low"] + subsidies["high"],
         }
+    order_year = _round(sum(order_effects) / years, 50) if order_effects else None
     return {
         "currency": "RON",
         "covered_years": round(years, 2),
         "county": _county_label(county),
-        "per_year": {"income": income_year, "costs": costs_year, "subsidies": subsidies, "margin": margin},
+        "per_year": {
+            "income": income_year,
+            "costs": costs_year,
+            "subsidies": subsidies,
+            "margin": margin,
+            "crop_order_effect": order_year,
+        },
         "crops": crops,
         "payments": payments,
         "warnings": warnings,
@@ -222,17 +316,18 @@ def _county_label(county: str | None) -> str | None:
 
 
 ASSUMPTIONS = [
-    "Money per hectare and year is an estimate, not a forecast, and it does not change the ranking: county "
-    "yields (INS, last 10 years) times regional farm-gate prices (INS, last 3 years), minus ICEADR cost "
-    "budgets, plus CAP payments.",
-    "Crop costs are ICEADR budgets at the 2022-2023 cost level; input prices have risen since, so real costs "
-    "are probably higher and margins lower. Use your own costs where you know them.",
+    "Money per hectare and year is an estimate, not a forecast, and it does not change the ranking: "
+    "commercial-farm yields in the county (INS, last 10 years) at the region's median farm-gate price "
+    "(INS, last 3 years), minus ICEADR cost budgets indexed to official input prices, plus CAP payments. "
+    "The range shows bad, typical and good years.",
+    "Crop order counts: a good previous crop raises the expected yield and a poor one lowers it (regional "
+    "rules), and after pea or soybean the next crop needs about 20-50 kg less nitrogen per hectare.",
     "CAP payment rates are those reported for the current campaign and are converted at the ECB rate of "
     "30 September; check the amounts and your eligibility with APIA.",
 ]
 
 
-def add_economics(result: dict, request: dict) -> None:
+def add_economics(result: dict, request: dict, rules: dict | None = None) -> None:
     """Attach `economics` to every plan and the baseline of a computed result (in place)."""
     loaded = load_data()
     if loaded is None:
@@ -248,7 +343,7 @@ def add_economics(result: dict, request: dict) -> None:
     if not targets:
         return
     for plan in targets:
-        plan["economics"] = plan_economics(plan, request, county, data)
+        plan["economics"] = plan_economics(plan, request, county, data, rules)
     listed = {s["id"] for s in result["sources"]}
     result["sources"] = result["sources"] + [s for s in data["sources"] if s["id"] not in listed]
     result["assumptions"] = list(dict.fromkeys(result["assumptions"] + ASSUMPTIONS))

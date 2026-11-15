@@ -98,3 +98,60 @@ def test_missing_data_file_is_a_data_gap(monkeypatch):
               "assumptions": [], "data_gaps": []}
     add_economics(result, REQUEST)
     assert result["data_gaps"] == ["Money estimate unavailable: the season data file is missing."]
+
+
+from fieldshift.evaluator.rules import load_rules  # noqa: E402
+
+RULES = load_rules({"latitude": 44.45, "longitude": 26.5})
+
+
+def test_a_legume_before_a_cereal_saves_nitrogen_and_raises_the_yield():
+    after_pea = plan_economics(plan(("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                               REQUEST, "calarasi", DATA, RULES)
+    after_barley = plan_economics(plan(("winter_barley", "Winter barley"), ("winter_wheat", "Winter wheat"),
+                                       ("maize", "Maize")), REQUEST, "calarasi", DATA, RULES)
+    wheat_after_pea, wheat_after_barley = after_pea["crops"][1], after_barley["crops"][1]
+    assert wheat_after_pea["previous_rating"] == "good" and wheat_after_barley["previous_rating"] == "poor"
+    kg = DATA["nitrogen_credit_kg_per_ha"]["pea"][1]
+    assert wheat_after_pea["nitrogen_saving"]["typical"] == round(kg * DATA["nitrogen_price_lei_per_kg"]["value"] / 10) * 10
+    assert wheat_after_barley["nitrogen_saving"] is None
+    assert wheat_after_pea["costs"]["typical"] < wheat_after_barley["costs"]["typical"]
+    assert wheat_after_pea["yield_t_per_ha"]["typical"] > wheat_after_barley["yield_t_per_ha"]["typical"]
+    assert wheat_after_pea["crop_order_effect"] > 0 > wheat_after_barley["crop_order_effect"]
+    # A legume after a legume gets no nitrogen saving.
+    soy_after_pea = plan_economics(plan(("pea", "Pea"), ("soybean", "Soybean"), ("maize", "Maize")),
+                                   REQUEST, "calarasi", DATA, RULES)["crops"][1]
+    assert soy_after_pea["nitrogen_saving"] is None
+
+
+def test_the_last_crop_in_the_history_is_the_first_previous_crop():
+    request = {"constraints": {}, "history": [{"crop_id": "maize", "harvest_year": 2024},
+                                              {"crop_id": "pea", "harvest_year": 2026}]}
+    result = plan_economics(plan(("winter_wheat", "Winter wheat"), ("sunflower", "Sunflower"), ("maize", "Maize")),
+                            request, "calarasi", DATA, RULES)
+    assert result["crops"][0]["previous_crop"] == "Pea" and result["crops"][0]["nitrogen_saving"] is not None
+
+
+def test_farmer_prices_and_costs_complete_an_unknown_crop():
+    crops = (("pea", "Pea"), ("winter_wheat", "Winter wheat"), ("maize", "Maize"))
+    unknown = plan_economics(plan(*crops), REQUEST, "calarasi", DATA, RULES)
+    assert unknown["per_year"]["margin"] is None
+    own = {"constraints": {}, "money_inputs": {"prices_lei_per_t": {"pea": 1500}, "costs_lei_per_ha": {"pea": 4000}}}
+    known = plan_economics(plan(*crops), own, "calarasi", DATA, RULES)
+    pea = known["crops"][0]
+    assert pea["price_basis"] == "farmer" and pea["price_lei_per_t"]["typical"] == 1500
+    assert pea["cost_basis"] == "farmer" and pea["costs"]["typical"] == 4000
+    assert known["per_year"]["margin"] is not None
+    assert not any(n.startswith("Pea:") for n in known["notes"])
+
+
+def test_commercial_farm_yields_are_used_when_available_and_the_range_is_weather_only():
+    result = plan_economics(plan(("winter_wheat", "Winter wheat"), ("sunflower", "Sunflower"), ("maize", "Maize")),
+                            REQUEST, "calarasi", DATA, RULES)
+    wheat = result["crops"][0]
+    assert wheat["yield_basis"] == "commercial_farms"
+    price = wheat["price_lei_per_t"]["typical"]
+    assert abs(wheat["income"]["low"] - wheat["yield_t_per_ha"]["low"] * price) <= 10
+    assert abs(wheat["income"]["high"] - wheat["yield_t_per_ha"]["high"] * price) <= 10
+    factor = DATA["cost_index"]["factor"]
+    assert abs(wheat["costs"]["typical"] - DATA["costs_lei_per_ha"]["winter_wheat"]["rainfed"] * factor) <= 10

@@ -16,7 +16,8 @@ import ReplayChart from "../src/components/charts/replay-chart";
 import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
 import { fullExampleRequest } from "../src/lib/api";
 import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
-import { leiRange, marginLine } from "../src/lib/money";
+import { leiRange, marginLine, signedLei } from "../src/lib/money";
+import { moneyCrops } from "../src/components/money-inputs";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
@@ -457,4 +458,36 @@ test("plan cards show money per hectare a year as an estimate, with unknowns spe
   );
   assert.match(results, /Money \(estimate\)/);
   assert.match(results, /Your current rotation: about/);
+});
+
+test("crops without official figures get a price and cost form; crop order is spelled out", () => {
+  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const crops = moneyCrops(result);
+  assert.equal(crops[0].id, "pea");
+  assert.ok(crops[0].missing && crops[0].price === undefined);
+  assert.ok(crops.slice(1).every((crop) => !crop.missing));
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, {
+      result,
+      busy: false,
+      error: "",
+      request: fullExampleRequest,
+      onRecalculate: () => {},
+      onRecalculateMoney: () => {},
+    }),
+  );
+  assert.match(html, /id="money-inputs"/);
+  assert.match(html, /There are no official recent figures for pea/);
+  assert.match(html, /Price you get \(lei\/t\)/);
+  assert.match(html, /Add your prices/);
+  // Without a handler (for example the static calculator) the form is not shown.
+  assert.doesNotMatch(
+    renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" })),
+    /id="money-inputs"/,
+  );
+  const baseline = renderToStaticMarkup(createElement(PlanCard, { plan: result.baseline!, baseline: true }));
+  assert.match(baseline, /a good previous crop|an acceptable previous crop|a poor previous crop/);
+  assert.match(baseline, /commercial farms in the county/);
+  assert.equal(signedLei(350), "+350 lei");
+  assert.equal(signedLei(-120), "-120 lei");
 });

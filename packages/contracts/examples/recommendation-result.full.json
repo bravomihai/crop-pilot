@@ -220,68 +220,94 @@
             "typical": 530,
             "high": 830
           },
-          "margin": null
+          "margin": null,
+          "crop_order_effect": 150
         },
         "crops": [
           {
             "crop_id": "winter_wheat",
             "crop_name": "Winter wheat",
+            "previous_crop": null,
+            "previous_rating": null,
             "yield_t_per_ha": {
-              "low": 4.88,
-              "typical": 5.25,
-              "high": 5.65
+              "low": 5.04,
+              "typical": 5.56,
+              "high": 5.87
             },
+            "yield_basis": "commercial_farms",
             "price_lei_per_t": {
               "low": 920,
               "typical": 940,
               "high": 1070
             },
+            "price_basis": "regional",
             "income": {
-              "low": 4490,
-              "typical": 4940,
-              "high": 6050
+              "low": 4740,
+              "typical": 5230,
+              "high": 5520
             },
             "costs": {
-              "low": 4600,
+              "low": 5420,
               "typical": 5420,
-              "high": 6230
-            }
+              "high": 5420
+            },
+            "cost_basis": "iceadr",
+            "nitrogen_saving": null,
+            "crop_order_effect": null
           },
           {
             "crop_id": "pea",
             "crop_name": "Pea",
+            "previous_crop": "Winter wheat",
+            "previous_rating": "good",
             "yield_t_per_ha": {
-              "low": 1.42,
-              "typical": 1.83,
-              "high": 2.08
+              "low": 1.46,
+              "typical": 2.22,
+              "high": 2.46
             },
+            "yield_basis": "commercial_farms",
             "price_lei_per_t": null,
+            "price_basis": null,
             "income": null,
-            "costs": null
+            "costs": null,
+            "cost_basis": null,
+            "nitrogen_saving": null,
+            "crop_order_effect": null
           },
           {
             "crop_id": "winter_wheat",
             "crop_name": "Winter wheat",
+            "previous_crop": "Pea",
+            "previous_rating": "good",
             "yield_t_per_ha": {
-              "low": 4.88,
-              "typical": 5.25,
-              "high": 5.65
+              "low": 5.3,
+              "typical": 5.86,
+              "high": 6.18
             },
+            "yield_basis": "commercial_farms",
             "price_lei_per_t": {
               "low": 920,
               "typical": 940,
               "high": 1070
             },
+            "price_basis": "regional",
             "income": {
-              "low": 4490,
-              "typical": 4940,
-              "high": 6050
+              "low": 4980,
+              "typical": 5510,
+              "high": 5810
             },
             "costs": {
-              "low": 4600,
-              "typical": 5420,
-              "high": 6230
-            }
+              "low": 5150,
+              "typical": 5230,
+              "high": 5310
+            },
+            "cost_basis": "iceadr",
+            "nitrogen_saving": {
+              "low": 110,
+              "typical": 190,
+              "high": 270
+            },
+            "crop_order_effect": 470
           }
         ],
         "payments": [
@@ -309,8 +335,8 @@
         ],
         "warnings": [],
         "notes": [
-          "Pea: no official recent price series, so its income is unknown.",
-          "Pea: no published cost budget, so its costs are unknown."
+          "Pea: no official recent price series. Add the price you get to complete the estimate.",
+          "Pea: no published cost budget. Add your cost per hectare to complete the estimate."
         ],
         "source_ids": [
           "ins-agr110a",
@@ -319,6 +345,9 @@
           "apia-2026-rates",
           "apia-coupled-2025",
           "apia-ecoscheme-2026",
+          "ins-agr108a-109a",
+          "eurostat-input-prices",
+          "nitrogen-credit",
           "ecb-eur-ron",
           "gisco-nuts3"
         ]
@@ -531,14 +560,14 @@
       "county": "Calarasi",
       "per_year": {
         "income": {
-          "low": 4150,
-          "typical": 5100,
-          "high": 7400
+          "low": 4900,
+          "typical": 5700,
+          "high": 7000
         },
         "costs": {
-          "low": 4950,
+          "low": 5850,
           "typical": 5850,
-          "high": 6700
+          "high": 5850
         },
         "subsidies": {
           "low": 530,
@@ -546,83 +575,105 @@
           "high": 830
         },
         "margin": {
-          "low": -2020,
-          "typical": -220,
-          "high": 3280
-        }
+          "low": -420,
+          "typical": 380,
+          "high": 1980
+        },
+        "crop_order_effect": 100
       },
       "crops": [
         {
           "crop_id": "winter_wheat",
           "crop_name": "Winter wheat",
+          "previous_crop": null,
+          "previous_rating": null,
           "yield_t_per_ha": {
-            "low": 4.88,
-            "typical": 5.25,
-            "high": 5.65
+            "low": 5.04,
+            "typical": 5.56,
+            "high": 5.87
           },
+          "yield_basis": "commercial_farms",
           "price_lei_per_t": {
             "low": 920,
             "typical": 940,
             "high": 1070
           },
+          "price_basis": "regional",
           "income": {
-            "low": 4490,
-            "typical": 4940,
-            "high": 6050
+            "low": 4740,
+            "typical": 5230,
+            "high": 5520
           },
           "costs": {
-            "low": 4600,
+            "low": 5420,
             "typical": 5420,
-            "high": 6230
-          }
+            "high": 5420
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": null
         },
         {
           "crop_id": "maize",
           "crop_name": "Maize",
+          "previous_crop": "Winter wheat",
+          "previous_rating": "good",
           "yield_t_per_ha": {
-            "low": 2.99,
-            "typical": 4.47,
-            "high": 7.75
+            "low": 4.35,
+            "typical": 5.54,
+            "high": 8.68
           },
+          "yield_basis": "commercial_farms",
           "price_lei_per_t": {
             "low": 880,
             "typical": 990,
             "high": 1110
           },
+          "price_basis": "regional",
           "income": {
-            "low": 2630,
-            "typical": 4430,
-            "high": 8600
+            "low": 4310,
+            "typical": 5480,
+            "high": 8590
           },
           "costs": {
-            "low": 4700,
-            "typical": 5530,
-            "high": 6360
-          }
+            "low": 5540,
+            "typical": 5540,
+            "high": 5540
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": 270
         },
         {
           "crop_id": "winter_wheat",
           "crop_name": "Winter wheat",
+          "previous_crop": "Maize",
+          "previous_rating": "ok",
           "yield_t_per_ha": {
-            "low": 4.88,
-            "typical": 5.25,
-            "high": 5.65
+            "low": 5.04,
+            "typical": 5.56,
+            "high": 5.87
           },
+          "yield_basis": "commercial_farms",
           "price_lei_per_t": {
             "low": 920,
             "typical": 940,
             "high": 1070
           },
+          "price_basis": "regional",
           "income": {
-            "low": 4490,
-            "typical": 4940,
-            "high": 6050
+            "low": 4740,
+            "typical": 5230,
+            "high": 5520
           },
           "costs": {
-            "low": 4600,
+            "low": 5420,
             "typical": 5420,
-            "high": 6230
-          }
+            "high": 5420
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": null
         }
       ],
       "payments": [
@@ -657,6 +708,9 @@
         "apia-2026-rates",
         "apia-coupled-2025",
         "apia-ecoscheme-2026",
+        "ins-agr108a-109a",
+        "eurostat-input-prices",
+        "nitrogen-credit",
         "ecb-eur-ron",
         "gisco-nuts3"
       ]
@@ -714,6 +768,22 @@
       "id": "gisco-nuts3",
       "title": "Eurostat GISCO NUTS 2021 county boundaries (© EuroGeographics)",
       "url": "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"
+    },
+    {
+      "id": "ins-agr108a-109a",
+      "title": "INS TEMPO AGR108A and AGR109A: cultivated area and production by county and type of holding (commercial farms = total minus individual holdings)",
+      "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table",
+      "resolution": "county, yearly"
+    },
+    {
+      "id": "eurostat-input-prices",
+      "title": "Eurostat apri_ap_ina: purchase prices of agricultural inputs in Romania (ammonium nitrate, urea, diesel)",
+      "url": "https://ec.europa.eu/eurostat/databrowser/view/apri_ap_ina/default/table"
+    },
+    {
+      "id": "nitrogen-credit",
+      "title": "Nitrogen left by pea and soybean for the next crop: Romanian fertilisation practice (30-50 kg N/ha) and Soon (2005), about 20 kg N/ha for wheat after pea",
+      "url": "https://www.bzi.ro/ce-influenteaza-necesarul-de-azot-la-porumb-si-cum-se-stabileste-fertilizarea-culturii-5571958"
     }
   ],
   "disclaimer": "Invented example values. Not a recommendation.",
