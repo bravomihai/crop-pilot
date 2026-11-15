@@ -80,6 +80,10 @@ export function useRecommendations() {
   function recalculate(scenario: RecommendationRequest["scenario"]) {
     if (lastRequest) void calculate({ ...lastRequest, scenario }, true, 300);
   }
+  /** Recalculates the last request with the farmer's own prices and costs (or without them). */
+  function recalculateMoney(money_inputs: RecommendationRequest["money_inputs"]) {
+    if (lastRequest) void calculate({ ...lastRequest, money_inputs }, true, 300);
+  }
   return {
     result,
     lastRequest,
@@ -87,6 +91,7 @@ export function useRecommendations() {
     error,
     calculate,
     recalculate,
+    recalculateMoney,
     clear,
     cancel,
     reportError: setError,

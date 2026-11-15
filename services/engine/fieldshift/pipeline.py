@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from .data_service import build_environment
 from .demo import recommend_demo
 from .evaluator import climate_context, evaluate, load_rules
+from .evaluator.economics import add_economics
 from .evaluator.rules import load_provisional_romania_rules
 from .geography import validate_field_boundary, validate_location
 from .recommender import recommend_rotations
@@ -119,6 +120,12 @@ def computed_result(
         listed = {source["id"] for source in result["sources"]}
         climate["source_ids"] = [i for i in climate["source_ids"] if i in listed]
         result["climate_context"] = climate
+    try:
+        add_economics(result, request, rules)
+    except Exception:  # optional estimate: never block the agronomic result
+        result["data_gaps"].append("Money estimate unavailable because of an internal error.")
+        for plan in result["plans"] + ([result["baseline"]] if result.get("baseline") else []):
+            plan.pop("economics", None)
     errors = validate_result_semantics(result)
     if errors:
         raise RuntimeError(

@@ -465,6 +465,44 @@ The CI/CD correction was independently verified by the successful automatic
 main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
 returned three computed plans of three crops each and passed the shared schema.
 
+## Money per plan (estimate) — 2026-11-15 (branch `tudor`, not pushed)
+
+Each computed plan and the current rotation carry an optional `economics` field: lei per
+hectare and year for income, costs, CAP payments and what is left, each as low / typical /
+high, with unknown values as `null`. It is shown on every plan card and in "At a glance".
+It does not change the ranking. Data and method: `docs/economics-design.md`.
+
+Verified: Python 239 passed plus the economics tests; web backend 97/97, UI 36/36,
+TypeScript; JSON Schemas regenerated (one new optional field). **Live** (local engine and
+web app, demo field in Călărași county): the current rotation maize → winter wheat showed
+about −520 lei/ha/year typical (range −3,120 to 4,530). Every recommended plan that day
+contained pea, so their income and margin showed as unknown, with subsidies only.
+Not verified: payment rates against the official Order; the yield and price figures as
+farm-level reality (they are county and regional averages).
+
+Same day, second version: crop order now changes the money (yield effect from the regional
+previous-crop ratings, nitrogen saved after pea or soybean at the official Eurostat nitrogen
+price), yields are those of commercial farms, costs are indexed to official input prices,
+the range shows bad and good years only, and the farmer can enter their own price and cost
+per crop. Verified: engine money tests 12/12, web UI 37/37, backend 97/97, TypeScript, schemas
+regenerated. **Live**: the current rotation shows about +330 lei/ha/year typical; with test
+values entered for pea (not real prices), all three plans got a full estimate and the
+crop-order line showed both gains and losses.
+
+## Survival Mode with the money estimate — 2026-11-15 (branch `feature/survival-mode`)
+
+Merged Tudor's money estimate (`1444c8d`, `dd75d7d`, `0a9d45a`) into Survival Mode. Results
+read: At a glance (with the money line), Survival Mode, then the plans in detail, where each
+plan card carries its money estimate and the "Your prices and costs" form. Survival Mode
+shows only 0–100 season scores; when plans carry `economics`, it adds a note that the money
+estimate is a separate per-year average, not recalculated for the challenge season.
+`field_free_from` replay dates and the same-season comparison are unchanged; the money
+estimate runs after P4 and does not read or change the replay.
+
+Verified: Python 247 passed; web backend 118/118, UI 43/43 (new test: page order, money
+labelled as an estimate on every card, no money amounts in Survival Mode, unique ids, same
+historical start for every rotation); configuration 3/3; TypeScript; schemas regenerated with
+no content change; production build. Not verified in this merge: a live browser run.
 
 ## VPS engine permissions and CI triggers — 2026-11-15
 
@@ -501,3 +539,18 @@ Verified locally: 118 backend tests, 40 UI tests, 3 configuration checks,
 TypeScript and regenerated schemas matching the committed contract. Full Python,
 database, build and container checks run in GitHub before merge. No agronomic
 validation is implied.
+
+## Latest main merged into Survival Mode; money data packaged — 2026-11-15
+
+Merged `origin/main` (Mihail's engine image permission fix and PR/main-only CI triggers)
+into `feature/survival-mode`, keeping Survival Mode and the money estimate. Found while
+reviewing: the installed engine package, which the Docker image uses, did not include the
+money estimate's data (`fieldshift/evaluator/rules/economics/*.json`), so a container
+would have reported "Money estimate unavailable" for every result. `pyproject.toml` now
+declares those files as package data, and `tests/test_packaging.py` fails if any JSON or
+GeoJSON file under `fieldshift/` is left out (checked: it fails on the old setting).
+
+Verified: a built wheel now contains both economics files and the Romania boundary; Python
+248 passed; web backend 118/118, UI 43/43; configuration 3/3; TypeScript; schemas
+regenerated with no content change; production build. Not verified here: a Docker image
+build and a live run of the money estimate inside a container.
