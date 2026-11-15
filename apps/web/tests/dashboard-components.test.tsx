@@ -154,6 +154,102 @@ test("rotation result cards do not manufacture missing alternatives", () => {
   }
 });
 
+test("land-cover warnings appear before plans and explain incompatible fields", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("../../../packages/contracts/examples/recommendation-result.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const render = (status: "uncertain" | "incompatible") =>
+    renderToStaticMarkup(
+      createElement(RecommendationResults, {
+        result: resultSchema.parse({
+          ...fixture,
+          mode: "computed",
+          status: status === "incompatible" ? "insufficient_data" : "complete",
+          plans: status === "incompatible" ? [] : fixture.plans,
+          land_cover: { status, message: "Verify satellite land cover." },
+        }),
+        busy: false,
+        error: "",
+      }),
+    );
+  const uncertain = render("uncertain");
+  assert.match(uncertain, /Land-cover information/);
+  assert.match(uncertain, /notice--info/);
+  assert.doesNotMatch(uncertain, /notice--warning/);
+  assert.ok(uncertain.indexOf("Verify satellite land cover.") < uncertain.indexOf('class="plan"'));
+  const incompatible = render("incompatible");
+  assert.match(incompatible, /Field may not be suitable for planting/);
+  assert.match(incompatible, /notice--warning/);
+  assert.doesNotMatch(incompatible, /Insufficient data/);
+  assert.doesNotMatch(incompatible, /class="plan"/);
+});
+
+test("rotation calendar appears before plan details and missing plans are explained", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+    "utf8",
+  ));
+  const html = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: resultSchema.parse({ ...fixture, mode: "computed" }),
+    busy: false,
+    error: "",
+  }));
+  assert.ok(html.indexOf("Rotation calendar") < html.indexOf('class="plan"'));
+  assert.ok(html.indexOf('class="plan"') < html.indexOf("How each plan would have done"));
+  assert.match(html, /Three crops do not necessarily mean three years/);
+  const empty = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: resultSchema.parse({ ...fixture, mode: "computed", status: "insufficient_data", plans: [], baseline: undefined }),
+    busy: false,
+    error: "",
+  }));
+  assert.match(empty, /No crop plans could be generated/);
+  assert.doesNotMatch(empty, /notice--warning/);
+});
+
+test("computed crop comparison shows selected crop uncertainty and alternatives", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+    "utf8",
+  ));
+  const result = resultSchema.parse({
+    ...fixture,
+    mode: "computed",
+    crop_assessment: {
+      selected: [
+        { crop_id: "potato", crop_name: "Potato", status: "uncertain", score: 0.4, message: "Soil pH is unknown. Other crops scored higher.", sowing_window: { start: "2027-04-01", end: "2027-04-20" } },
+        { crop_id: "maize", crop_name: "Maize", status: "not_recommended", score: null, message: "Check the crop history." },
+      ],
+      alternatives: [{ crop_id: "pea", crop_name: "Pea", score: 0.6, harvest_window: { start: "2027-07-01", end: "2027-07-20" } }],
+      disclaimer: "Estimates only.",
+    },
+  });
+  const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
+  assert.match(html, /Potato<\/h4>.*Needs checking/);
+  assert.match(html, /Soil pH is unknown\. Other crops scored higher/);
+  assert.match(html, /Next sowing<\/dt><dd>1 Apr 2027 – 20 Apr 2027/);
+  assert.match(html, /Maize<\/h4>.*Not recommended/);
+  assert.match(html, /Check the crop history/);
+  assert.match(html, /Pea<\/h5><span>60 \/ 100/);
+  assert.match(html, /Harvest: 1 Jul 2027 – 20 Jul 2027/);
+  assert.match(html, /Estimates only/);
+  assert.ok(html.indexOf("Your crop choices") < html.indexOf("Rotation calendar"));
+  assert.ok(html.indexOf("Rotation calendar") < html.indexOf('class="plan"'));
+  const suggestionsOnly = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, crop_assessment: { ...result.crop_assessment!, selected: [] } },
+    busy: false,
+    error: "",
+    request: fullExampleRequest,
+    onRecalculate: () => {},
+  }));
+  assert.match(suggestionsOnly, /Crops to consider/);
+  assert.match(suggestionsOnly, /Suggested crops/);
+  assert.match(suggestionsOnly, /<details class="result-scenario"><summary>Explore a different climate scenario/);
+  assert.ok(suggestionsOnly.indexOf("Rotation calendar") < suggestionsOnly.indexOf("Explore a different climate scenario"));
+});
+
 test("five English priority sliders render with neutral defaults, labels, values, and a reset control", () => {
   const ranking = rankDemoCrops(DEFAULT_FARMING_PRIORITIES, {
     temperature: 0,

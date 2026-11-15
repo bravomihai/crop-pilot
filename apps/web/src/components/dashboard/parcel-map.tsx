@@ -8,6 +8,7 @@ import {
   addFreehand,
   createParcel,
   MAX_BOUNDARY_POINTS,
+  MAX_FIELD_PARTS,
   tracePoints,
   type Coordinate,
   type DrawSegment,
@@ -20,6 +21,7 @@ const MAX_MAP_ZOOM = 17;
 
 type Commands = {
   start: () => void;
+  startPart: () => void;
   finish: () => void;
   undo: () => void;
   cancel: () => void;
@@ -32,6 +34,8 @@ type Props = {
   opacity: number;
   onSelect: (selection: FieldSelection | null) => void;
   onDrawingChange: (drawing: boolean) => void;
+  parts?: FieldSelection[];
+  onAddPart?: (part: FieldSelection) => void;
 };
 
 export default function ParcelMap(props: Props) {
@@ -127,6 +131,7 @@ export default function ParcelMap(props: Props) {
           interactive: false,
         }).addTo(instance);
         let active = false;
+        let drawingPart = false;
         let segments: DrawSegment[] = [];
         let gesture: {
           id: number;
@@ -213,15 +218,17 @@ export default function ParcelMap(props: Props) {
         function finish() {
           if (!active) return;
           try {
-            const field = createParcel(tracePoints(segments), "Selected field");
+            const field = createParcel(tracePoints(segments), drawingPart ? `Part ${(latest.current.parts?.length ?? 0) + 1}` : "Selected field");
+            if (drawingPart) latest.current.onAddPart?.(field);
+            else latest.current.onSelect(field);
             stop();
-            latest.current.onSelect(field);
-            instance.fitBounds(L.latLngBounds(latLngs(field.boundary!)), {
-              padding: [36, 36],
-              maxZoom: 17,
-            });
+            if (!drawingPart)
+              instance.fitBounds(L.latLngBounds(latLngs(field.boundary!)), {
+                padding: [36, 36],
+                maxZoom: 17,
+              });
             setMessage(
-              `Field selected. Approximate area: ${field.areaHectares!.toFixed(2)} ha. In computed mode, soil and terrain use up to three samples inside the boundary.`,
+              `${drawingPart ? "Part" : "Field"} selected. Approximate area: ${field.areaHectares!.toFixed(2)} ha. In computed mode, soil and terrain use up to three samples inside the boundary.`,
             );
           } catch (cause) {
             setMessage(
@@ -234,6 +241,7 @@ export default function ParcelMap(props: Props) {
         commands.current = {
           start() {
             resetSketch();
+            drawingPart = false;
             active = true;
             selected.clearLayers();
             latest.current.onSelect(null);
@@ -243,6 +251,16 @@ export default function ParcelMap(props: Props) {
             setMessage(
               `Click for corners; hold and drag for curves. Click the first point, double-click, or choose Finish to close. Maximum ${MAX_BOUNDARY_POINTS} points.`,
             );
+            element.focus();
+          },
+          startPart() {
+            resetSketch();
+            drawingPart = true;
+            active = true;
+            interactions(false);
+            setDrawing(true);
+            latest.current.onDrawingChange(true);
+            setMessage("Draw a closed part inside the field without overlapping another part.");
             element.focus();
           },
           finish,
@@ -270,8 +288,8 @@ export default function ParcelMap(props: Props) {
         };
         renderSelection.current = () => {
           selected.clearLayers();
-          const { selection, color, opacity } = latest.current;
-          if (!selection || active) return;
+          const { selection, color, opacity, parts = [] } = latest.current;
+          if (!selection || (active && !drawingPart)) return;
           if (selection.boundary)
             L.polygon(latLngs(selection.boundary), {
               color,
@@ -279,6 +297,15 @@ export default function ParcelMap(props: Props) {
               fillColor: color,
               fillOpacity: opacity,
             }).addTo(selected);
+          parts.forEach((part, index) => {
+            if (!part.boundary) return;
+            L.polygon(latLngs(part.boundary), {
+              color: "#ffffff",
+              weight: 2,
+              fillColor: color,
+              fillOpacity: 0.4,
+            }).bindTooltip(`Part ${index + 1}`, { permanent: true }).addTo(selected);
+          });
         };
         function down(event: PointerEvent) {
           if (
@@ -463,7 +490,7 @@ export default function ParcelMap(props: Props) {
   }, [props.view, ready]);
   useEffect(() => {
     renderSelection.current?.();
-  }, [props.selection, props.color, props.opacity, ready]);
+  }, [props.selection, props.parts, props.color, props.opacity, ready]);
 
   return (
     <section className="dashboard-card map-card" aria-labelledby="map-title">
@@ -514,6 +541,16 @@ export default function ParcelMap(props: Props) {
               Cancel
             </button>
           </>
+        )}
+        {!drawing && props.selection && props.onAddPart && (
+          <button
+            className="button button--secondary"
+            type="button"
+            disabled={!ready || (props.parts?.length ?? 0) >= MAX_FIELD_PARTS}
+            onClick={() => commands.current?.startPart()}
+          >
+            Draw field part
+          </button>
         )}
         <button
           className="map-clear"

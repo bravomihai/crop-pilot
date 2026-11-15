@@ -1719,6 +1719,121 @@ h4 {
   border-color: #fecaca;
   background: #fef2f2;
 }
+.crop-comparison {
+  margin: 18px 0;
+  padding: clamp(16px, 3vw, 24px);
+  border: 1px solid #cbd9d1;
+  border-radius: 16px;
+  background: #f4f8f5;
+  color: #123c2f;
+}
+.crop-comparison-heading .eyebrow {
+  margin: 0 0 5px;
+  color: #426956;
+}
+.crop-comparison-heading h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.crop-comparison-heading > p:last-child {
+  margin: 5px 0 16px;
+  color: #415a4d;
+}
+.crop-assessment-list,
+.crop-alternative-list {
+  display: grid;
+  gap: 10px;
+}
+.crop-assessment-card,
+.crop-alternative-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #d5e0d9;
+  border-radius: 12px;
+  background: #fff;
+}
+.crop-assessment-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.crop-assessment-top h4,
+.crop-assessment-top h5 {
+  margin: 0;
+  font-size: 16px;
+  color: #123c2f;
+}
+.crop-assessment-status {
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #e8f2eb;
+  color: #123c2f;
+  font-size: 11px;
+  font-weight: 700;
+}
+.crop-assessment-status--uncertain {
+  background: #fff4d9;
+  color: #724a08;
+}
+.crop-assessment-status--not_recommended {
+  background: #fce9e7;
+  color: #8a3026;
+}
+.crop-assessment-message {
+  margin: 10px 0 0;
+  line-height: 1.6;
+  color: #283d32;
+}
+.crop-assessment-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #e3ebe5;
+}
+.crop-assessment-details dt {
+  color: #526a5c;
+  font-size: 11px;
+}
+.crop-assessment-details dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.crop-alternative-section {
+  margin-top: 20px;
+}
+.crop-alternative-section > h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.crop-alternative-intro {
+  margin: -4px 0 10px;
+  color: #415a4d;
+  line-height: 1.5;
+}
+.crop-alternative-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+}
+.crop-alternative-card .crop-assessment-top > span {
+  font-size: 13px;
+  font-weight: 700;
+}
+.crop-alternative-card p {
+  margin: 5px 0 0;
+  color: #415a4d;
+  line-height: 1.5;
+}
+.crop-assessment-disclaimer {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #d5e0d9;
+  color: #415a4d;
+  line-height: 1.6;
+}
 .empty-state {
   background: white;
   border: 1px dashed #cbd5e1;

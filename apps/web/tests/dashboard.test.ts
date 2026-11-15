@@ -6,6 +6,7 @@ import {
   addFreehand,
   createParcel,
   MAX_BOUNDARY_POINTS,
+  validateFieldPart,
   tracePoints,
   type Coordinate,
   type DrawSegment,
@@ -47,6 +48,19 @@ test("a drawn field can be sent in the recommendation request", () => {
   });
   assert.deepEqual(request.field_boundary?.coordinates[0], field.boundary);
   assert.deepEqual(request.location, field.location);
+});
+
+test("field parts must stay inside the field and not overlap", () => {
+  const field = createParcel(rectangle);
+  const left = createParcel([[26, 44], [26.0005, 44], [26.0005, 44.001], [26, 44.001]]);
+  const right = createParcel([[26.0005, 44], [26.001, 44], [26.001, 44.001], [26.0005, 44.001]]);
+  const overlapping = createParcel([[26.0004, 44], [26.0009, 44], [26.0009, 44.001], [26.0004, 44.001]]);
+  const outside = createParcel([[25.9998, 44], [26.0002, 44], [26.0002, 44.001], [25.9998, 44.001]]);
+  assert.doesNotThrow(() => validateFieldPart(field, left, []));
+  assert.doesNotThrow(() => validateFieldPart(field, right, [left]));
+  assert.throws(() => validateFieldPart(field, overlapping, [left]), /cannot overlap/);
+  assert.throws(() => validateFieldPart(field, outside, []), /inside the field/);
+  assert.throws(() => validateFieldPart(field, right, Array(5).fill(left)), /at most 5/);
 });
 
 test("concave field boundaries keep the NASA representative point inside the parcel", () => {

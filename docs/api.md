@@ -59,8 +59,32 @@ that do not use these fields need no changes. Complete examples:
 | `plan.scores: {water, soil, climate, productivity}` | result | P3 calculates 0–1 or `null` (unknown); P4 forwards it; P1 displays it |
 | `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
+| `land_cover: {status, message}` | computed result | Satellite screening: `cropland`, `incompatible`, or `uncertain`; display the message prominently |
+| `assessment_crops: crop_id[0–15]` | request | Optional individual crops to screen; an empty list requests alternative crop screening without choosing a crop |
+| `crop_assessment: {selected, alternatives, disclaimer}` | computed result | Individual crop assessments and up to three alternatives; separate from successive rotation plans |
 
 `productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+
+Computed requests with a boundary send its geometry to Microsoft Planetary Computer
+for ESA WorldCover 2021 land-cover statistics. Available pixels uniformly showing tree cover, built-up land,
+water, wetland, snow/ice, mangrove, or moss/lichen yields `insufficient_data` and no
+plans. Mixed classes, missing data, tile crossings, very small fields, and large
+fields that cannot be screened at full resolution are uncertain: plans may still be
+shown alongside the land-cover uncertainty. Cropland classifications also require field checks.
+The historical 10 m classification is not current ground truth, a soil assessment,
+or a legal land-use determination. No alternative land use is inferred.
+
+Each optional individual crop assessment runs the evaluator on one crop, including
+history, exclusions, irrigation and the requested hypothetical scenario. Alternatives
+are ranked by the evaluator's provisional relative growing-potential score, not by
+rotation-priority weights. Crop comparisons include the next sowing and harvest windows
+when available; different crops may have windows in different years. Missing pH or soil texture prevents confirming crop fit;
+unknown pH is omitted from the score and unknown texture uses the evaluator's loam
+assumption. The score is not a yield, profit, probability or field measurement, and
+crop rules need local expert review. Incompatible land cover returns no assessments.
+Unsupported selected crops are reported as uncertain. The main page can submit up to
+five independently drawn, non-overlapping parts as separate requests; all other form
+details apply to every part, and unoutlined areas are not analysed.
 
 ## Future integration
 

@@ -20,6 +20,17 @@ runtime and interface states; earlier checks are not new claims of scientific va
   representative coordinate. For a boundary, SoilGrids and SRTM sample up to three
   distributed interior points. NASA POWER remains representative-point context.
   Sparse sampling is not parcel-wide raster zonal statistics.
+- Computed recommendations screen field boundaries using ESA WorldCover 2021 via
+  Microsoft Planetary Computer, displaying uncertainty as information and no
+  crop plans when available pixels uniformly show tree cover, water, built-up land and other
+  incompatible classes. This historical 10 m classification cannot verify present
+  conditions or legal land use; mixed, unavailable and unsupported fields remain
+  uncertain. The submitted boundary is sent to the provider.
+- The main page can draw up to five non-overlapping parts inside the field and request
+  separate crop comparisons and rotations. All form details other than crop choices
+  apply to every part, and any unoutlined land is excluded. Individual crop comparisons
+  use provisional single-crop evaluator scores and explicitly report missing soil data;
+  they are not scientifically validated crop suitability or yield forecasts.
 - The demo generator respects chronological order and exclusions and does not fabricate
   agronomic scores. Compose, AWS preparation, and active GitHub checks are documented.
 - The real P3 evaluator and P4 recommender integrate with the pipeline without a
@@ -249,6 +260,32 @@ events traced an outline, and Calculate sent a closed polygon and representative
 point to an intercepted request. Physical gestures and live data providers were not
 verified. The local engine status returned `engine_not_configured`, so no end-to-end
 calculation or computed agronomic validity is claimed.
+
+## Local computed field request — 2026-11-15
+
+Configured the local web and engine services with a shared service token in ignored
+environment files, with the optional cache disabled. The web status endpoint reported
+the computed engine reachable. A synthetic Fundulea field polygon submitted through
+the web API returned a computed `complete` result with three three-crop plans, NASA
+POWER weather, and SRTM terrain. SoilGrids timed out and was reported as missing;
+separate SoilGrids endpoint checks also timed out. No browser-to-result flow, other
+locations, or agronomic validity were verified by this check.
+
+## Satellite land-cover screening
+
+The local engine was restarted with the screening code. Synthetic polygon requests
+through the web API returned zero plans for a field classified as tree cover and
+three computed plans for one classified as cropland. The latter reported a SoilGrids
+timeout. Offline tests cover mixed and unavailable classifications and the results
+warning. These checks do not establish current land use or agronomic validity.
+
+## Field parts and crop comparisons
+
+In the local browser, two synthetic parts were drawn, assigned potato and pea, and
+calculated separately through the computed web API. Both returned crop comparisons
+and rotation plans; the results reported unknown soil pH, and one part had mixed
+satellite land cover. The separate comparison scores and provisional alternative crops
+are not a field assessment or agronomic validation. SoilGrids timed out locally.
 
 ## Local calculator restored and zoom capped — 2026-11-14
 

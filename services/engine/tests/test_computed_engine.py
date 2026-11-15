@@ -146,6 +146,45 @@ def test_computed_result_keeps_monthly_climate_and_field_data_gap(monkeypatch):
     assert any("representative point" in gap for gap in result["data_gaps"])
 
 
+def test_incompatible_land_cover_returns_no_plans_without_fetching_weather(monkeypatch):
+    request = example("recommendation-request")
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(
+        pipeline, "assess_land_cover",
+        lambda boundary: ({"status": "incompatible", "message": "Tree cover in 2021."},
+                          [{"id": "worldcover", "title": "WorldCover 2021"}]),
+    )
+
+    def unexpected(request):
+        pytest.fail("Weather and plans should not be fetched for incompatible land")
+
+    monkeypatch.setattr(pipeline, "build_environment", unexpected)
+    result = pipeline.recommend(request, "forest-test")
+    assert result["status"] == "insufficient_data"
+    assert result["plans"] == []
+    assert result["request_id"] == "forest-test"
+    assert result["land_cover"]["status"] == "incompatible"
+    assert validate("recommendation-result", result) == []
+
+
+def test_uncertain_land_cover_keeps_plans_and_warning(monkeypatch):
+    request = example("recommendation-request")
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(
+        pipeline, "assess_land_cover",
+        lambda boundary: ({"status": "uncertain", "message": "Verify the field."}, []),
+    )
+    monkeypatch.setattr(pipeline, "build_environment", lambda request: {"sources": []})
+    monkeypatch.setattr(pipeline, "load_rules", lambda location: {"crops": ["crop"]})
+    monkeypatch.setattr(
+        pipeline, "computed_result",
+        lambda *args: {"plans": ["existing plan"], "assumptions": []},
+    )
+    result = pipeline.recommend(request, "uncertain-test")
+    assert result["plans"] == ["existing plan"]
+    assert result["land_cover"]["status"] == "uncertain"
+
+
 def test_selected_crop_shortlist_filters_new_candidates(monkeypatch):
     request = example("recommendation-request")
     request["constraints"]["selected_crops"] = ["pea", "maize"]

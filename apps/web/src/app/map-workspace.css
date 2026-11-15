@@ -150,7 +150,10 @@
 .results-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 23px 28px 18px; border-bottom: 1px solid #00000026; }
 .results-panel-header h2 { font-size: 26px; font-weight: 550; margin: 0; }
 .map-back-button { display: flex; align-items: center; gap: 13px; background: #ffffff; border: 0; color: var(--forest); padding: 10px 12px; border-radius: 10px; font-size: 11px !important; }
-.map-results-scroll { min-height: 0; overflow: auto; padding: 24px 28px; overscroll-behavior: contain; }
+.map-results-scroll { --chart-blue: #2563eb; --chart-teal: #0f766e; --chart-orange: #b45309; --chart-purple: #7e22ce; min-height: 0; overflow: auto; padding: 24px 28px; overscroll-behavior: contain; }
+.part-results-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.part-results-nav button { padding: 7px 10px; border: 1px solid #123c2f; border-radius: 7px; }
+.part-results-nav button[aria-pressed="true"] { background: #123c2f; color: #fff; }
 .map-results-scroll .results { padding: 0; margin: 0; border: 0; background: transparent; }
 .map-results-scroll .section-heading { margin-bottom: 16px; }
 .map-results-scroll .section-heading .eyebrow { display: none; }
@@ -160,6 +163,14 @@
 .map-results-scroll .empty-state { padding: 45px 15px; border: 1px dashed #00000026; background: #ffffff; }
 .map-results-scroll .notice { background: #ffffff; color: #000000; border-color: #00000026; }
 .map-results-scroll p, .map-results-scroll li { font-size: 12px; }
+.map-results-scroll .rotation-timeline { margin: 20px 0; padding: 20px; border: 1px solid #d5e0d9; border-radius: 16px; background: #fff; }
+.map-results-scroll .rotation-timeline-eyebrow { margin: 0 0 6px; color: #426956; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; }
+.map-results-scroll .rotation-timeline h3 { margin: 0; color: #123c2f; font-size: 20px; }
+.map-results-scroll .rotation-timeline .chart-legend { margin: 8px 0 12px; line-height: 1.6; }
+.map-results-scroll .rotation-timeline .timeline-scroll { border-radius: 8px; }
+.map-results-scroll .result-scenario { margin: 18px 0; border: 1px solid #d5e0d9; border-radius: 12px; background: #fff; }
+.map-results-scroll .result-scenario > summary { padding: 16px; color: #123c2f; font-weight: 650; cursor: pointer; }
+.map-results-scroll .result-scenario > .results-what-if { margin: 0 16px 16px; }
 .cancel-calculation { padding: 10px 13px; background: #ffffff; border: 0; border-radius: 8px; color: var(--forest); margin-bottom: 16px; }
 .map-about { width: min(390px, calc(100vw - 32px)); border: 1px solid #00000026; border-radius: 20px; padding: 0 24px 24px; background: var(--surface); color: var(--ink); box-shadow: 0 20px 80px #00000055; }
 .map-about::backdrop { background: #00000080; backdrop-filter: blur(4px); }

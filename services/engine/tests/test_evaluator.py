@@ -15,6 +15,7 @@ import pytest
 
 from fieldshift.contracts import example
 from fieldshift.evaluator import evaluate, load_rules
+from fieldshift.recommender.crop_assessment import assess_crops
 
 FIXTURE = Path(__file__).parent / "fixtures" / "environment-ro-south.json"
 CRITERIA = ("water", "soil", "climate", "productivity")
@@ -126,6 +127,16 @@ def test_output_shape_matches_what_the_recommender_reads(request_, environment, 
     assert out["fixture"] is False and out["scenario_applied"] is False
     assert len(out["details"]) == 3 and len(out["replay"]) >= 15
     assert out["local_checks"]
+
+def test_individual_crop_assessment_uses_real_evaluator(request_, environment, rules):
+    request_["assessment_crops"] = ["potato"]
+    result = assess_crops(request_, environment, rules, evaluate)
+    assert result["selected"][0]["crop_id"] == "potato"
+    assert result["selected"][0]["score"] is not None
+    assert result["selected"][0]["sowing_window"]["start"] >= request_["available_from"]
+    assert result["selected"][0]["harvest_window"]["start"] > result["selected"][0]["sowing_window"]["end"]
+    assert result["alternatives"]
+    assert all(crop["crop_id"] != "potato" for crop in result["alternatives"])
 
 
 def test_calendar_is_ordered_and_does_not_overlap(request_, environment, rules):

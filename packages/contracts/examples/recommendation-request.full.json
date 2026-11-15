@@ -7,6 +7,7 @@
   },
   "available_from": "2026-10-01",
   "crop_count": 3,
+  "assessment_crops": ["potato"],
   "history": [
     { "crop_id": "maize", "harvest_year": 2024, "source": "apia" },
     { "crop_id": "winter_wheat", "harvest_year": 2025, "source": "apia" },

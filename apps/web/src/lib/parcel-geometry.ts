@@ -1,6 +1,8 @@
 import { area } from "@turf/area";
 import { centerOfMass } from "@turf/center-of-mass";
-import { lineString, polygon } from "@turf/helpers";
+import { difference } from "@turf/difference";
+import { featureCollection, lineString, polygon } from "@turf/helpers";
+import { intersect } from "@turf/intersect";
 import { kinks } from "@turf/kinks";
 import { simplify } from "@turf/simplify";
 import { locationSchema, type Location } from "@fieldshift/contracts";
@@ -15,6 +17,28 @@ export type FieldSelection = {
 };
 
 export const MAX_BOUNDARY_POINTS = 100;
+export const MAX_FIELD_PARTS = 5;
+
+export function validateFieldPart(
+  field: FieldSelection,
+  part: FieldSelection,
+  existing: FieldSelection[],
+): void {
+  if (!field.boundary || !part.boundary)
+    throw new Error("Draw the field and the part as closed outlines.");
+  if (existing.length >= MAX_FIELD_PARTS)
+    throw new Error(`A field can contain at most ${MAX_FIELD_PARTS} parts.`);
+  const shape = polygon([part.boundary]);
+  const outside = difference(featureCollection([shape, polygon([field.boundary])]));
+  if (outside && area(outside) > 0.1)
+    throw new Error("Draw the entire part inside the field boundary.");
+  for (const other of existing) {
+    if (!other.boundary) continue;
+    const overlap = intersect(featureCollection([shape, polygon([other.boundary])]));
+    if (overlap && area(overlap) > 0.1)
+      throw new Error("Field parts cannot overlap. Draw a separate part.");
+  }
+}
 
 const equal = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 

@@ -11,6 +11,13 @@ import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
 import AiSummary, { PrintSheetButton } from "./ai-summary";
 
+function formatWindow(window: { start: string; end: string }) {
+  const format = (value: string) =>
+    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" })
+      .format(new Date(`${value}T12:00:00`));
+  return `${format(window.start)} – ${format(window.end)}`;
+}
+
 export default function RecommendationResults({
   result,
   busy,
@@ -41,14 +48,6 @@ export default function RecommendationResults({
           <span className="count-badge">{result.plans.length} / 3 plans</span>
         )}
       </div>
-      {result && request && onRecalculate && (
-        <ResultsWhatIf
-          request={request}
-          busy={busy}
-          onRecalculate={onRecalculate}
-          onCancel={onCancel}
-        />
-      )}
       <p className="sr-only" role="status">
         {busy
           ? "Preparing results. You can stop waiting using the form."
@@ -92,26 +91,98 @@ export default function RecommendationResults({
           aria-busy={busy}
         >
           {result.mode === "demo" && (
-            <Notice title="Demo · fictional results" tone="warning">
+            <Notice title="Demo · fictional results">
               The crops, dates, and explanations are examples. They are not
-              agronomic recommendations calculated for your field.
+              agronomic recommendations calculated for your field. Selected
+              crops are not assessed in demo mode.
             </Notice>
           )}
-          {result.status !== "complete" && (
+          {result.land_cover && (
+            <Notice
+              title={
+                result.land_cover.status === "incompatible"
+                  ? "Field may not be suitable for planting"
+                  : "Land-cover information"
+              }
+              tone={result.land_cover.status === "incompatible" ? "warning" : "info"}
+              announce
+            >
+              {result.land_cover.message}
+            </Notice>
+          )}
+          {result.status !== "complete" && result.land_cover?.status !== "incompatible" && (
             <Notice
               title={
                 result.status === "limited"
                   ? "Fewer alternatives available"
                   : "Insufficient data"
               }
-              tone="warning"
             >
               {result.status === "limited"
                 ? "Fewer than three alternatives are available. Review the missing data and assumptions below."
-                : "The available data cannot support any plans. Review the missing information before trying again."}
+                : "No crop plans could be generated from the available data and constraints. Review the missing information below."}
             </Notice>
           )}
-          {!result.baseline &&
+          {result.mode === "computed" && result.crop_assessment && (
+            <section aria-labelledby="crop-comparison-title" className="crop-comparison">
+              <div className="crop-comparison-heading">
+                <p className="eyebrow">START HERE</p>
+                <h3 id="crop-comparison-title">
+                  {result.crop_assessment.selected.length ? "Your crop choices" : "Crops to consider"}
+                </h3>
+                <p>Explore what the available data suggests for this field.</p>
+              </div>
+              {result.crop_assessment.selected.length > 0 && (
+                <div className="crop-assessment-list">
+                  {result.crop_assessment.selected.map((crop) => (
+                    <article className="crop-assessment-card" key={crop.crop_id}>
+                      <div className="crop-assessment-top">
+                        <h4>{crop.crop_name}</h4>
+                        <span className={`crop-assessment-status crop-assessment-status--${crop.status}`}>
+                          {crop.status === "not_recommended" ? "Not recommended" :
+                            crop.status === "uncertain" ? "Needs checking" : "Assessment available"}
+                        </span>
+                      </div>
+                      <p className="crop-assessment-message">{crop.message}</p>
+                      {(crop.score !== null || crop.sowing_window || crop.harvest_window) && (
+                        <dl className="crop-assessment-details">
+                          {crop.score !== null && <div><dt>Estimated potential</dt><dd>{Math.round(crop.score * 100)} / 100</dd></div>}
+                          {crop.sowing_window && <div><dt>Next sowing</dt><dd>{formatWindow(crop.sowing_window)}</dd></div>}
+                          {crop.harvest_window && <div><dt>Harvest</dt><dd>{formatWindow(crop.harvest_window)}</dd></div>}
+                        </dl>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+              <div className="crop-alternative-section">
+                <h4>{result.crop_assessment.selected.length ? "Other crops to consider" : "Suggested crops"}</h4>
+                {result.crop_assessment.alternatives.length > 0 && (
+                  <p className="crop-alternative-intro">Compare estimated potential and check suitability locally before planting.</p>
+                )}
+                {result.crop_assessment.alternatives.length > 0 ? (
+                  <div className="crop-alternative-list">
+                    {result.crop_assessment.alternatives.map((crop) => (
+                      <article className="crop-alternative-card" key={crop.crop_id}>
+                        <div className="crop-assessment-top">
+                          <h5>{crop.crop_name}</h5>
+                          <span>{Math.round(crop.score * 100)} / 100</span>
+                        </div>
+                        <p>Estimated potential</p>
+                        {crop.sowing_window && <p>Next sowing: {formatWindow(crop.sowing_window)}</p>}
+                        {crop.harvest_window && <p>Harvest: {formatWindow(crop.harvest_window)}</p>}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No other comparable crops are available from this assessment.</p>
+                )}
+              </div>
+              <p className="crop-assessment-disclaimer">{result.crop_assessment.disclaimer}</p>
+            </section>
+          )}
+          <RotationTimeline plans={result.plans} baseline={result.baseline} />
+          {result.plans.length > 0 && !result.baseline &&
             (request?.current_rotation?.length ? (
               <p className="baseline-hint">
                 Your current rotation could not be evaluated for comparison. See
@@ -123,22 +194,32 @@ export default function RecommendationResults({
                 today.
               </p>
             ))}
-          <AiSummary result={result} />
-          <ScoreComparison plans={result.plans} baseline={result.baseline} />
-          <RotationTimeline plans={result.plans} baseline={result.baseline} />
-          <PlanReplay result={result} scenario={request?.scenario} />
-          <ClimateCard result={result} />
-          {result.baseline && (
-            <div className="baseline-container">
-              <PlanCard plan={result.baseline} baseline />
-            </div>
-          )}
           {result.plans.length > 0 && (
             <div className="plans">
               {result.plans.map((plan, index) => (
                 <PlanCard key={plan.id} plan={plan} number={index + 1} />
               ))}
             </div>
+          )}
+          {result.baseline && (
+            <div className="baseline-container">
+              <PlanCard plan={result.baseline} baseline />
+            </div>
+          )}
+          <AiSummary result={result} />
+          <ScoreComparison plans={result.plans} baseline={result.baseline} />
+          <PlanReplay result={result} scenario={request?.scenario} />
+          <ClimateCard result={result} />
+          {request && onRecalculate && (
+            <details className="result-scenario">
+              <summary>Explore a different climate scenario</summary>
+              <ResultsWhatIf
+                request={request}
+                busy={busy}
+                onRecalculate={onRecalculate}
+                onCancel={onCancel}
+              />
+            </details>
           )}
           <div className="result-context">
             <section aria-labelledby="assumptions-title">

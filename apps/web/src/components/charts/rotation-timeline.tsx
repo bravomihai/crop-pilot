@@ -21,12 +21,13 @@ export default function RotationTimeline({
   const axis = timelineData(rows.map(({ plan }) => plan));
   if (!axis) return null;
   return (
-    <section className="analysis-chart" aria-labelledby="timeline-title">
+    <section className="analysis-chart rotation-timeline" aria-labelledby="timeline-title">
+      <p className="rotation-timeline-eyebrow">YOUR PLANS OVER TIME</p>
       <h3 id="timeline-title">Rotation calendar</h3>
       <p className="chart-legend">
-        Shared monthly axis · light segment: sowing window · labelled bar:
-        growing period through harvest · hatched gap: bare soil · dashed row:
-        current rotation.
+        Follow each crop from sowing to harvest. Scroll across to see the years.
+        Light segment: sowing window · hatched gap: bare soil · dashed row:
+        current rotation. Three crops do not necessarily mean three years.
       </p>
       <div
         className="timeline-scroll"

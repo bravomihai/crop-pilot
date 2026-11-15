@@ -6,8 +6,110 @@ import httpx
 import pytest
 
 from fieldshift import data_service
-from fieldshift.data_service import climate, daily, power, soil, terrain
+from fieldshift.data_service import climate, daily, land_cover, power, soil, terrain
 from fieldshift.evaluator import evaluate, load_rules
+
+
+@pytest.mark.parametrize(
+    ("classes", "expected"),
+    [
+        ([10], "incompatible"),
+        ([80], "incompatible"),
+        ([50], "incompatible"),
+        ([40], "cropland"),
+        ([10, 40], "uncertain"),
+        ([30], "uncertain"),
+    ],
+)
+def test_satellite_screening_classifies_field(monkeypatch, classes, expected):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+                         [26.491, 44.444], [26.491, 44.441]]],
+    }
+
+    def post(url, params, json, timeout):
+        assert json["geometry"] == boundary
+        assert params["item"] == "ESA_WorldCover_10m_2021_v200_N42E024"
+        stats = {"histogram": [[10] * len(classes), classes], "count": 10 * len(classes)}
+        return httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": stats}}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(land_cover.httpx, "post", post)
+    assessment, sources = land_cover.assess_land_cover(boundary)
+    assert assessment["status"] == expected
+    assert "2021" in assessment["message"]
+    assert sources[0]["id"] == "esa-worldcover-2021"
+
+
+def test_satellite_screening_does_not_hide_unavailable_or_incomplete_data(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+                         [26.491, 44.444], [26.491, 44.441]]],
+    }
+
+    def fail(url, **kwargs):
+        raise httpx.ConnectError("unavailable")
+
+    monkeypatch.setattr(land_cover.httpx, "post", fail)
+    assessment, sources = land_cover.assess_land_cover(boundary)
+    assert assessment["status"] == "uncertain"
+    assert "service failed" in assessment["message"]
+    assert sources == []
+
+    def incomplete(url, **kwargs):
+        return httpx.Response(200, json={}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(land_cover.httpx, "post", incomplete)
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
+    assert land_cover.assess_land_cover(None)[0]["status"] == "uncertain"
+
+    def unknown_class(url, **kwargs):
+        return httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": {
+                "histogram": [[10], [999]], "count": 10,
+            }}}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(land_cover.httpx, "post", unknown_class)
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
+
+
+def test_satellite_screening_flags_tile_boundary_and_too_few_pixels(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.999, 44.441], [27.001, 44.441], [27.001, 44.444],
+                         [26.999, 44.444], [26.999, 44.441]]],
+    }
+    assert "tile boundary" in land_cover.assess_land_cover(boundary)[0]["message"]
+    large = {
+        "type": "Polygon",
+        "coordinates": [[[26.1, 44.1], [26.2, 44.1], [26.2, 44.2],
+                         [26.1, 44.2], [26.1, 44.1]]],
+    }
+    assert "too large" in land_cover.assess_land_cover(large)[0]["message"]
+    boundary["coordinates"][0] = [
+        [26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+        [26.491, 44.444], [26.491, 44.441],
+    ]
+    monkeypatch.setattr(
+        land_cover.httpx,
+        "post",
+        lambda url, **kwargs: httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": {
+                "histogram": [[1], [10]], "count": 1,
+            }}}},
+            request=httpx.Request("POST", url),
+        ),
+    )
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
 
 
 def test_fao56_et0_uses_dewpoint_and_matches_example_18():
