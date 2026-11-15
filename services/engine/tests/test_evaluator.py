@@ -244,3 +244,49 @@ def test_straw_cereal_after_itself_is_not_recommended(rotation, request_, enviro
     request_["history"] = []
     out = evaluate(rotation, request_, environment, rules)
     assert out["feasibility"] == "infeasible", out["violations"]
+
+
+def test_cover_crop_suggestions_follow_the_season_of_each_gap(request_, environment, rules):
+    request_["history"] = []
+    request_["available_from"] = "2026-10-01"
+    # Wheat harvested in July, maize sown next spring: overwintering vetch mix.
+    wheat_maize = evaluate(["winter_wheat", "maize", "soybean"], request_, environment, rules)
+    assert any("common vetch" in c and "after the winter wheat harvest" in c.lower() for c in wheat_maize["local_checks"])
+    # Maize harvested in October, soybean sown next spring: winter rye.
+    maize_soy = evaluate(["winter_wheat", "maize", "soybean"], request_, environment, rules)
+    assert any("winter rye" in c and "maize" in c for c in maize_soy["local_checks"])
+    # Pea harvested in early July, winter wheat sown in October: short summer cover with a dryness warning.
+    pea_wheat = evaluate(["pea", "winter_wheat", "maize"], {**request_, "available_from": "2027-02-01"}, environment, rules)
+    assert any("mustard or phacelia" in c and "dry summer" in c for c in pea_wheat["local_checks"])
+
+
+def test_no_cover_crop_suggestion_for_a_short_turnaround(rules):
+    from datetime import date
+    from fieldshift.evaluator.core import cover_crop_suggestions
+    from fieldshift.evaluator.schedule import Step
+
+    crops = {c["id"]: c for c in rules["crops"]}
+    steps = [
+        Step("winter_barley", date(2026, 9, 25), date(2026, 10, 10), date(2027, 6, 10), date(2027, 6, 30), False, 0),
+        Step("winter_rapeseed", date(2027, 8, 25), date(2027, 9, 10), date(2028, 6, 20), date(2028, 7, 5), False, 0),
+    ]
+    assert cover_crop_suggestions(steps, crops, rules) == []  # 56 days: too short to be worth it
+
+
+def test_no_legume_cover_next_to_a_legume_crop(rules):
+    from datetime import date
+    from fieldshift.evaluator.core import cover_crop_suggestions
+    from fieldshift.evaluator.schedule import Step
+
+    crops = {c["id"]: c for c in rules["crops"]}
+    pea_then_sunflower = [
+        Step("pea", date(2027, 3, 1), date(2027, 3, 25), date(2027, 6, 15), date(2027, 7, 5), False, 0),
+        Step("sunflower", date(2028, 3, 25), date(2028, 4, 20), date(2028, 8, 25), date(2028, 9, 20), False, 0),
+    ]
+    wheat_then_maize = [
+        Step("winter_wheat", date(2026, 10, 1), date(2026, 10, 20), date(2027, 6, 25), date(2027, 7, 15), False, 0),
+        Step("maize", date(2028, 4, 5), date(2028, 4, 30), date(2028, 9, 10), date(2028, 10, 10), False, 0),
+    ]
+    after_pea = cover_crop_suggestions(pea_then_sunflower, crops, rules)
+    assert after_pea and "rye or oats" in after_pea[0] and "common vetch" not in after_pea[0]
+    assert "common vetch" in cover_crop_suggestions(wheat_then_maize, crops, rules)[0]

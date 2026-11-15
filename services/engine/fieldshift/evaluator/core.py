@@ -396,7 +396,9 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         f"bare soil about {round(soil['bare_days'] / 30)} of {round(soil['total_days'] / 30)} months"
         f"{'; erosion risk from the slope included' if comp.get('erosion') is not None else ''}."
     )
-    if soil["bare_days"] > 0.3 * soil["total_days"]:
+    covers = cover_crop_suggestions(steps, crops, rules)
+    local_checks.extend(covers)
+    if not covers and soil["bare_days"] > 0.3 * soil["total_days"]:
         local_checks.append("Consider a cover crop in the long gaps between main crops to protect the soil.")
 
     # 3. Replay over past seasons.
@@ -616,6 +618,35 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         "details": details,
         "replay": sorted(replay_rows, key=lambda row: row["season_start_year"]),
     }
+
+
+def cover_crop_suggestions(steps: list[schedule.Step], crops: dict, rules: dict) -> list[str]:
+    """A seasonal cover-crop suggestion for each long gap between two main crops.
+
+    The suggestion is chosen by the month the previous crop is harvested and the month the
+    next one is sown (rules `cover_crops`). Gaps shorter than `min_gap_days` get none.
+    """
+    config = rules.get("cover_crops") or {}
+    minimum = config.get("min_gap_days", 75)
+    found = []
+    for before, after in zip(steps, steps[1:]):
+        if (after.sow_start - before.harvest_end).days < minimum:
+            continue
+        next_to_legume = crops[before.crop_id].get("legume") or crops[after.crop_id].get("legume")
+        for option in config.get("suggestions") or []:
+            if option.get("not_next_to_legumes") and next_to_legume:
+                continue  # a legume cover beside a legume crop shares its diseases
+            if (
+                before.harvest_end.month in option.get("harvest_months", [])
+                and after.sow_start.month in option.get("next_sowing_months", [])
+            ):
+                found.append(
+                    option["text"]
+                    .replace("{previous}", crops[before.crop_id]["name"].lower())
+                    .replace("{next}", crops[after.crop_id]["name"].lower())
+                )
+                break
+    return list(dict.fromkeys(found))
 
 
 def _fmt(value) -> str:
