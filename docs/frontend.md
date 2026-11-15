@@ -188,3 +188,6 @@ NASA layers opens from the top-right corner, aligned with the map header on
 desktop and mobile. The header reserves space for the button. Satellite imagery
 is the only basemap; the street-map selector and on-screen zoom buttons are
 removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
+
+Map attribution appears at the bottom left in the active theme. The optional
+Leaflet branding is removed; imagery-provider and enabled-overlay credits remain.

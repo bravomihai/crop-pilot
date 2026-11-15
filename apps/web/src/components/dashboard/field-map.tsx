@@ -42,6 +42,7 @@ export default function FieldMap(props: Props) {
       const location = latest.current.view;
       const instance = L.map(container.current, { zoomControl: false, preferCanvas: true, minZoom: MIN_MAP_ZOOM, maxZoom: MAX_MAP_ZOOM, maxBounds: [[-85, -180], [85, 180]], maxBoundsViscosity: 1 }).setView([location.latitude, location.longitude], clampZoom(latest.current.zoom ?? FIELD_ZOOM));
       map.current = instance;
+      instance.attributionControl.setPrefix(false).setPosition("bottomleft");
       const imagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
         maxZoom: MAX_MAP_ZOOM,
         noWrap: true,
