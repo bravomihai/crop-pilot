@@ -10,7 +10,7 @@ import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
 import { PrintSheetButton } from "./ai-summary";
-import ResultsAtAGlance, { BackToSummary } from "./results-at-a-glance";
+import ResultsAtAGlance from "./results-at-a-glance";
 import RequestSummary from "./request-summary";
 import SurvivalMode from "./survival-mode";
 import MoneyInputs from "./money-inputs";
@@ -44,9 +44,6 @@ export default function RecommendationResults({
               : "A place for your next plan."}
           </h2>
         </div>
-        {result && (
-          <span className="count-badge">{result.plans.length} / 3 plans</span>
-        )}
       </div>
       <p className="sr-only" role="status">
         {busy
@@ -148,18 +145,12 @@ export default function RecommendationResults({
               </section>
             );
           })}
-          {!result.baseline &&
-            (request?.current_rotation?.length ? (
+          {!result.baseline && Boolean(request?.current_rotation?.length) && (
               <p className="baseline-hint">
                 Your current rotation could not be evaluated for comparison. See “How
                 this was calculated” below for the reason.
               </p>
-            ) : (
-              <p className="baseline-hint">
-                Add your current rotation to compare the plans with what you do
-                today.
-              </p>
-            ))}
+            )}
           <ResultsAtAGlance result={result} />
           <SurvivalMode result={result} request={request} />
           <section className="plan-details" id="plan-details" tabIndex={-1} aria-labelledby="plan-details-title">
@@ -186,7 +177,6 @@ export default function RecommendationResults({
             <MoneyInputs result={result} request={request} busy={busy} onApply={onRecalculateMoney} />
             <PlanReplay result={result} scenario={request?.scenario} />
             <ClimateCard result={result} />
-            {result.plans.length > 0 && <BackToSummary />}
           </section>
           {request && onRecalculate && (
             <ResultsWhatIf
@@ -247,12 +237,10 @@ export default function RecommendationResults({
               )}
               <p className="request-id">Request reference: {result.request_id}</p>
             </section>
-            <BackToSummary />
           </details>
           <Glossary />
           <p className="result-disclaimer">{result.disclaimer}</p>
           <div className="results-end">
-            {result.plans.length > 0 && <BackToSummary />}
             {result.mode === "computed" && result.plans.length > 0 && <PrintSheetButton />}
           </div>
         </div>

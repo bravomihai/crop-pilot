@@ -112,9 +112,6 @@ export default function PlainWordsSummary({ result }: { result: RecommendationRe
           )}
         </details>
       )}
-      <p className="plain-words-note">
-        Written by AI from the calculated results; every number is checked against them.
-      </p>
     </div>
   );
 }

@@ -10,7 +10,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | --- | --- |
 | `src/app/page.tsx` | Entry point: the single full-screen map page |
 | `src/components/field-dashboard.tsx` | Map page state, planning form, request building and the results panel |
-| `src/components/dashboard/field-map.tsx` | Full-screen Leaflet map with point selection |
+| `src/components/dashboard/field-map.tsx` | Leaflet map with one draggable field point, zoom limited to 6–17 |
 | `src/components/dashboard/location-search.tsx` | Place search through `/api/locations` |
 | `src/components/recommendation-results.tsx` | Loading, error, complete, limited and insufficient-data states |
 | `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
@@ -174,3 +174,37 @@ git diff --check
 
 The automated checks do not verify browser gestures, layout, tile services, or
 external integrations; check those manually in a browser at narrow and wide widths.
+
+## Shared visual system — 2026-11-15
+
+`src/app/ui-theme.css` defines the shared interface tokens and control/card styles.
+Light and dark appearance follows `prefers-color-scheme` automatically; the main
+page offers no theme selector and stores no theme preference. Light mode uses
+soft white surfaces with a slight green tint, black text and forest green
+(`#123c2f`) accents. Dark mode uses deep green surfaces and readable white text.
+Score bars have muted, distinct colours with darker variants in dark mode; other
+chart series and geographic imagery keep their existing colours.
+
+Planner, results and NASA layer panels share 16 px card corners, consistent
+borders, spacing, dropdowns and keyboard focus indicators. Branding sits at the
+top left of the map and results headers. The results title reads logo, CropPilot,
+then Your crop plans, without the earlier THE NEXT CHAPTER eyebrow. Results retain the summary and plan
+sections, without Back to summary links, a plan-count badge or a prompt to add a
+rotation. A supplied rotation that cannot be evaluated still produces a warning.
+Programmatic heading focus does not draw a selection-like rectangle.
+
+The Prototype badge and project-information button/dialog are removed. Map zoom
+is bounded to levels 6–17; all basemaps disable wrapping and panning is constrained
+to the world bounds to prevent repeated world tiles.
+
+
+### Map controls
+
+NASA layers opens from the top-right corner, aligned with the map header on
+desktop and mobile. The header reserves space for the button. Satellite imagery
+is the only basemap; the street-map selector and on-screen zoom buttons are
+removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
+
+The map attribution control is disabled in every build at the owner's request
+for design review. Layer attribution metadata is retained. Restore the control
+before publishing a version using the current imagery providers.

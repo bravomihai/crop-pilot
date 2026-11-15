@@ -1,68 +1,18 @@
+/* Chart colours retain their existing light and dark palettes. */
 :root {
-  --surface-muted: #f1f5f9;
   --chart-blue: #2563eb;
   --chart-teal: #0f766e;
   --chart-orange: #b45309;
   --chart-purple: #7e22ce;
-  --chart-grid: #dbe3ee;
-  --warning-bg: #fffbeb;
-  --warning-text: #854d0e;
-  --warning-border: #fde68a;
-  --positive-bg: #f0fdf4;
-  --positive-text: #166534;
-  --error-bg: #fef2f2;
-  --error-text: #991b1b;
-  --soft-blue: #eff6ff;
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --background: #0b1220;
-  --surface: #111d30;
-  --surface-muted: #1d2b40;
-  --ink: #e2e8f0;
-  --muted: #b2c0d3;
-  --blue: #93c5fd;
-  --border: #35445c;
-  --chart-blue: #93c5fd;
-  --chart-teal: #5eead4;
-  --chart-orange: #fdba74;
-  --chart-purple: #d8b4fe;
-  --chart-grid: #35445c;
-  --warning-bg: #302716;
-  --warning-text: #fde68a;
-  --warning-border: #806329;
-  --positive-bg: #132c23;
-  --positive-text: #86efac;
-  --error-bg: #351d25;
-  --error-text: #fca5a5;
-  --soft-blue: #192d49;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --background: #0b1220;
-    --surface: #111d30;
-    --surface-muted: #1d2b40;
-    --ink: #e2e8f0;
-    --muted: #b2c0d3;
-    --blue: #93c5fd;
-    --border: #35445c;
+  :root {
     --chart-blue: #93c5fd;
     --chart-teal: #5eead4;
     --chart-orange: #fdba74;
     --chart-purple: #d8b4fe;
-    --chart-grid: #35445c;
-    --warning-bg: #302716;
-    --warning-text: #fde68a;
-    --warning-border: #806329;
-    --positive-bg: #132c23;
-    --positive-text: #86efac;
-    --error-bg: #351d25;
-    --error-text: #fca5a5;
-    --soft-blue: #192d49;
   }
 }
-
 /* Existing dashboard surfaces follow the same theme variables as the new charts. */
 .dashboard-sidebar,
 .dashboard-topbar,
@@ -1212,12 +1162,10 @@
 .glance-note { color: var(--muted); }
 .glance-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 .glance-actions .print-sheet-button { margin: 0; }
-.glance-link, .back-to-summary { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 12px; border-radius: 8px; background: #123c2f; color: #ffffff !important; font-size: 12px; font-weight: 600; text-decoration: none; }
-.back-to-summary { background: transparent; color: #123c2f !important; border: 1px solid #123c2f; }
-.glance-link:focus-visible, .back-to-summary:focus-visible { outline: 2px solid #123c2f; outline-offset: 2px; }
+.glance-link { display: inline-flex; align-items: center; min-height: 34px; padding: 6px 12px; border-radius: 8px; background: #123c2f; color: #ffffff !important; font-size: 12px; font-weight: 600; text-decoration: none; }
+.glance-link:focus-visible { outline: 2px solid #123c2f; outline-offset: 2px; }
 .plan-details { scroll-margin-top: 12px; }
 .details-title { margin: 24px 0 8px; font-size: 15px; }
-.plan-details > .back-to-summary { margin-top: 14px; }
 .results-end { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 .results-end .print-sheet-button { margin: 0; }
 .plan-summary { margin: 12px 0 0; font-size: 12px; }
@@ -1230,7 +1178,6 @@
 .how-calculated > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #123c2f; }
 .how-calculated .source-details { margin-top: 14px; }
 .how-calculated .source-details h3 { font-size: 12px; margin: 0 0 8px; color: var(--ink); }
-.how-calculated > .back-to-summary { margin-top: 14px; }
 @media (max-width: 640px) { .glance-facts > div { grid-template-columns: 1fr; gap: 4px; } }
 
 /* Full-screen results panel. */
@@ -1240,7 +1187,7 @@
 .map-results-panel.is-fullscreen .map-results-scroll { padding: 24px max(28px, calc((100vw - 1200px) / 2)); }
 .map-results-panel.is-fullscreen .map-results-scroll p, .map-results-panel.is-fullscreen .map-results-scroll li { font-size: 13px; }
 @media print {
-  .glance-actions, .back-to-summary, .results-end, .fullscreen-toggle { display: none !important; }
+  .glance-actions, .results-end, .fullscreen-toggle { display: none !important; }
 }
 
 /* The panel itself never scrolls; only its results list does. */
