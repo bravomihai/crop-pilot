@@ -189,5 +189,6 @@ desktop and mobile. The header reserves space for the button. Satellite imagery
 is the only basemap; the street-map selector and on-screen zoom buttons are
 removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
 
-Map attribution appears at the bottom left in the active theme. The optional
-Leaflet branding is removed; imagery-provider and enabled-overlay credits remain.
+The map attribution control is disabled in every build at the owner's request
+for design review. Layer attribution metadata is retained. Restore the control
+before publishing a version using the current imagery providers.
