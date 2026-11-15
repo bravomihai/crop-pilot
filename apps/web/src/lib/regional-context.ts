@@ -46,6 +46,10 @@ export const GIBS_CHOICES = [
     label: "MODIS daytime land surface temperature",
   },
   { id: "IMERG_Precipitation_Rate", label: "GPM IMERG precipitation rate" },
+  {
+    id: "MODIS_Terra_L3_NDVI_16Day",
+    label: "MODIS vegetation index (NDVI, 16-day)",
+  },
 ] as const;
 export type GibsMetadata = {
   id: string;

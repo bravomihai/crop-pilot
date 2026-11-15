@@ -93,7 +93,7 @@ export default function RegionalMapContext({
         const layers = parseGibsCapabilities(xml);
         setMetadata(layers);
         setCatalogStatus(
-          layers.length === 3
+          layers.length === GIBS_CHOICES.length
             ? "Availability and legends read from NASA GIBS capabilities."
             : "Some requested NASA layers are unavailable in the capabilities document.",
         );
@@ -205,8 +205,9 @@ export default function RegionalMapContext({
       <h3 id={`${id}-title`}>NASA regional context</h3>
       <p>
         <strong>Regional context (km-scale), not a field measurement.</strong>{" "}
-        These dated NASA overlays are separate from the dashboard's fictional
-        KPI cards and crop scores.
+        These NASA satellite pictures show the region on a chosen date. The crop
+        plans are calculated separately, from NASA POWER weather, soil and slope
+        data at your point.
       </p>
       {location && !isCovered(location) && (
         <p className="coverage-warning" role="status">
