@@ -99,3 +99,38 @@ def test_outside_zone_message_reaches_the_result(environment):
     out = computed_result(request, "cluj", environment, load_rules(request["location"]), evaluate)
     assert out["status"] == "insufficient_data"
     assert any("outside the zones" in gap for gap in out["data_gaps"])
+
+
+def test_replay_seasons_carry_the_historical_start_date_for_fair_comparison(result):
+    """Survival Mode compares plans on the same past season: `field_free_from` lines them up.
+
+    Plans may sow their first crop in different years (autumn wheat vs spring maize), so
+    `season_start_year` alone would pair different historical windows.
+    """
+    request = example("recommendation-request.full")
+    free = request["available_from"]
+    plans = result["plans"] + [result["baseline"]]
+    for plan in plans:
+        for season in plan["replay"]:
+            start = season["field_free_from"]
+            assert start[4:] == free[4:]  # same month and day, moved back whole years
+            first_sowing_year = int(plan["steps"][0]["sowing_window"]["start"][:4])
+            shift = int(free[:4]) - int(start[:4])
+            assert season["season_start_year"] == first_sowing_year - shift
+    # Every plan's replay starts from dates drawn from the same set of past years.
+    shared = set.intersection(*({s["field_free_from"] for s in p["replay"]} for p in plans))
+    assert len(shared) >= 10
+
+
+def test_replay_start_date_is_checked_and_passed_through():
+    raw = {
+        "feasibility": "unknown",
+        "replay": [
+            {"season_start_year": 2012, "field_free_from": "2011-10-01", "scores": {"water": 0.5}},
+            {"season_start_year": 2013, "field_free_from": "not-a-date", "scores": {"water": 0.5}},
+            {"season_start_year": 2014, "scores": {"water": 0.4}},
+        ],
+    }
+    evaluation = parse_evaluation(raw, ("winter_wheat", "maize", "soybean"))
+    assert [s.get("field_free_from") for s in evaluation.replay] == ["2011-10-01", None]
+    assert sum("replay season dropped" in e for e in evaluation.contract_errors) == 1

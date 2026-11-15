@@ -14,14 +14,17 @@ returned. Since the merge of `main` (contract update of 2026-11-14) it also supp
 optional `productivity` priority, `current_rotation` → `baseline`, `history[].source`,
 and the plan fields `scores`, `local_checks` and `violations` (see section 9).
 
-**Computed mode is still not available over HTTP**, because P2's `build_environment` is
-disabled and `ENGINE_MODE=computed` keeps returning HTTP 503. A test checks this.
+**Computed mode works over HTTP with live P2 data** (NASA POWER, SoilGrids, SRTM slope):
+it was verified live through the Next.js route and in a browser (see `docs/status.md`).
+It still fails explicitly with HTTP 503, never falling back to demo, when the data
+service is switched off (`ENABLE_NASA_POWER` not `true`); a test checks this.
 
 P3's real evaluator is now merged. With the historical NASA POWER fixture standing in for
 P2, the real P3 and P4 modules work together and produce contract-valid results; see "P3–P4
 integration audit" below.
 
-The merged API and frontend accept and display these real results without loss. One display issue remains and belongs to P1; see "Full-stack integration audit".
+The merged API and frontend accept and display these real results without loss; the one
+display issue found in the "Full-stack integration audit" has since been fixed.
 
 P4's algorithm tests still use a **synthetic evaluator** (`tests/fake_evaluator.py`).
 Its outputs are marked `fixture: true`, and the pipeline refuses to return them as
@@ -399,8 +402,9 @@ No P3 defect was confirmed. These are notes, each with a way to reproduce it:
 ### Still depends on others
 
 - **P2:** a validated `build_environment`, returning `daily`, `static`, `sources` with
-  titles, and `data_gaps`. Until then computed mode returns 503 over HTTP. The fixture
-  covers one test point with no SoilGrids, SMAP or SRTM data.
+  titles, and `data_gaps`. At the time of this audit computed mode returned 503 over HTTP;
+  this was resolved when P2's data service was merged (PR #7). The fixture covers one test
+  point with no SoilGrids, SMAP or SRTM data.
 - **P3:** agronomist review of calendars, successions and thresholds. Coverage is one
   zone (southern plains) with 7 crops.
 
@@ -584,7 +588,16 @@ services/engine/.venv/Scripts/python.exe -m pytest services/engine/tests
 `uv` was not installed on this machine. The pinned `uv==0.9.5` was installed into a
 temporary folder only to run the sync. The `.venv` it created is gitignored.
 
-**Latest result (merge with `main` incl. PR #7, 2026-11-14): 213 passed, 0 failed**, about 55 s; web `test:backend` 84/84, `test:ui` 26/26, TypeScript passes. Previous result (full-stack audit): 176 passed, 0 failed in about 43 s. That is the 162 below plus `test_p4_web_integration.py` (14). Web checks in the same audit: contracts and web TypeScript passed, `test:backend` 82/82, `test:ui` 25/25. Schema regeneration produced identical content; only line endings differed, so the committed files were restored.
+**Latest result (`main` after PR #10 plus the bare-soil and print-sheet changes, 2026-11-15):
+228 passed, 0 failed**; web `test:backend` 96/96, `test:ui` 33/33, TypeScript and the
+production build pass; CI on GitHub passed for PR #10 and `main`.
+
+Changes since the previous entry: the soil score counts the time from `available_from` to
+the first sowing as bare soil (P3, `scoring.soil_index`), so a plan that leaves the field
+empty for months before its first crop no longer looks as well covered as one that starts
+at once; the timeline shows that period, and the printed sheet lists the entered inputs.
+
+Earlier result (merge with `main` incl. PR #7, 2026-11-14): **213 passed, 0 failed**, about 55 s; web `test:backend` 84/84, `test:ui` 26/26, TypeScript passes. Previous result (full-stack audit): 176 passed, 0 failed in about 43 s. That is the 162 below plus `test_p4_web_integration.py` (14). Web checks in the same audit: contracts and web TypeScript passed, `test:backend` 82/82, `test:ui` 25/25. Schema regeneration produced identical content; only line endings differed, so the committed files were restored.
 
 Previous result (P3–P4 audit): 162 passed, 0 failed, in about 81 s:
 
@@ -649,7 +662,8 @@ FastAPI server, Docker, PostgreSQL, live NASA calls.
 
 ## Known limitations
 
-- Every agronomic result depends on P3. With the stub evaluator, computed mode returns 503.
+- Every agronomic result depends on P3's rules and models, which still await agronomist
+  review; outside the described southern zone the rules are provisional (confidence "low").
 - The search is exhaustive only up to 1,500 sequences per climate condition. Beyond that
   it evaluates a deterministic sample, which is disclosed. There is no prefix pruning,
   because the evaluator only scores full rotations.

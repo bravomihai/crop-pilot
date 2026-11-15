@@ -14,6 +14,8 @@ import Calculator from "../src/components/calculator";
 import CurrentRotationInput from "../src/components/current-rotation-input";
 import ReplayChart from "../src/components/charts/replay-chart";
 import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
+import { RevealPanel, SurvivalPanel } from "../src/components/survival-mode";
+import { buildChallenge, revealChoice } from "../src/lib/survival";
 import { fullExampleRequest } from "../src/lib/api";
 import {
   DEFAULT_FARMING_PRIORITIES,
@@ -119,6 +121,40 @@ test("the past-season replay says when a hypothetical scenario was applied", () 
     ),
   );
   assert.ok(!render({ temp_change_c: 0, rain_change_pct: 0 }).includes("hypothetical scenario ("));
+});
+
+test("the printed sheet lists what was entered", () => {
+  const full = resultSchema.parse(
+    JSON.parse(
+      readFileSync(
+        new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
+  const request = {
+    ...fullExampleRequest,
+    current_rotation: ["maize", "winter_wheat"],
+    constraints: { ...fullExampleRequest.constraints, excluded_crops: ["pea"] },
+    scenario: { temp_change_c: 2, rain_change_pct: -20 },
+  };
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: full, busy: false, error: "", request, onRecalculate: () => {} }),
+  );
+  assert.match(html, /class="request-summary print-only"/);
+  for (const text of [
+    "What was entered",
+    `Field available from</dt><dd>${request.available_from}`,
+    "Maize → Winter wheat",
+    "Crops avoided</dt><dd>Pea",
+    "+2 °C, -20% rain (hypothetical, not a forecast)",
+    `reference ${full.request_id}`,
+  ])
+    assert.ok(html.includes(text), text);
+  const without = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: full, busy: false, error: "", onRecalculate: () => {} }),
+  );
+  assert.doesNotMatch(without, /What was entered/);
 });
 
 test("rotation result cards do not manufacture missing alternatives", () => {
@@ -376,4 +412,82 @@ test("results explain the terms the challenge names, in plain words", async () =
     assert.match(html, new RegExp(term));
   assert.ok(GLOSSARY.length >= 8 && CROP_ROLES.length >= 4);
   assert.ok(CROP_ROLES.some((entry) => /Legumes/.test(entry.role)));
+});
+
+const survivalFixture = () =>
+  resultSchema.parse(
+    JSON.parse(
+      readFileSync(new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url), "utf8"),
+    ),
+  );
+
+test("results offer a 'Challenge my plan' button that controls Survival Mode", () => {
+  const full = survivalFixture();
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: full, busy: false, error: "", request: fullExampleRequest, onRecalculate: () => {} }),
+  );
+  assert.match(html, /<button type="button" class="button button--primary survival-cta-button" aria-expanded="false">Challenge my plan<\/button>/);
+  assert.match(html, /aria-labelledby="survival-cta-title"/);
+  // No plans, nothing to challenge.
+  const empty = { ...full, status: "insufficient_data" as const, plans: [], baseline: undefined };
+  const none = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: empty, busy: false, error: "", onRecalculate: () => {} }),
+  );
+  assert.doesNotMatch(none, /Challenge my plan/);
+});
+
+test("Survival Mode renders accessible challenge cards, evidence, comparison and a labelled decision", () => {
+  const html = renderToStaticMarkup(
+    createElement(SurvivalPanel, { result: survivalFixture(), request: fullExampleRequest, initialChallenge: "drought" }),
+  );
+  const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  for (const expected of [
+    "Survival Mode",
+    "Test your crop rotation against history",
+    "Demo · fictional weather and scores",
+    "Worst drought",
+    "Extreme heat",
+    "Unpredictable rainfall",
+    "Water deficit (ET₀ − rain)",
+    "This compares historical conditions, not a prediction of future harvests.",
+    "Demo mode: the weather values and scores are fictional",
+  ])
+    assert.ok(text.includes(expected), expected);
+  assert.match(html, /role="group" aria-label="Choose a historical challenge"/);
+  assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 1);
+  assert.equal((html.match(/aria-pressed="false"/g) ?? []).length, 2);
+  assert.match(html, /class="survival-year">2012</);
+  // Every bar has a text alternative; the decision is a labelled radio group.
+  assert.match(html, /role="img" aria-label="Water score in 2012, Your current rotation: \d+ out of 100"/);
+  assert.match(html, /<fieldset><legend>[^<]+<\/legend>/);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
+  assert.match(html, /<label class="survival-mine" for="survival-mine">/);
+  assert.match(html, /<button type="submit" class="button button--primary" disabled="">Reveal what happened in 2012<\/button>/);
+  assert.match(html, /aria-live="polite"/);
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(ids.length, new Set(ids).size);
+  for (const match of html.matchAll(/aria-labelledby="([^"]+)"/g)) assert.ok(ids.includes(match[1]), match[1]);
+});
+
+test("Survival Mode explains an unavailable challenge instead of guessing", () => {
+  const full = survivalFixture();
+  for (const year of full.climate_context!.years) year.hot_days_gt32 = null;
+  const html = renderToStaticMarkup(
+    createElement(SurvivalPanel, { result: full, request: fullExampleRequest, initialChallenge: "heat" }),
+  );
+  assert.match(html, /Extreme heat cannot be tested fairly\./);
+  assert.match(html, /Hot-day counts are not available for any year/);
+  assert.doesNotMatch(html, /type="radio"/);
+});
+
+test("the reveal states the result, trade-offs and the disclaimer from engine data", () => {
+  const full = survivalFixture();
+  const challenge = buildChallenge("drought", full, fullExampleRequest);
+  assert.ok(challenge.available);
+  const reveal = revealChoice(challenge, "baseline", full.plans[0].id)!;
+  const html = renderToStaticMarkup(createElement(RevealPanel, { challenge, reveal }));
+  assert.ok(html.includes(reveal.takeaway.replace(/&/g, "&amp;")));
+  assert.match(html, /You switched to Plan 1/);
+  assert.match(html, /This compares historical conditions, not a prediction of future harvests\./);
+  assert.match(html, /<span class="sr-only">Key takeaway: <\/span>/);
 });

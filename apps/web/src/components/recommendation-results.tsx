@@ -10,6 +10,8 @@ import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
 import AiSummary, { PrintSheetButton } from "./ai-summary";
+import RequestSummary from "./request-summary";
+import SurvivalMode from "./survival-mode";
 
 export default function RecommendationResults({
   result,
@@ -91,6 +93,7 @@ export default function RecommendationResults({
           className={busy ? "result-body is-recalculating" : "result-body"}
           aria-busy={busy}
         >
+          <RequestSummary request={request} result={result} />
           {result.mode === "demo" && (
             <Notice title="Demo · fictional results" tone="warning">
               The crops, dates, and explanations are examples. They are not
@@ -124,8 +127,13 @@ export default function RecommendationResults({
               </p>
             ))}
           <AiSummary result={result} />
+          <SurvivalMode result={result} request={request} />
           <ScoreComparison plans={result.plans} baseline={result.baseline} />
-          <RotationTimeline plans={result.plans} baseline={result.baseline} />
+          <RotationTimeline
+            plans={result.plans}
+            baseline={result.baseline}
+            availableFrom={request?.available_from}
+          />
           <PlanReplay result={result} scenario={request?.scenario} />
           <ClimateCard result={result} />
           {result.baseline && (

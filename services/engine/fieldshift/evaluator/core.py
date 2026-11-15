@@ -377,7 +377,10 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
 
     # 2. Soil (structure of the rotation; no weather needed).
     soil_in = _soil_inputs(request, environment, settings)
-    soil = scoring.soil_index(steps, checked["classes"], crops, rules, _slope(environment))
+    soil = scoring.soil_index(
+        steps, checked["classes"], crops, rules, _slope(environment),
+        field_free=date.fromisoformat(request["available_from"]),
+    )
     if _slope(environment) is None and not any(
         "srtm" in gap.lower() for gap in environment.get("data_gaps", [])
     ):
@@ -394,10 +397,15 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         f"{succession_text[0].upper()}{succession_text[1:]}; {len(soil['families'])} plant families"
         f"{', including a legume that adds nitrogen' if soil['legume'] else ', no legume'}; "
         f"bare soil about {round(soil['bare_days'] / 30)} of {round(soil['total_days'] / 30)} months"
+        f"{f' (about {round(initial / 30)} before the first crop)' if (initial := soil['initial_bare_days']) >= 60 else ''}"
         f"{'; erosion risk from the slope included' if comp.get('erosion') is not None else ''}."
     )
     if soil["bare_days"] > 0.3 * soil["total_days"]:
-        local_checks.append("Consider a cover crop in the long gaps between main crops to protect the soil.")
+        local_checks.append(
+            "Consider a cover crop in the long gaps between main crops to protect the soil."
+            if soil["initial_bare_days"] < 60
+            else "Consider a cover crop while the field waits for its first main crop, and in long gaps between crops."
+        )
 
     # 3. Replay over past seasons.
     elevation = _elevation(environment)
@@ -456,7 +464,12 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
         for k in shifts:
             seasons = rainfed["runs"][k]["seasons"]
             irr_seasons = irrigated_runs["runs"][k]["seasons"] if irrigated_runs else None
-            row = {"season_start_year": steps[0].sow_start.year - k, "steps": []}
+            row = {
+                "season_start_year": steps[0].sow_start.year - k,
+                # Same start date = same historical weather for every plan (fair comparison).
+                "field_free_from": schedule.shift_years(available_from, k).isoformat(),
+                "steps": [],
+            }
             w_vals, c_vals, p_vals = [], [], []
             for i, (step, season) in enumerate(zip(steps, seasons)):
                 crop = crops[step.crop_id]
