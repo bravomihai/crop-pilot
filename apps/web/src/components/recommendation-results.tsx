@@ -33,6 +33,24 @@ export default function RecommendationResults({
   onRecalculateMoney?: (inputs: RecommendationRequest["money_inputs"]) => void;
   onCancel?: () => void;
 }) {
+  if (busy && !result) {
+    return (
+      <section className="results" id="results" aria-label="Preparing crop plans">
+        <div className="empty-state results-loading">
+          <span className="results-loading-icon" aria-hidden="true">
+            <span className="spinner spinner--large" />
+          </span>
+          <p role="status">Preparing your comparison…</p>
+          {onCancel && (
+            <button className="cancel-calculation" type="button" onClick={onCancel}>
+              Cancel calculation
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   if (error && !result) {
     return (
       <section className="results" id="results" aria-label="Planning problem">
@@ -73,23 +91,9 @@ export default function RecommendationResults({
       )}
       {!result && (
         <div className="empty-state">
-          {busy ? (
-            <span className="spinner spinner--large" aria-hidden="true" />
-          ) : (
-            <span className="empty-state-symbol" aria-hidden="true">
-              ↗
-            </span>
-          )}
-          <h3>
-            {busy
-              ? "Preparing your comparison…"
-              : "Your plans will appear here"}
-          </h3>
-          <p>
-            {busy
-              ? "Your form entries are retained while the planner responds."
-              : "Submit the planning form to see the available rotation alternatives."}
-          </p>
+          <span className="empty-state-symbol" aria-hidden="true">↗</span>
+          <h3>Your plans will appear here</h3>
+          <p>Submit the planning form to see the available rotation alternatives.</p>
         </div>
       )}
       {result && (

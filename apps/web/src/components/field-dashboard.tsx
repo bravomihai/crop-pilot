@@ -209,7 +209,7 @@ export default function FieldDashboard() {
           </div>
         </header>
         <div className="map-results-scroll" tabIndex={0} role="region" aria-label="Crop plan results">
-          {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
+          {busy && result && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
           <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onRecalculateMoney={recalculateMoney} onCancel={cancel} />
         </div>
       </section>
