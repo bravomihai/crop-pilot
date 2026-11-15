@@ -775,3 +775,8 @@ vertically centered alignment and a 20 px gap. The desktop footer has a 22 px
 bottom inset. Mobile retains its 31 px bottom inset and hides the signature as
 before. Verified with a whitespace check; visual review remains with the owner
 as requested.
+
+
+Footer integration with current main verified with TypeScript, 52 UI tests and
+whitespace checks. The README update and previously merged results styling are
+preserved. Browser appearance remains for owner review.
