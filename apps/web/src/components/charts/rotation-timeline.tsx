@@ -1,4 +1,4 @@
-import type { RotationPlan } from "@fieldshift/contracts";
+import type { RotationPlan } from "@croppilot/contracts";
 import {
   bareGaps,
   DAY,

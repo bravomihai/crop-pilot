@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { RecommendationRequest } from "@fieldshift/contracts";
+import type { RecommendationRequest } from "@croppilot/contracts";
 
 export default function ResultsWhatIf({
   request,

@@ -1,7 +1,7 @@
 import type {
   RecommendationResult,
   RecommendationRequest,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import PlanCard from "./plan-card";
 import Notice from "./ui/notice";
 import ScoreComparison from "./charts/score-comparison";
@@ -9,7 +9,8 @@ import RotationTimeline from "./charts/rotation-timeline";
 import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
-import AiSummary, { PrintSheetButton } from "./ai-summary";
+import { PrintSheetButton } from "./ai-summary";
+import ResultsAtAGlance, { BackToSummary } from "./results-at-a-glance";
 import RequestSummary from "./request-summary";
 import SurvivalMode from "./survival-mode";
 
@@ -43,14 +44,6 @@ export default function RecommendationResults({
           <span className="count-badge">{result.plans.length} / 3 plans</span>
         )}
       </div>
-      {result && request && onRecalculate && (
-        <ResultsWhatIf
-          request={request}
-          busy={busy}
-          onRecalculate={onRecalculate}
-          onCancel={onCancel}
-        />
-      )}
       <p className="sr-only" role="status">
         {busy
           ? "Preparing results. You can stop waiting using the form."
@@ -110,15 +103,15 @@ export default function RecommendationResults({
               tone="warning"
             >
               {result.status === "limited"
-                ? "Fewer than three alternatives are available. Review the missing data and assumptions below."
+                ? "Fewer than three alternatives are available. See “How this was calculated” below for what is missing."
                 : "The available data cannot support any plans. Review the missing information before trying again."}
             </Notice>
           )}
           {!result.baseline &&
             (request?.current_rotation?.length ? (
               <p className="baseline-hint">
-                Your current rotation could not be evaluated for comparison. See
-                Missing data below for the reason.
+                Your current rotation could not be evaluated for comparison. See “How
+                this was calculated” below for the reason.
               </p>
             ) : (
               <p className="baseline-hint">
@@ -126,80 +119,99 @@ export default function RecommendationResults({
                 today.
               </p>
             ))}
-          <AiSummary result={result} />
+          <ResultsAtAGlance result={result} />
           <SurvivalMode result={result} request={request} />
-          <ScoreComparison plans={result.plans} baseline={result.baseline} />
-          <RotationTimeline
-            plans={result.plans}
-            baseline={result.baseline}
-            availableFrom={request?.available_from}
-          />
-          <PlanReplay result={result} scenario={request?.scenario} />
-          <ClimateCard result={result} />
-          {result.baseline && (
-            <div className="baseline-container">
-              <PlanCard plan={result.baseline} baseline />
-            </div>
-          )}
-          {result.plans.length > 0 && (
-            <div className="plans">
-              {result.plans.map((plan, index) => (
-                <PlanCard key={plan.id} plan={plan} number={index + 1} />
-              ))}
-            </div>
-          )}
-          <div className="result-context">
-            <section aria-labelledby="assumptions-title">
-              <h3 id="assumptions-title">Assumptions</h3>
-              {result.assumptions.length ? (
-                <ul>
-                  {result.assumptions.map((text, index) => (
-                    <li key={index}>{text}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No additional assumptions are reported.</p>
-              )}
-            </section>
-            <section aria-labelledby="gaps-title">
-              <h3 id="gaps-title">Missing data</h3>
-              {result.data_gaps.length ? (
-                <ul>
-                  {result.data_gaps.map((text, index) => (
-                    <li key={index}>{text}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No missing data is reported in this response.</p>
-              )}
-            </section>
-          </div>
-          <details className="source-details">
-            <summary>Sources and result details</summary>
-            {result.sources.length ? (
-              <ul>
-                {result.sources.map((source) => (
-                  <li key={source.id}>
-                    {source.url ? (
-                      <a href={source.url} target="_blank" rel="noreferrer">
-                        {source.title}
-                        <span className="sr-only"> (opens in a new tab)</span>
-                      </a>
-                    ) : (
-                      source.title
-                    )}
-                    {source.resolution && ` · ${source.resolution}`}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No sources are reported in this response.</p>
+          <section className="plan-details" id="plan-details" tabIndex={-1} aria-labelledby="plan-details-title">
+            <h3 id="plan-details-title" className="details-title">The plans in detail</h3>
+            <ScoreComparison plans={result.plans} baseline={result.baseline} />
+            <RotationTimeline
+              plans={result.plans}
+              baseline={result.baseline}
+              availableFrom={request?.available_from}
+            />
+            {result.baseline && (
+              <div className="baseline-container">
+                <PlanCard plan={result.baseline} baseline />
+              </div>
             )}
-            <p className="request-id">Request reference: {result.request_id}</p>
+            {result.plans.length > 0 && (
+              <div className="plans">
+                {result.plans.map((plan, index) => (
+                  <PlanCard key={plan.id} plan={plan} number={index + 1} />
+                ))}
+              </div>
+            )}
+            <PlanReplay result={result} scenario={request?.scenario} />
+            <ClimateCard result={result} />
+            {result.plans.length > 0 && <BackToSummary />}
+          </section>
+          {request && onRecalculate && (
+            <ResultsWhatIf
+              request={request}
+              busy={busy}
+              onRecalculate={onRecalculate}
+              onCancel={onCancel}
+            />
+          )}
+          <details className="how-calculated">
+            <summary>How this was calculated: assumptions, all missing data and sources</summary>
+            <div className="result-context">
+              <section aria-labelledby="assumptions-title">
+                <h3 id="assumptions-title">Assumptions</h3>
+                {result.assumptions.length ? (
+                  <ul>
+                    {result.assumptions.map((text, index) => (
+                      <li key={index}>{text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No additional assumptions are reported.</p>
+                )}
+              </section>
+              <section aria-labelledby="gaps-title">
+                <h3 id="gaps-title">Missing data</h3>
+                {result.data_gaps.length ? (
+                  <ul>
+                    {result.data_gaps.map((text, index) => (
+                      <li key={index}>{text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No missing data is reported in this response.</p>
+                )}
+              </section>
+            </div>
+            <section className="source-details" aria-labelledby="sources-title">
+              <h3 id="sources-title">Sources</h3>
+              {result.sources.length ? (
+                <ul>
+                  {result.sources.map((source) => (
+                    <li key={source.id}>
+                      {source.url ? (
+                        <a href={source.url} target="_blank" rel="noreferrer">
+                          {source.title}
+                          <span className="sr-only"> (opens in a new tab)</span>
+                        </a>
+                      ) : (
+                        source.title
+                      )}
+                      {source.resolution && ` · ${source.resolution}`}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No sources are reported in this response.</p>
+              )}
+              <p className="request-id">Request reference: {result.request_id}</p>
+            </section>
+            <BackToSummary />
           </details>
           <Glossary />
           <p className="result-disclaimer">{result.disclaimer}</p>
-          {result.mode === "computed" && result.plans.length > 0 && <PrintSheetButton />}
+          <div className="results-end">
+            {result.plans.length > 0 && <BackToSummary />}
+            {result.mode === "computed" && result.plans.length > 0 && <PrintSheetButton />}
+          </div>
         </div>
       )}
     </section>

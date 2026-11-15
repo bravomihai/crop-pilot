@@ -6,7 +6,7 @@
 | P2 data | `services/engine/fieldshift/data_service` | Daily data, units, quality, sources, and public-data cache |
 | P3 agronomy | `services/engine/fieldshift/evaluator` | Regional rules, calendar, checks against actual history, and criterion evaluation |
 | P4 recommendations | `services/engine/fieldshift/recommender`, `pipeline.py` | Generation and comparison of three plans containing three crops each |
-| P5 backend | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra` | Validation, Python HTTP integration, Prisma/PostgreSQL cache, and AWS |
+| P5 backend | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra` | Validation, Python HTTP integration, Prisma/PostgreSQL cache, and VPS hosting |
 
 ## Parallel development
 
@@ -21,8 +21,8 @@ P3/P4 must agree on an intermediate evaluation contract before implementing chan
 The public request/result contract is already shared and checked in both languages.
 
 The first coverage area is the southern and south-eastern plains (Romanian Plain,
-Bărăgan, Dobrogea), using the main field crops. Fundulea is only the example test
-point. Return `insufficient_data` outside covered zones. An example locality does not
+Bărăgan, Dobrogea), using the main field crops. The example field in the Romanian Plain
+is only a test point. Return `insufficient_data` outside covered zones. An example locality does not
 establish agronomic validation.
 
 The new optional contract fields (`current_rotation`/`baseline`, `plan.scores`,

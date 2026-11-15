@@ -5,7 +5,7 @@
 		exclude http.log.access http.log.error
 	}
 }
-fieldshift.example.com {
+croppilot.example.com {
 	header {
 		-Server
 		X-Content-Type-Options nosniff

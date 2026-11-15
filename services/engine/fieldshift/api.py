@@ -1,5 +1,6 @@
 """Internal service. Public farmers use the Next.js endpoint, without accounts."""
 
+import logging
 import os
 import secrets
 import uuid
@@ -9,7 +10,7 @@ from .geography import UnsupportedLocationError
 from .pipeline import recommend
 
 app = FastAPI(
-    title="FieldShift engine",
+    title="CropPilot engine",
     docs_url="/docs" if os.getenv("ENABLE_ENGINE_DOCS") == "true" else None,
     redoc_url=None,
 )
@@ -26,7 +27,7 @@ def authorize(authorization: str | None = Header(default=None)):
 @app.get("/health")
 def health():
     return {
-        "service": "fieldshift-engine",
+        "service": "croppilot-engine",
         "contract_version": "1.0",
         "mode": os.getenv("ENGINE_MODE", "demo"),
     }
@@ -48,6 +49,8 @@ def recommendations(request: dict, x_request_id: str | None = Header(default=Non
             503, "Scientific engine is not ready; explicitly use demo mode"
         )
     except Exception:
+        # The traceback only (no request body), so failures can be diagnosed.
+        logging.getLogger("croppilot.engine").exception("Recommendation failed")
         raise HTTPException(502, "Environmental analysis could not be completed")
     if validate("recommendation-result", result):
         raise HTTPException(500, "Engine output does not match the shared contract")

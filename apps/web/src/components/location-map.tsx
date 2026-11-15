@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, CircleMarker, Polygon } from "leaflet";
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 import RegionalMapContext from "./regional-map-context";
 import type { Coordinate } from "@/lib/parcel-geometry";
 export default function LocationMap({

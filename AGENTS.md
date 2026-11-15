@@ -1,4 +1,4 @@
-# FieldShift: instructions for agents and contributors
+# CropPilot: instructions for agents and contributors
 
 ## Project language
 
@@ -56,7 +56,7 @@ row colors and the geographic imagery. Keep demo results visibly labelled as fic
 - `packages/contracts/schemas/`: GENERATED JSON Schema for Python; do not edit by hand.
 - `packages/contracts/examples/`: fictional requests and results for independent development.
 - `docs/`: architecture, API, implementation status, and team responsibilities.
-- `infra/`: AWS guidance, reverse proxy, deployment configuration, and the CI reference copy
+- `infra/`: VPS guidance, reverse proxy, deployment configuration, and the CI reference copy
   in `infra/ci/checks.yml.example`.
 - `.github/workflows/checks.yml`: backend, contracts, PostgreSQL, and Docker build checks
   prepared for pushes and pull requests.
@@ -89,7 +89,7 @@ integration separately. A fixture passing the schema does not prove a working fl
 ## Contracts and implementation rules
 
 - Change the Zod source, run `pnpm contracts:generate`, and update examples in the same commit.
-- Do not duplicate TypeScript interfaces by hand in the frontend/backend; import `@fieldshift/contracts`.
+- Do not duplicate TypeScript interfaces by hand in the frontend/backend; import `@croppilot/contracts`.
 - Coordinates are `latitude`, `longitude`; Leaflet receives `[lat, lon]`.
 - Dates use ISO `YYYY-MM-DD`, with explicit units. Unknown does not mean zero.
 - Preserve pre-plan history and check transitions/calendars, including autumn crops.

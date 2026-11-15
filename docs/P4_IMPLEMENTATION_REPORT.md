@@ -763,7 +763,7 @@ user-facing Romanian, for the owners to translate:
 ## Remaining work
 
 1. Agree on the P3–P4 contract, then replace the fake evaluator in an integration test
-   with P3's real evaluator on the Fundulea case.
+   with P3's real evaluator on the example case.
 2. Calibrate the selection thresholds with P3 and real candidate pools. Add crop families
    to the diversity metric.
 3. Enable computed mode only after P2 and P3 are verified. Then update `docs/status.md`

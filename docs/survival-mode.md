@@ -88,8 +88,11 @@ alignment was derived. Without the request date such seasons are not used.
 The farmer's rotation defaults to the current rotation (or Plan 1 when there is none)
 and can be changed. The question is built from the season scores: whether that rotation
 led or fell behind the best rotation of that season. After a choice, the reveal states
-which did better and by how many points, where the alternative is weaker (lower overall
-P3 scores, lower other season scores), P4's own trade-off notes, and:
+which scored higher and by how many points, where the alternative is weaker (lower overall
+P3 scores, lower other season scores) and P4's own trade-off notes. A gap of fewer than 5 points
+out of 100 (`SMALL_DIFFERENCE_POINTS`) is described as a small difference for a single
+season, not as one rotation struggling; this changes only the wording, never a score or
+ranking. Every reveal ends with:
 
 > This compares historical conditions, not a prediction of future harvests.
 

@@ -1,19 +1,21 @@
 {
-  "name": "fieldshift",
+  "name": "croppilot",
   "private": true,
   "packageManager": "pnpm@10.11.0",
   "engines": {
     "node": ">=22.12.0 <25"
   },
   "scripts": {
-    "dev": "pnpm --filter @fieldshift/web dev",
-    "build": "pnpm contracts:generate && pnpm --filter @fieldshift/web build",
-    "typecheck": "pnpm --filter @fieldshift/contracts typecheck && pnpm --filter @fieldshift/web typecheck",
-    "contracts:generate": "pnpm --filter @fieldshift/contracts generate",
-    "db:generate": "pnpm --filter @fieldshift/web db:generate",
-    "db:migrate": "pnpm --filter @fieldshift/web db:migrate",
-    "db:deploy": "pnpm --filter @fieldshift/web db:deploy",
-    "test:backend": "pnpm --filter @fieldshift/web test:backend",
-    "test:cache": "pnpm --filter @fieldshift/web test:cache"
+    "dev": "pnpm --filter @croppilot/web dev",
+    "build": "pnpm contracts:generate && pnpm --filter @croppilot/web build",
+    "typecheck": "pnpm --filter @croppilot/contracts typecheck && pnpm --filter @croppilot/web typecheck",
+    "contracts:generate": "pnpm --filter @croppilot/contracts generate",
+    "db:generate": "pnpm --filter @croppilot/web db:generate",
+    "db:migrate": "pnpm --filter @croppilot/web db:migrate",
+    "db:deploy": "pnpm --filter @croppilot/web db:deploy",
+    "test:backend": "pnpm --filter @croppilot/web test:backend",
+    "test:cache": "pnpm --filter @croppilot/web test:cache",
+    "dev:engine": "node scripts/dev-engine.mjs",
+    "test:config": "node --test scripts/env.test.mjs"
   }
 }

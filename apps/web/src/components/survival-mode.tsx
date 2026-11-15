@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { RecommendationRequest, RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationRequest, RecommendationResult } from "@croppilot/contracts";
 import { formatDate } from "@/lib/chart-data";
 import {
   buildChallenges,
   decisionQuestion,
   defaultMine,
+  isSmallDifference,
   revealChoice,
   sequenceText,
   SURVIVAL_DISCLAIMER,
@@ -136,7 +137,8 @@ const VERDICT_TITLE = (reveal: Reveal) => {
   if (reveal.verdict === "equal") return "A draw in this season";
   const points = Math.abs(reveal.difference!);
   const pts = `${points} point${points === 1 ? "" : "s"}`;
-  return reveal.verdict === "better" ? `${other} did better by ${pts}` : `${other} did worse by ${pts}`;
+  const small = isSmallDifference(points) ? " (a small difference)" : "";
+  return reveal.verdict === "better" ? `${other} scored ${pts} higher${small}` : `${other} scored ${pts} lower${small}`;
 };
 
 /** The modelled historical comparison after the farmer's choice. */

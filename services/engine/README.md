@@ -10,7 +10,7 @@ accounts, and the engine does not persist requests.
 - Integration: `fieldshift/pipeline.py` and `fieldshift/api.py`.
 - Fictional demo: `fieldshift/demo.py`; never use its calendar function in the real engine.
 
-`ENGINE_MODE=computed` (the default in `.env.example`, with `ENABLE_NASA_POWER=true`) runs the
+`ENGINE_MODE=computed` (the default in the root `.env.example`, with `ENABLE_NASA_POWER=true`) runs the
 real engine; `demo` returns clearly labelled examples. `computed` requires the real
 data and evaluation modules and returns 503 when they are unavailable; there is no
 automatic fallback to demo. No yield or profit forecast is implemented. The POWER
@@ -20,6 +20,8 @@ Reproducible setup from the root: `uv sync --project services/engine --frozen --
 The reference uv version is 0.9.5; dependencies are locked in `uv.lock`.
 Schemas live in `packages/contracts/schemas`; export them from the workspace when changing the contract.
 
+Run `pnpm dev:engine` from the repository root to load the shared root `.env`.
+Compose injects that configuration directly when using containers.
 See the root README for startup commands. Do not start services for a task limited
 to static checks. Unit tests do not require NASA, PostgreSQL, or an HTTP server.
 Comments, errors, explanations, and display crop names use English. Intentional

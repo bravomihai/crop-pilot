@@ -4,7 +4,7 @@ import "./globals.css";
 import "./analysis.css";
 import "./map-workspace.css";
 export const metadata: Metadata = {
-  title: "FieldShift — crop planning",
+  title: "CropPilot — crop planning",
   description:
     "Compare three plans for your next three main crops.",
 };

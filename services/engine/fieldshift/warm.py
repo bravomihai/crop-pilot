@@ -1,7 +1,7 @@
 """Download and cache the public data for demo fields before a presentation.
 
     cd services/engine
-    FIELDSHIFT_CACHE_DIR=cache ENABLE_NASA_POWER=true .venv/bin/python -m fieldshift.warm 44.45,26.5 44.53,25.21
+    CROPPILOT_CACHE_DIR=cache ENABLE_NASA_POWER=true .venv/bin/python -m fieldshift.warm 44.45,26.5 44.53,25.21
 
 Each point is fetched like a real request (NASA POWER, SoilGrids, SRTM) and stored in the
 local cache, so the app answers from cache during the demo. SoilGrids is retried with a
@@ -27,8 +27,8 @@ def main(argv: list[str]) -> int:
     if not points:
         print(__doc__)
         return 2
-    if not os.getenv("FIELDSHIFT_CACHE_DIR"):
-        print("Set FIELDSHIFT_CACHE_DIR (for example to 'cache') so the results are kept.")
+    if not os.getenv("CROPPILOT_CACHE_DIR"):
+        print("Set CROPPILOT_CACHE_DIR (for example to 'cache') so the results are kept.")
         return 2
     os.environ["ENABLE_NASA_POWER"] = "true"
     os.environ.setdefault("SOILGRIDS_TIMEOUT_S", "60")

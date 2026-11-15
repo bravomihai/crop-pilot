@@ -1,7 +1,7 @@
 """Cache for public environmental data (NASA POWER, SoilGrids, SRTM).
 
 Two layers, both optional:
-- a local disk cache when `FIELDSHIFT_CACHE_DIR` is set (fast, no database; lets a demo
+- a local disk cache when `CROPPILOT_CACHE_DIR` is set (fast, no database; lets a demo
   field be downloaded once in advance with `python -m fieldshift.warm`);
 - the shared cache behind the web app's internal API when `CACHE_BACKEND_URL` and
   `INTERNAL_API_TOKEN` are set.
@@ -31,7 +31,7 @@ def key_for(value: dict) -> str:
 
 
 def _local_path(key: str) -> Path | None:
-    directory = os.getenv("FIELDSHIFT_CACHE_DIR")
+    directory = os.getenv("CROPPILOT_CACHE_DIR")
     if not directory:
         return None
     return Path(directory) / (key.split(":", 1)[-1] + ".json")

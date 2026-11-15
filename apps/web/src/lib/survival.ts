@@ -15,7 +15,7 @@ import type {
   RecommendationResult,
   ReplaySeason,
   RotationPlan,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import { RULE_CROPS } from "./crop-options";
 import { scorePercent, SCORE_CRITERIA, utcDate } from "./chart-data";
 
@@ -529,11 +529,24 @@ export function decisionQuestion(challenge: AvailableChallenge, mineKey: string)
   if (challenge.best.some((o) => o.contender.key === mineKey))
     return `${capitalise(subject)} held up best in this ${challenge.noun} (${mine.score}/100). Would you keep it, or still switch?`;
   const leader = challenge.best[0];
+  if (isSmallDifference(leader.score! - mine.score))
+    return (
+      `${capitalise(subject)} scored close to ${leader.contender.label} in this ${challenge.noun}: ` +
+      `${mine.score}/100 against ${leader.score}/100, a small difference for a single season. Would you keep it or switch?`
+    );
   return (
-    `${capitalise(subject)} struggled in this ${challenge.noun}: ${mine.score}/100 against ${leader.score}/100 ` +
-    `for ${leader.contender.label}. Would you keep it or switch to a more resilient alternative?`
+    `${capitalise(subject)} scored lower in this ${challenge.noun}: ${mine.score}/100 against ${leader.score}/100 ` +
+    `for ${leader.contender.label}. Would you keep it or switch to the higher-scoring alternative?`
   );
 }
+
+/**
+ * Season scores are rounded relative indices from one replayed season, not measurements;
+ * a gap below this many points out of 100 is described as small rather than as a lead.
+ * A wording threshold only: it does not change any score, ranking or "best" marker.
+ */
+export const SMALL_DIFFERENCE_POINTS = 5;
+export const isSmallDifference = (points: number) => Math.abs(points) < SMALL_DIFFERENCE_POINTS;
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -618,12 +631,15 @@ export function revealChoice(challenge: AvailableChallenge, mineKey: string, pic
       takeaway = `${name} and ${minePhrase} had the same ${kind} ${when} (${o.score}/100).`;
     else if (verdict === "better")
       takeaway =
-        `${name} performed better than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")})` +
+        (isSmallDifference(difference!)
+          ? `${name} scored slightly higher than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")}, a small difference for a single season)`
+          : `${name} performed better than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")})`) +
         (tradeoffs.length ? `, but ${joinClauses(tradeoffs)}.` : ", and none of its other known scores is lower.");
     else
-      takeaway =
-        `${name} performed worse than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")}).` +
-        " Keeping your rotation would have done better in this season.";
+      takeaway = isSmallDifference(difference!)
+        ? `${name} scored slightly lower than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")}), a small difference for a single season.`
+        : `${name} performed worse than ${minePhrase} ${when}: ${o.score} vs ${mine.score} (${signed(difference!, " points")}).` +
+          " Keeping your rotation would have done better in this season.";
     if (!switched && verdict === "better") takeaway = `You kept your rotation. ${takeaway}`;
   }
   return { mine, pick, switched, difference, verdict, other, tradeoffs, engineTradeoffs, unknowns, takeaway };

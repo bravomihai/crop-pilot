@@ -7,7 +7,7 @@ import {
   type ClimateYear,
   type RecommendationResult,
   type RotationPlan,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import {
   alignedSeasons,
   buildChallenge,
@@ -250,8 +250,26 @@ test("keeping a rotation compares it with the season's best, or confirms it led"
   const led = revealChoice(drought, "plan-1", "plan-1")!;
   assert.equal(led.other, null);
   assert.match(led.takeaway, /highest water score .* \(71\/100\)/);
-  assert.match(decisionQuestion(drought, "baseline"), /struggled in this drought: 40\/100 against 71\/100 for Plan 1/);
+  assert.match(decisionQuestion(drought, "baseline"), /scored lower in this drought: 40\/100 against 71\/100 for Plan 1/);
   assert.match(decisionQuestion(drought, "plan-1"), /held up best/);
+  assert.doesNotMatch(decisionQuestion(drought, "baseline"), /struggled/);
+});
+
+test("a small score gap is described as small, not as one rotation struggling", () => {
+  const result = makeResult();
+  const leader = available(buildChallenge("drought", result, request)).best[0];
+  const mineSeason = result.baseline!.replay!.find((s) => s.field_free_from === "2011-10-01")!;
+  mineSeason.scores.water = (leader.score! - 2) / 100;
+  const drought = available(buildChallenge("drought", result, request));
+  const question = decisionQuestion(drought, "baseline");
+  assert.match(question, /scored close to Plan 1 in this drought: \d+\/100 against \d+\/100, a small difference for a single season/);
+  assert.doesNotMatch(question, /struggled|more resilient/);
+  const kept = revealChoice(drought, "baseline", "baseline")!;
+  assert.equal(kept.verdict, "better");
+  assert.equal(kept.difference, 2);
+  assert.match(kept.takeaway, /scored slightly higher than your current rotation .* \(\+2 points, a small difference for a single season\)/);
+  const switched = revealChoice(drought, "baseline", leader.contender.key)!;
+  assert.match(switched.takeaway, /slightly higher/);
 });
 
 test("unknown scores stay unknown and block the comparison instead of counting as zero", () => {

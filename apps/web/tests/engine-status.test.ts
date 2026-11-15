@@ -8,7 +8,7 @@ const originalToken = process.env.INTERNAL_API_TOKEN;
 const originalTimeout = process.env.ENGINE_TIMEOUT_MS;
 const token = "test-internal-token-with-at-least-32-characters";
 const health = {
-  service: "fieldshift-engine",
+  service: "croppilot-engine",
   contract_version: "1.0",
   mode: "demo",
 };
@@ -135,7 +135,7 @@ for (const [name, body] of [
   ["wrong service", { ...health, service: "other-service" }],
   ["wrong contract version", { ...health, contract_version: "2.0" }],
   ["unknown mode", { ...health, mode: "unknown" }],
-  ["incomplete status", { service: "fieldshift-engine" }],
+  ["incomplete status", { service: "croppilot-engine" }],
   ["null status", null],
 ] as const) {
   test(`rejects ${name}`, async () => {

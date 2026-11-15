@@ -16,7 +16,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
 | `src/components/results-what-if.tsx` | Hypothetical scenario recalculation from the results panel |
 | `src/components/results-evidence.tsx` | Past-season replay (`plan.replay`) and observed yearly climate with trends (`climate_context`) |
-| `src/components/ai-summary.tsx` | Optional AI summary (English/Romanian) and the print button; `lib/summary-payload.ts` trims what is sent |
+| `src/components/ai-summary.tsx` | Optional English-only OpenAI summary and the print button; `lib/summary-payload.ts` trims what is sent |
 | `src/components/glossary.tsx` | Plain explanations of the terms used in the results |
 | `src/components/charts/` | Score meters and comparison, rotation timeline, replay and climate charts |
 | `src/components/regional-map-context.tsx` | Optional NASA GIBS layers, POWER cell and rule-zone outlines |
@@ -39,39 +39,38 @@ From the repository root, with Node.js and Corepack available:
 
 ```powershell
 corepack pnpm install --frozen-lockfile
-corepack pnpm --filter @fieldshift/contracts generate
-corepack pnpm --filter @fieldshift/web db:generate
+corepack pnpm --filter @croppilot/contracts generate
+corepack pnpm --filter @croppilot/web db:generate
 ```
 
-If `apps/web/.env.local` does not exist, copy `apps/web/.env.example` to that
-path. Preserve existing local settings. Set this value in `.env.local`:
+Use the single repository-root `.env` (copy the root `.env.example` for a new checkout).
+Preserve existing local settings. For a real calculation, keep:
 
 ```dotenv
-NEXT_PUBLIC_USE_MOCK_API=true
+NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
-Start only the web application:
+Start the engine with `pnpm dev:engine` in another terminal, then start the web application:
 
 ```powershell
-corepack pnpm --filter @fieldshift/web dev
+corepack pnpm --filter @croppilot/web dev
 ```
 
 Open the URL printed in the terminal, normally `http://localhost:3000`. Keep the
 terminal open; saving source files updates the preview. Stop it with Ctrl+C.
-Restart it after changing `.env.local`.
+Restart it after changing the root `.env`.
 
 These direct workspace commands also work when `pnpm` is not on PATH and
 `corepack enable` cannot write to `C:\Program Files\nodejs`.
 
-Mock mode uses fictional results with a fixed calendar; form entries are not
-evaluated. It does not require Python or PostgreSQL. The map and location search
-use the internet. Never present demo output as real NASA observations or
-calculated agronomic advice.
+The real calculation path requires Python and internet access to public environmental
+data. A frontend fixture is not a calculation of the submitted field. The optional
+PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
 - Search for a place or click the map to place one field point; drag it to move it.
-  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` opens with that point
+  A shared link such as `/?lat=44.45&lon=26.5&name=Example%20field` opens with that point
   chosen (limited to Romania's bounding box). No field outline is sent: the contract's
   optional `field_boundary` is supported by the engine but not offered here.
 - The form sends the shared request: availability date (not before today), previous
@@ -102,7 +101,7 @@ calculated agronomic advice.
   farmer choose and see the modelled historical result. Logic in `src/lib/survival.ts`,
   interface in `src/components/survival-mode.tsx`; details in `docs/survival-mode.md`.
 - **AI summary** (optional, computed results only): rewords the calculated result in
-  English or Romanian. It needs `ANTHROPIC_API_KEY` on the server; without it the page
+  English only. It needs `OPENAI_API_KEY` in the root `.env`; without it the page
   says the summary is not set up and everything else works. The page sends a trimmed
   result (no replay, monthly or yearly climate rows, no coordinates reach the model);
   numbers not found in the result make the server reject the summary.
@@ -152,8 +151,8 @@ are isolated from the base map and form.
 
 ```powershell
 corepack pnpm --recursive typecheck
-corepack pnpm --filter @fieldshift/web test:ui
-corepack pnpm --filter @fieldshift/web test:backend
+corepack pnpm --filter @croppilot/web test:ui
+corepack pnpm --filter @croppilot/web test:backend
 git diff --check
 ```
 

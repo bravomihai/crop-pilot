@@ -1,4 +1,4 @@
-import type { ClimateContext, CriterionScores, RotationPlan } from "@fieldshift/contracts";
+import type { ClimateContext, CriterionScores, RotationPlan } from "@croppilot/contracts";
 
 export const SCORE_CRITERIA = [
   ["water", "Water"],

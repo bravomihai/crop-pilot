@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { resultSchema } from "@fieldshift/contracts";
+import { resultSchema } from "@croppilot/contracts";
 import FieldDashboard from "../src/components/field-dashboard";
 import FieldMap from "../src/components/dashboard/field-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
@@ -17,6 +17,7 @@ import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
 import { RevealPanel, SurvivalPanel } from "../src/components/survival-mode";
 import { buildChallenge, revealChoice } from "../src/lib/survival";
 import { fullExampleRequest } from "../src/lib/api";
+import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
@@ -26,7 +27,7 @@ test("main page starts with location search and a point map without dashboard cl
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
-    "FieldShift",
+    "CropPilot",
     "Prototype",
     "Pick your field.",
     "Search for a place or click the map.",
@@ -490,4 +491,59 @@ test("the reveal states the result, trade-offs and the disclaimer from engine da
   assert.match(html, /You switched to Plan 1/);
   assert.match(html, /This compares historical conditions, not a prediction of future harvests\./);
   assert.match(html, /<span class="sr-only">Key takeaway: <\/span>/);
+});
+
+test("the plain-words explanation loads by itself, without a button or language selector", () => {
+  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
+  assert.doesNotMatch(html, /Summarise in plain words|ai-summary-button/);
+  assert.doesNotMatch(html, /ai-summary-language|Rezumat|Română/);
+});
+
+test("results open with an At a glance summary and keep technical notes collapsed", () => {
+  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, { result, busy: false, error: "", request: fullExampleRequest, onRecalculate: () => {} }),
+  );
+  const glance = html.indexOf('id="results-summary"');
+  assert.ok(glance > 0 && glance < html.indexOf('id="plan-details"'), "summary comes before the details");
+  assert.ok(html.indexOf('id="plan-details"') < html.indexOf('class="how-calculated"'));
+  assert.match(html, /Best match:/);
+  assert.match(html, /Compared with your current rotation/);
+  assert.match(html, /Before you decide/);
+  assert.match(html, /href="#results-summary"/);
+  assert.match(html, /Print for your agronomist/);
+  assert.match(html, /<details class="how-calculated"><summary>How this was calculated/);
+  assert.match(html, /<details class="plan-why"><summary>Why this plan\?/);
+});
+
+test("the glance helpers use the result as it is", () => {
+  const [plan] = fullFixture.plans;
+  const baseline = fullFixture.baseline!;
+  const rows = compareWithCurrent(plan, baseline);
+  for (const row of rows) {
+    assert.ok(Number.isInteger(row.plan) && Number.isInteger(row.current));
+  }
+  assert.deepEqual(compareWithCurrent(plan, undefined), []);
+  assert.equal(firstSentence("Chosen first. Then more."), "Chosen first.");
+  assert.equal(firstSentence("No full stop"), "No full stop");
+  const tradeoffs = ["Climate: 52/100.", "Watch out: Pea: heat in 11 of 18 past seasons."];
+  assert.deepEqual(mainRisks({ ...plan, tradeoffs }), ["Pea: heat in 11 of 18 past seasons."]);
+  const shared = "Confirm the sowing and harvest windows for this location.";
+  const checks = keyChecks(
+    { ...plan, local_checks: [shared, "Check pea root-disease history."] },
+    [{ ...plan, local_checks: [shared] }],
+  );
+  assert.deepEqual(checks, ["Check pea root-disease history.", shared]);
+  assert.deepEqual(
+    keyGaps({
+      ...fullFixture,
+      data_gaps: [
+        "SoilGrids not queried (offline test).",
+        "No field-level measurements, soil moisture or soil analysis are supplied by this adapter.",
+        "No crop history was provided; x.",
+      ],
+    }),
+    ["No crop history was provided; x."],
+  );
 });

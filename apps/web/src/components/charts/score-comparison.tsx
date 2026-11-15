@@ -1,4 +1,4 @@
-import type { RotationPlan } from "@fieldshift/contracts";
+import type { RotationPlan } from "@croppilot/contracts";
 import { SCORE_CRITERIA, scorePercent } from "@/lib/chart-data";
 
 export default function ScoreComparison({

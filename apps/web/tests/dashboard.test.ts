@@ -362,7 +362,7 @@ test("autumn sowing hint covers 6 November to the end of February only", async (
 
 test("a page link can preselect a field inside Romania only", async () => {
   const { fieldFromQuery } = await import("../src/lib/planning-dates");
-  assert.deepEqual(fieldFromQuery("?lat=44.45&lon=26.5&name=Fundulea"), { name: "Fundulea", latitude: 44.45, longitude: 26.5 });
+  assert.deepEqual(fieldFromQuery("?lat=44.45&lon=26.5&name=Example%20field"), { name: "Example field", latitude: 44.45, longitude: 26.5 });
   assert.equal(fieldFromQuery("?lat=44.45&lon=26.5")?.name, "Your field");
   assert.equal(fieldFromQuery("?lat=40&lon=26.5"), null);
   assert.equal(fieldFromQuery("?lat=abc&lon=26.5"), null);

@@ -20,12 +20,11 @@ from test_p4_web_integration import cached_run, dashboard_request, environment, 
 EXCLUDED_FOR_LIMITED = ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]
 
 
-def test_missing_data_lists_each_winterkill_note_once_per_crop():
+def test_missing_data_merges_winterkill_notes_into_one_line():
     result = run(dashboard_request(), p2_built_environment(dashboard_request()))
     notes = [g for g in result["data_gaps"] if g.startswith("Winterkill risk")]
-    assert notes, "the fixture's plans include winter crops"
-    assert all(re.fullmatch(r"Winterkill risk for [a-z ]+ ignores snow cover.*", g) and "," not in g.split(" ignores")[0] for g in notes), notes
-    assert len(notes) == len(set(notes)) <= 3
+    assert len(notes) == 1, result["data_gaps"]
+    assert re.fullmatch(r"Winterkill risk for [a-z ,]+ ignores snow cover.*", notes[0]), notes
     assert len(result["data_gaps"]) < 15, result["data_gaps"]
 
 
@@ -128,3 +127,14 @@ def test_time_before_the_first_crop_counts_as_bare_soil():
     assert waiting["score"] < immediate["score"]
     assert "before the first crop" in waiting["summary"]
     assert "before the first crop" not in immediate["summary"]
+
+
+def test_result_texts_have_no_duplicates_or_broken_wording():
+    result = run(dashboard_request(), p2_built_environment(dashboard_request()))
+    texts = result["assumptions"] + result["data_gaps"]
+    assert sum("compare the options" in t or "compare options" in t for t in result["assumptions"]) == 1
+    assert sum("replayed over" in t for t in result["assumptions"]) <= 1
+    assert not any(" by supplied " in t for t in texts)
+    assert not any("not known from a laboratory analysis or an estimate" in t for t in texts)
+    for plan in result["plans"]:
+        assert "compare the options" not in plan["explanation"]

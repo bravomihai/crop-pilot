@@ -1,4 +1,4 @@
-import type { HistorySource } from "@fieldshift/contracts";
+import type { HistorySource } from "@croppilot/contracts";
 
 export const RULE_CROPS = [
   ["winter_wheat", "Winter wheat"],

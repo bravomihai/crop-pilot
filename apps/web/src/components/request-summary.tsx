@@ -1,4 +1,4 @@
-import type { RecommendationRequest, RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationRequest, RecommendationResult } from "@croppilot/contracts";
 import { HISTORY_SOURCES, RULE_CROPS } from "@/lib/crop-options";
 
 const cropName = (id: string) => RULE_CROPS.find(([crop]) => crop === id)?.[1] ?? id.replace(/_/g, " ");
