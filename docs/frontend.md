@@ -208,3 +208,13 @@ removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
 The map attribution control is disabled in every build at the owner's request
 for design review. Layer attribution metadata is retained. Restore the control
 before publishing a version using the current imagery providers.
+
+
+### Scrollbars and result surfaces
+
+Shared scrollbar tokens in `ui-theme.css` follow the system appearance throughout
+the app, including nested scroll areas. Standard scrollbar properties and a WebKit
+fallback use muted green thumbs and themed tracks. The outer results scrollbar is
+hidden while scrolling remains enabled; the results region is keyboard focusable.
+Money cards and Survival Mode use the same surface, border and text tokens as the
+other result cards.

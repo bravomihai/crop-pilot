@@ -209,7 +209,7 @@ export default function FieldDashboard() {
             <button type="button" className="map-back-button" onClick={() => { setFullscreen(false); setPanel("details"); }}>Edit details<Icon name="close" size={17} /></button>
           </div>
         </header>
-        <div className="map-results-scroll">
+        <div className="map-results-scroll" tabIndex={0} role="region" aria-label="Crop plan results">
           {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
           <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onRecalculateMoney={recalculateMoney} onCancel={cancel} />
         </div>
