@@ -44,6 +44,8 @@ totals are divided by 2.8. Months of bare soil are inside the period and earn no
 | Which farms | **Commercial farms** = (total − individual holdings) production ÷ area. Years with too little commercial area (under 200 ha or under 10 % of the county's area of that crop) are dropped. If fewer than 5 years remain, **all farms** are used instead, and the card says so |
 | Years used | The last 10 years (2016–2025 in the 2026 data file) |
 | Bad / typical / good | 20th percentile, median, 80th percentile of those years |
+| No county series | The Romanian national yield from Eurostat apro_cpsh1 (last 10 completed years), and the card says so. Today this applies to triticale everywhere, and to crops such as sugar beet in counties that do not grow them |
+| Spring barley | AGR110A has no column of its own: its yield is "barley and two-row barley" minus "barley" from AGR108A/AGR109A, county by county |
 | Minimum data | At least 5 yearly values, otherwise the yield is unknown |
 | Irrigation | If the farmer says irrigated: yield × (ICEADR irrigated yield ÷ ICEADR rainfed yield) of that crop, because county averages are mostly rainfed |
 
@@ -73,10 +75,10 @@ These factors are the project's own agronomic assumptions and need review by a l
 |---|---|
 | Source | INS TEMPO table PPA102C, average farm-gate prices by development region, lei/kg × 1,000 |
 | Which region | The region of the field's county; if the region has no series, the national average is used and the card says so |
-| Years used | The last 3 years (2023–2025 in the 2026 data file) |
+| Years used | The last 3 data years (2023–2025 in the 2026 data file). A crop with no price in those years may use its latest price from up to 5 years back, and the card says from which year ("the latest official price is from 2022"). Older prices count as unknown |
 | Value used for income | **Median** of those years (typical). The range of the 3 years is listed in the details, but it does not widen the income range |
 | Farmer's own price | Replaces the price for that crop completely |
-| No series | The price is unknown, so the crop's income and the plan's totals are unknown. Today this is **pea**: INS stopped publishing dry pea prices in 2007 |
+| No official series | A labelled **market estimate** is used (see section 9): pea (INS stopped dry pea prices in 2007), grain sorghum and rye (no INS or Eurostat price), and sugar beet (latest official price 2022). Without any figure, the crop's income and the plan's totals are unknown |
 
 Income range: `yield (bad year / typical / good year) × typical price`. Price swings are shown
 separately so that one bad year of weather and one bad year of prices are not stacked.
@@ -91,14 +93,16 @@ separately so that one bad year of weather and one bad year of prices are not st
 | Index shares | Nitrogen fertiliser 37.3 % and mechanised work 38.2 % of the budget (from the ICEADR rainfed wheat budget); mechanised work follows the diesel price; the remaining 24.5 % is kept as it is |
 | Index now | Nitrogen +8.4 %, diesel −7.9 %, so the factor is **1.001** (costs barely change) |
 | Farmer's own cost | Replaces the budget cost for that crop |
-| No budget | Costs are unknown. Today this is **pea**: ICEADR has no pea budget |
+| Stand-in budget ("proxy") | Crops ICEADR has no budget for use the budget of the closest crop, and the card says so: oats and spring barley ← winter barley; triticale and rye ← winter wheat; grain sorghum ← maize; dry beans ← soybean. These pairings are expert choices pending agronomist review |
+| No budget | Costs are unknown. Pea now uses the soybean budget as a stand-in |
+| Yield far below the budget | If the yields used are under 70 % of the yield the budget is written for (for example all-farm potato yields of about 10 t/ha against a 16.7 t/ha budget), the card warns that the margin is probably too low for a commercial farm |
 
 Other costs are not counted: land rent, loans, taxes, storage, drying, transport and the
 farmer's own labour beyond what the budgets include.
 
 ### Nitrogen saved by a legume before the crop
 
-If the previous crop is **pea or soybean** and the crop itself is not a legume, its cost is
+If the previous crop is a legume (**pea, soybean or dry beans**) and the crop itself is not a legume, its cost is
 lowered by the fertiliser it no longer needs:
 
 ```
@@ -125,6 +129,8 @@ campaign year (**5.2788** for 2026).
 | Basic income support, BISS (PD-01) | 101.03 €/ha | Counted fully, every year, in every plan. About 530 lei |
 | Soybean coupled support (PD-09) | 141.98 €/ha (2025 claim year) | Counted for each soybean season in the plan, divided by the plan's years |
 | Eco-scheme for arable land (PD-04) | 56.28 €/ha | **Only in the high estimate**, because it depends on the whole farm meeting the scheme. The card says whether the plan grows a legume or 3 different crops, which helps meet its optional requirements |
+| Coupled support for legumes for processing (PD-11) | 209.70 €/ha (2025 claim year) | Dry beans only; **only in the high estimate**, because it needs a processing contract |
+| Coupled support for sugar beet (PD-16) | 818.19 €/ha (as reported for 2025; sources disagree) | Counted for each sugar-beet season, divided by the plan's years: sugar beet is only grown under a factory contract |
 | Redistributive payment, CRISS (PD-02) | depends on farm size | Listed, **never counted**: farm size is not asked |
 
 Low and typical subsidies are the sure payments; high adds the eco-scheme.
@@ -198,12 +204,42 @@ The same wheat **after pea** (a good previous crop):
 | Cost | 5,423 − 187 ≈ **5,230 lei** |
 | Crop-order effect | (5.86 − 5.56) × 940 + 187 ≈ **+470 lei** for this season |
 
-## 9. Known limits
+## 9. Coverage by crop (2026 data file)
+
+| Crop | Yield | Price | Cost |
+|---|---|---|---|
+| Winter wheat, winter barley, maize, sunflower, rapeseed, soybean | County (commercial farms) | Regional | ICEADR |
+| Pea | County | Market estimate (feed-pea listings, 2026) | Proxy (soybean) |
+| Oats | County | National | Proxy (winter barley) |
+| Spring barley | County (derived) | Regional | Proxy (winter barley) |
+| Triticale | **National** | National (2025 only) | Proxy (winter wheat) |
+| Winter rye | County (mostly all farms) | Market estimate (derived from wheat) | Proxy (winter wheat) |
+| Grain sorghum | County (mostly all farms) | Market estimate (reference price and listings, 2026) | Proxy (maize) |
+| Dry beans | County (all farms) | National | Proxy (soybean) |
+| Sugar beet | County where grown, else national | Market estimate (factory contracts 2025-2026) | ICEADR |
+| Potato (main crop) | County (mostly all farms) | Regional | ICEADR |
+
+Every crop now has a figure. "Market estimate" means no recent official price exists: the value comes
+from contracts, reference prices or sale listings, is labelled on the plan, and should be replaced by
+the farmer's own price where known:
+
+| Crop | Low / typical / high (lei/t) | Basis |
+|---|---|---|
+| Field pea | 1,100 / 1,300 / 1,800 | Feed-pea sale listings for the 2026 harvest, mostly 1.30-2.00 lei/kg asking prices |
+| Grain sorghum | 900 / 1,000 / 1,200 | 2026 county reference price 1.00 lei/kg; listings 1.10-1.20 lei/kg; close to maize |
+| Winter rye | 750 / 850 / 1,000 | No rye quote found; derived from bread wheat (850-1,017 lei/t on the exchange, July 2025), which rye trades below |
+| Sugar beet | 140 / 160 / 190 | Factory contracts 2025-2026: 26.2 EUR/t base, up to about 36 EUR/t with sugar bonuses |
+
+Price order: a recent official price (last 3 data years) wins; otherwise the market estimate;
+otherwise an official price up to 5 years old, with its year shown; otherwise unknown.
+
+## 10. Known limits
 
 - **Averages, not your field.** County and regional statistics; a good farm can do better and
   a poor soil worse. Use your own prices and costs where you know them.
-- **Pea has no official price or cost**, so plans with pea are unknown until the farmer enters
-  figures. Its yield still comes from the county statistics.
+- **Market estimates are not statistics.** Pea, sorghum, rye and sugar beet prices come from contracts,
+  reference prices and sale listings (asking prices run above what farmers are paid); the rye price is
+  derived from wheat. Replace them with your own prices where you know them.
 - **Costs are from 2022–2023**, indexed only for nitrogen and diesel up to 2024. Fertiliser
   prices rose again in 2026 (press reports of +40 %), which the data does not yet show.
 - **The farmer's own cost and the nitrogen saving can overlap.** If a farmer enters a cost for
@@ -216,12 +252,14 @@ The same wheat **after pea** (a good previous crop):
   should confirm.
 - **Romania only.** Outside the Romanian county data the estimate is not produced.
 
-## 10. Sources
+## 11. Sources
 
 - INS TEMPO: AGR108A, AGR109A, AGR110A, PPA102C (statistici.insse.ro).
 - ICEADR: *Ghid practic tehnico-economic … estimări pentru anul de producție 2022–2023*
   ([PDF](https://iceadr.ro/wp-content/uploads/2024/02/2023_ghid-veget.pdf)).
-- Eurostat: apri_ap_ina (purchase prices of agricultural inputs) and GISCO NUTS 2021 county boundaries.
+- Eurostat: apri_ap_ina (purchase prices of agricultural inputs), apro_cpsh1 (national crop yields) and
+  GISCO NUTS 2021 county boundaries.
+- ICEADR 2022–2023 budgets also cover potato and sugar beet; the 2021 guide has no budgets for the other new crops.
 - ECB EUR/RON reference rate.
 - APIA 2026 application instructions
   ([Annex 2](https://apia.org.ro/wp-content/uploads/2026/03/Anexa-2.pdf)) and press reports of the 2026 and

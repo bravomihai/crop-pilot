@@ -27,9 +27,14 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent / "rules" / "economics"
 PRICE_YEARS = 3
+# A crop without a price in the last PRICE_YEARS data years may use an older one, up to this
+# many years back, and the plan says how old it is. Older prices count as unknown.
+MAX_PRICE_AGE = 5
+# Warn when the yields used are below this share of the yield a cost budget is written for.
+MISMATCH_SHARE = 0.7
 YIELD_YEARS = 10
 MIN_YIELD_YEARS = 5
-LEGUMES = {"pea", "soybean"}
+LEGUMES = {"pea", "soybean", "dry_beans"}
 # County averages mix fields after every kind of previous crop; they are taken as the "ok" level.
 AVERAGE_CLASS = "ok"
 
@@ -75,40 +80,65 @@ def _range(low: float, typical: float, high: float, step: int = 10) -> dict:
     return {"low": _round(low, step), "typical": _round(typical, step), "high": _round(high, step)}
 
 
+def _legumes(rules: dict, data: dict) -> set[str]:
+    """Legumes from the regional rules and from the nitrogen-credit table."""
+    from_rules = {c["id"] for c in rules.get("crops") or [] if c.get("legume")}
+    return LEGUMES | from_rules | set(data.get("nitrogen_credit_kg_per_ha") or {})
+
+
 def _yields(data: dict, county: str, crop_id: str) -> tuple[list[float], str] | None:
     for key, basis in (("yields_commercial_t_per_ha", "commercial_farms"), ("yields_t_per_ha", "all_farms")):
         series = ((data.get(key) or {}).get(county) or {}).get(crop_id) or {}
         values = [v for _, v in sorted(series.items())][-YIELD_YEARS:]
         if len(values) >= MIN_YIELD_YEARS:
             return values, basis
+    series = (data.get("yields_national_t_per_ha") or {}).get(crop_id) or {}
+    values = [v for _, v in sorted(series.items())][-YIELD_YEARS:]
+    if len(values) >= MIN_YIELD_YEARS:
+        return values, "national"
     return None
 
 
-def _price(data: dict, region: str | None, crop_id: str, own: dict) -> tuple[dict | None, str | None]:
+def _latest_price_year(data: dict) -> int:
+    years = [int(y) for region in data["prices_lei_per_t"].values() for series in region.values() for y in series]
+    return max(years) if years else 0
+
+
+def _price(data: dict, region: str | None, crop_id: str, own: dict) -> tuple[dict | None, str | None, int | None]:
+    """Price range, its basis, and the latest year used (None for the farmer's own price)."""
     if isinstance(own.get(crop_id), (int, float)) and own[crop_id] > 0:
         value = float(own[crop_id])
-        return {"low": value, "typical": value, "high": value}, "farmer"
+        return {"low": value, "typical": value, "high": value}, "farmer", None
     prices = data["prices_lei_per_t"]
-    series, basis = (prices.get(region or "") or {}).get(crop_id), "regional"
-    if not series:
-        series, basis = (prices.get("TOTAL") or {}).get(crop_id), "national"
-    if not series:
-        return None, None
-    values = [v for _, v in sorted(series.items())][-PRICE_YEARS:]
-    return {"low": min(values), "typical": statistics.median(values), "high": max(values)}, basis
+    latest = _latest_price_year(data)
+    market = (data.get("market_prices_lei_per_t") or {}).get(crop_id)
+    for oldest in (latest - PRICE_YEARS + 1, latest - MAX_PRICE_AGE + 1):
+        if market and oldest < latest - PRICE_YEARS + 1:
+            # No recent official price: a dated market estimate beats an old statistic.
+            return ({k: market[k] for k in ("low", "typical", "high")}, "market_estimate", market.get("year"))
+        for basis, series in (("regional", (prices.get(region or "") or {}).get(crop_id)),
+                              ("national", (prices.get("TOTAL") or {}).get(crop_id))):
+            recent = sorted((int(y), v) for y, v in (series or {}).items() if int(y) >= oldest)[-PRICE_YEARS:]
+            if recent:
+                values = [v for _, v in recent]
+                return ({"low": min(values), "typical": statistics.median(values), "high": max(values)},
+                        basis, recent[-1][0])
+    return None, None, None
 
 
-def _base_cost(data: dict, crop_id: str, irrigated: bool, own: dict) -> tuple[float | None, str | None]:
+def _base_cost(data: dict, crop_id: str, irrigated: bool, own: dict) -> tuple[float | None, str | None, str | None]:
+    """Cost per hectare, its basis, and the crop whose budget stands in for this one (if any)."""
     if isinstance(own.get(crop_id), (int, float)) and own[crop_id] > 0:
-        return float(own[crop_id]), "farmer"
+        return float(own[crop_id]), "farmer", None
     budget = data["costs_lei_per_ha"].get(crop_id)
     if not budget:
-        return None, None
+        return None, None, None
     factor = (data.get("cost_index") or {}).get("factor", 1.0)
-    return budget["irrigated" if irrigated else "rainfed"] * factor, "iceadr"
+    proxy = budget.get("proxy_of")
+    return budget["irrigated" if irrigated else "rainfed"] * factor, "proxy" if proxy else "iceadr", proxy
 
 
-def _previous_effect(rules: dict, data: dict, previous: str | None, crop_id: str) -> dict:
+def _previous_effect(rules: dict, data: dict, previous: str | None, crop_id: str, legumes: set[str]) -> dict:
     """Yield factor from the previous-crop rating, and kg N left by a previous legume."""
     effect = {"previous": previous, "rating": None, "yield_factor": 1.0, "nitrogen_kg": None}
     if previous is None:
@@ -119,7 +149,7 @@ def _previous_effect(rules: dict, data: dict, previous: str | None, crop_id: str
         effect["rating"] = rating
         effect["yield_factor"] = factors[rating] / factors[AVERAGE_CLASS]
     credit = (data.get("nitrogen_credit_kg_per_ha") or {}).get(previous)
-    if credit and crop_id not in LEGUMES:
+    if credit and crop_id not in legumes:
         effect["nitrogen_kg"] = credit
     return effect
 
@@ -158,10 +188,11 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
     years = max((end - start).days / 365.25, 0.5)
 
     crops, notes, order_effects = [], [], []
+    legumes = _legumes(rules, data)
     previous = _previous_crop(request)
     for step in steps:
         crop_id, name = step["crop_id"], step["crop_name"]
-        effect = _previous_effect(rules, data, previous, crop_id)
+        effect = _previous_effect(rules, data, previous, crop_id, legumes)
         found = _yields(data, county, crop_id) if county else None
         yields, yield_basis = None, None
         if found:
@@ -175,8 +206,8 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
                 low, typical, high = low * ratio, typical * ratio, high * ratio
             f = effect["yield_factor"]
             yields = {"low": round(low * f, 2), "typical": round(typical * f, 2), "high": round(high * f, 2)}
-        price, price_basis = _price(data, region, crop_id, own_prices)
-        base_cost, cost_basis = _base_cost(data, crop_id, irrigated, own_costs)
+        price, price_basis, price_year = _price(data, region, crop_id, own_prices)
+        base_cost, cost_basis, cost_proxy = _base_cost(data, crop_id, irrigated, own_costs)
 
         income = None
         if yields and price:
@@ -203,6 +234,13 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
 
         if price is None:
             notes.append(f"{name}: no official recent price series. Add the price you get to complete the estimate.")
+        elif price_basis == "market_estimate":
+            basis = ((data.get("market_prices_lei_per_t") or {}).get(crop_id) or {}).get("basis", "market reports")
+            notes.append(f"{name}: no recent official price; a market estimate from {basis} is used "
+                         f"({price['low']:,}-{price['high']:,} lei/t). Add the price you get for a better estimate.")
+        elif price_year is not None and price_year <= _latest_price_year(data) - PRICE_YEARS:
+            notes.append(f"{name}: the latest official price is from {price_year}; prices may have changed since. "
+                         "Add the price you get for a better estimate.")
         elif price_basis == "national":
             notes.append(f"{name}: national average price; no regional price for this region.")
         if base_cost is None:
@@ -211,6 +249,21 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
             notes.append(f"{name}: not enough county yield statistics, so its income is unknown.")
         elif yield_basis == "all_farms":
             notes.append(f"{name}: commercial-farm yields are too thin in this county; all farms are used.")
+        elif yield_basis == "national":
+            notes.append(f"{name}: no county yield statistics; the national average yield is used.")
+        budget = data["costs_lei_per_ha"].get(crop_id) or {}
+        if yields and cost_basis == "iceadr" and yield_basis != "commercial_farms":
+            planned = budget["yield_irrigated" if irrigated else "yield_rainfed"] / 1000
+            if yields["typical"] < MISMATCH_SHARE * planned:
+                notes.append(
+                    f"{name}: the yields used ({yields['typical']:.1f} t/ha, mostly small farms) are far below the "
+                    f"{planned:.1f} t/ha the cost budget is written for, so the margin is probably too low for a "
+                    "commercial farm. Add your own price and cost for a better estimate."
+                )
+        if cost_basis == "proxy":
+            stand_in = names.get(cost_proxy, cost_proxy.replace("_", " ")).lower()
+            notes.append(f"{name}: no published cost budget; the {stand_in} budget stands in for it. "
+                         "Add your own cost for a better estimate.")
 
         crops.append({
             "crop_id": crop_id,
@@ -247,11 +300,17 @@ def plan_economics(plan: dict, request: dict, county: str | None, data: dict, ru
                 lei = eur * rate * count / years
                 sure += lei
                 payments.append(_payment(payment, lei, "always"))
+        elif kind == "crop_contract":
+            count = sum(1 for c in ids if c in payment.get("crops", []))
+            if count:
+                lei = eur * rate * count / years
+                possible += lei
+                payments.append(_payment(payment, lei, "if_eligible"))
         elif kind == "eco_scheme":
             lei = eur * rate
             possible += lei
             helps = []
-            if LEGUMES & set(ids):
+            if legumes & set(ids):
                 helps.append("grows a nitrogen-fixing legume")
             if len(set(ids)) >= 3:
                 helps.append("grows 3 different crops")
@@ -321,7 +380,10 @@ ASSUMPTIONS = [
     "(INS, last 3 years), minus ICEADR cost budgets indexed to official input prices, plus CAP payments. "
     "The range shows bad, typical and good years.",
     "Crop order counts: a good previous crop raises the expected yield and a poor one lowers it (regional "
-    "rules), and after pea or soybean the next crop needs about 20-50 kg less nitrogen per hectare.",
+    "rules), and after a legume (pea, soybean, dry beans) the next crop needs about 20-50 kg less nitrogen "
+    "per hectare.",
+    "Where a crop has no county statistics or no published cost budget, the national average yield or the "
+    "budget of the closest crop is used, and the plan says so.",
     "CAP payment rates are those reported for the current campaign and are converted at the ECB rate of "
     "30 September; check the amounts and your eligibility with APIA.",
 ]

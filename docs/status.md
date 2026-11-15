@@ -643,6 +643,15 @@ regenerated. **Live**: the current rotation shows about +330 lei/ha/year typical
 values entered for pea (not real prices), all three plans got a full estimate and the
 crop-order line showed both gains and losses.
 
+Money data for the 8 crops on Maria's branch (oats, grain sorghum, dry beans, sugar beet, spring
+barley, triticale, winter rye, potato), 2026-11-15, branch `tudor`: INS county yields (spring
+barley derived from AGR108A/AGR109A), Eurostat national yields where counties have none
+(triticale), INS prices where published, stand-in ICEADR budgets of the closest crop for the six
+crops without a budget, coupled support for dry beans and sugar beet in the high estimate only,
+and a date-aware price rule. Sorghum and rye have no official price. Verified with Maria's
+15-crop rules and engine on the demo field (all 15 crops priced or explained); engine money
+tests 16/16, web backend 118/118, UI 43/43, TypeScript.
+
 ## Survival Mode with the money estimate — 2026-11-15 (branch `feature/survival-mode`)
 
 Merged Tudor's money estimate (`1444c8d`, `dd75d7d`, `0a9d45a`) into Survival Mode. Results
@@ -740,7 +749,6 @@ Verified on the merged tree: TypeScript, 43 UI tests, contract generation with
 no generated schema changes, and whitespace checks. Required CI will verify
 the full integrated build before merge; no additional visual review was run.
 
-
 ## Results theme consistency and keyboard scrolling — 2026-11-15
 
 Results, Survival Mode, money estimates and summary placeholders use the shared
@@ -780,3 +788,41 @@ as requested.
 Footer integration with current main verified with TypeScript, 52 UI tests and
 whitespace checks. The README update and previously merged results styling are
 preserved. Browser appearance remains for owner review.
+
+
+### Concise calculation error screen — 2026-11-15
+
+When a calculation fails without results, the results area now shows one themed
+card containing only the returned reason and a warning icon. Removed the empty
+section heading, generic failure title and follow-up instructions from this state.
+The message remains announced as an alert. Loading states and existing results
+are preserved. Verified: web TypeScript, all 52 UI tests and whitespace checks.
+Browser appearance remains for owner review.
+
+
+The error card now fills the available results area below the header, keeping
+equal top/bottom padding and centering the icon/message group horizontally and
+vertically. The change is scoped to failed calculations. This CSS adjustment
+received a whitespace check; browser review remains with the owner.
+
+
+The results header now shows “Your crop plans” without the CropPilot logo/name
+badge. The map header retains its branding. This markup adjustment received a
+whitespace check; visual review remains with the owner.
+
+Market price estimates, 2026-11-15 (branch `tudor`): pea, grain sorghum, winter rye and sugar
+beet, which have no recent official price, now use labelled market estimates from factory
+contracts, a county reference price and sale listings (rye derived from wheat prices). Pea uses
+the soybean cost budget as a stand-in. Sugar-beet coupled support counts fully, since the crop is
+only grown under contract. Every crop of Maria's 15-crop rules now gets a money estimate on the
+demo field. Verified: Python 253 passed; web backend 118/118, UI 43/43, TypeScript.
+
+
+### Tudor financial estimates and local interface integration
+
+Integrated PR #26 with the local error screen, simplified results header and
+README. Retained both status records when resolving their append conflict.
+Verified: TypeScript, backend tests, all 52 UI tests, 18 focused Python
+economics/packaging tests, unchanged regenerated schemas and whitespace checks.
+The full suite and container builds run in GitHub before merge. Browser
+appearance was not visually reviewed; no agronomic validation is implied.

@@ -3,6 +3,7 @@ import type {
   RecommendationRequest,
 } from "@croppilot/contracts";
 import PlanCard from "./plan-card";
+import Icon from "./dashboard/icon";
 import Notice from "./ui/notice";
 import ScoreComparison from "./charts/score-comparison";
 import RotationTimeline from "./charts/rotation-timeline";
@@ -32,6 +33,19 @@ export default function RecommendationResults({
   onRecalculateMoney?: (inputs: RecommendationRequest["money_inputs"]) => void;
   onCancel?: () => void;
 }) {
+  if (error && !result) {
+    return (
+      <section className="results" id="results" aria-label="Planning problem">
+        <div className="empty-state results-error" role="alert">
+          <span className="results-error-icon" aria-hidden="true">
+            <Icon name="warning" size={32} />
+          </span>
+          <p>{error}</p>
+        </div>
+      </section>
+    );
+  }
+
   const cropAssessment = result?.crop_assessment;
   return (
     <section className="results" id="results" aria-labelledby="results-title">
@@ -69,16 +83,12 @@ export default function RecommendationResults({
           <h3>
             {busy
               ? "Preparing your comparison…"
-              : error
-                ? "Plans aren't available yet"
-                : "Your plans will appear here"}
+              : "Your plans will appear here"}
           </h3>
           <p>
             {busy
               ? "Your form entries are retained while the planner responds."
-              : error
-                ? "Check the message above and try again. Your entries are still in the form."
-                : "Submit the planning form to see the available rotation alternatives."}
+              : "Submit the planning form to see the available rotation alternatives."}
           </p>
         </div>
       )}
