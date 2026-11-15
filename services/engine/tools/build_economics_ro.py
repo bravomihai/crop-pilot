@@ -27,7 +27,7 @@ TEMPO = "http://statistici.insse.ro:8077/tempo-ins"
 AGENT = {"User-Agent": "croppilot-data-script", "Content-Type": "application/json"}
 CAMPAIGN = 2026
 
-# Rule crop id -> (INS yield item in AGR110A, INS price item in PPA102C or None).
+# Rule crop id -> (INS yield item in AGR110A or None, INS price item in PPA102C or None).
 CROPS = {
     "winter_wheat": ("Grau comun", "Grau"),
     "winter_barley": ("Orz", "Orz"),
@@ -37,6 +37,24 @@ CROPS = {
     "soybean": ("Soia boabe", "Soia"),
     # INS stopped publishing dry pea purchase prices in 2007 (table PPA102B).
     "pea": ("Mazare boabe", None),
+    "oats": ("Ovaz", "Ovaz"),
+    # No current INS or Eurostat price for grain sorghum or rye in Romania.
+    "sorghum": ("Sorg", None),
+    "dry_beans": ("Fasole boabe", "Fasole boabe"),
+    "sugar_beet": ("Sfecla de zahar", "Sfecla de zahar"),
+    # Spring (two-row) barley: AGR110A has no column of its own; its yield is derived from
+    # AGR108A/AGR109A as "Orz si orzoaica" minus "Orz" (see build_commercial_yields).
+    "spring_barley": (None, "Orzoaica"),
+    # INS publishes no triticale yield; the Eurostat national yield is used instead.
+    "triticale": (None, "Triticale"),
+    "winter_rye": ("Secara", None),
+    "potato": ("Cartofi de toamna", "Cartofi de toamna"),
+}
+
+# Eurostat apro_cpsh1 national yields (EU standard humidity), a fallback when county data is thin.
+EUROSTAT_YIELD = {
+    "triticale": "C1600", "winter_rye": "C1210", "spring_barley": "C1320", "oats": "C1410",
+    "sorghum": "C1700", "pea": "P1100", "potato": "R1000", "sugar_beet": "R2000",
 }
 
 # ICEADR, "Ghid practic tehnico-economic ... estimari pentru anul de productie 2022-2023",
@@ -49,6 +67,86 @@ ICEADR_COSTS = {
     "sunflower": {"rainfed": 5107, "irrigated": 6628, "yield_rainfed": 2630, "yield_irrigated": 3680},
     "winter_rapeseed": {"rainfed": 5777, "irrigated": 7438, "yield_rainfed": 2570, "yield_irrigated": 3600},
     "soybean": {"rainfed": 5399, "irrigated": 7113, "yield_rainfed": 2430, "yield_irrigated": 3400},
+    "potato": {"rainfed": 22261, "irrigated": 26512, "yield_rainfed": 16700, "yield_irrigated": 23400},
+    "sugar_beet": {"rainfed": 12268, "irrigated": 16802, "yield_rainfed": 38700, "yield_irrigated": 54200},
+}
+
+# Market price estimates (lei/t) for crops without a recent official price. They come from
+# contracts, reference prices and sale listings, not statistics, and the plan labels them so.
+MARKET_PRICES = {
+    "pea": {
+        "low": 1100,
+        "typical": 1300,
+        "high": 1800,
+        "year": 2026,
+        "source": "market-pea-2026",
+        "basis": "feed-pea sale listings for the 2026 harvest (mostly 1.30-2.00 lei/kg asking prices)"
+    },
+    "sorghum": {
+        "low": 900,
+        "typical": 1000,
+        "high": 1200,
+        "year": 2026,
+        "source": "market-sorghum-2026",
+        "basis": "the 2026 county reference price (1.00 lei/kg) and sale listings (1.10-1.20 lei/kg)"
+    },
+    "winter_rye": {
+        "low": 750,
+        "typical": 850,
+        "high": 1000,
+        "year": 2025,
+        "source": "market-rye-derived",
+        "basis": "no rye quote was found; derived from bread-wheat prices (850-1,017 lei/t in July 2025), which rye usually trades below"
+    },
+    "sugar_beet": {
+        "eur_low": 26.2,
+        "eur_typical": 30.0,
+        "eur_high": 36.0,
+        "year": 2026,
+        "source": "market-sugar-beet-2026",
+        "basis": "factory contracts for 2025 and 2026 (26.2 EUR/t base, up to about 36 EUR/t with sugar bonuses)"
+    },
+}
+MARKET_SOURCES = [
+    {
+        "id": "market-pea-2026",
+        "title": "Market estimate: feed-pea sale listings for the 2026 harvest (asking prices, not statistics)",
+        "url": "https://www.olx.ro/anunturi-agricole/seminte-plante-pomi/cereale-furaje-fan/q-mazare-furajera/"
+    },
+    {
+        "id": "market-sorghum-2026",
+        "title": "Market estimate: 2026 county reference price and sale listings for grain sorghum (not statistics)",
+        "url": "https://agro-market24.eu/ro/cereale-sorg-pret-cumpar-vand-92"
+    },
+    {
+        "id": "market-rye-derived",
+        "title": "Market estimate for rye derived from bread-wheat prices on the Romanian Commodities Exchange, July 2025 (no rye quote found)",
+        "url": "https://agroteca.ro/pret-grau-2025-romania/"
+    },
+    {
+        "id": "market-sugar-beet-2026",
+        "title": "Market estimate: sugar-beet contract prices of the Ludus factory for 2025 and 2026 (base and sugar bonuses)",
+        "url": "https://agrointel.ro/345439/fabrica-de-zahar-ludus-a-inceput-semnarea-contractelor"
+    }
+]
+
+
+def market_prices(eur_ron: float) -> dict:
+    out = {}
+    for crop, entry in MARKET_PRICES.items():
+        entry = dict(entry)
+        if "eur_typical" in entry:
+            for key in ("low", "typical", "high"):
+                entry[key] = round(entry.pop(f"eur_{key}") * eur_ron / 10) * 10
+        out[crop] = entry
+    return out
+
+
+# ICEADR publishes no budget for these crops; the closest budgeted crop stands in for them
+# and the estimate says so ("proxy"). Expert choices pending agronomist review.
+COST_PROXIES = {
+    "oats": "winter_barley", "spring_barley": "winter_barley", "triticale": "winter_wheat",
+    "winter_rye": "winter_wheat", "sorghum": "maize", "dry_beans": "soybean", "pea": "soybean",
 }
 
 # Shares of the ICEADR rainfed wheat budget (2022-2023) used to index costs to the latest year:
@@ -59,7 +157,7 @@ COST_SHARES = {"fertiliser": 0.373, "mechanised_work": 0.382}
 # Nitrogen a legume leaves for the next crop, kg N/ha (low, typical, high). Romanian practice
 # lowers the next crop's N dose by 30-50 kg N/ha after soybean or pea (worked example: 35);
 # a long-term study found about 20 kg N/ha less fertiliser for wheat after pea (Soon, 2005).
-NITROGEN_CREDIT_KG = {"pea": [20, 35, 50], "soybean": [20, 35, 50]}
+NITROGEN_CREDIT_KG = {"pea": [20, 35, 50], "soybean": [20, 35, 50], "dry_beans": [20, 35, 50]}
 
 # CAP Strategic Plan 2023-2027 payments relevant to a single arable field (EUR/ha/year).
 PAYMENTS = [
@@ -78,6 +176,19 @@ PAYMENTS = [
         "id": "PD-09", "label": "Coupled support for soybean", "eur_per_ha": 141.98, "crops": ["soybean"],
         "applies": "crop", "source": "apia-coupled-2025",
         "condition": "For each hectare of soybean declared to APIA; rate of the 2025 claim year.",
+    },
+    {
+        "id": "PD-11", "label": "Coupled support for legumes grown for processing", "eur_per_ha": 209.70,
+        "crops": ["dry_beans"], "applies": "crop_contract", "source": "apia-coupled-2025",
+        "condition": "For dry beans grown for processing, usually under a contract with a processor; "
+                     "rate of the 2025 claim year.",
+    },
+    {
+        "id": "PD-16", "label": "Coupled support for sugar beet", "eur_per_ha": 818.19,
+        "crops": ["sugar_beet"], "applies": "crop", "source": "apia-coupled-2025",
+        "condition": "For each hectare of sugar beet delivered under a contract with a sugar factory (sugar beet "
+                     "is only grown under such contracts); rate reported for the 2025 claim year (sources "
+                     "disagree: check the Order).",
     },
     {
         "id": "PD-02", "label": "Redistributive payment (CRISS)", "eur_per_ha": None,
@@ -130,9 +241,9 @@ def build_yields(this_year: int):
             counties.append(o["nomItemId"])
             county_region[plain(label)] = region
     years = [o for o in options(meta, 3) if this_year - 10 <= int(o["label"].split()[-1]) < this_year]
-    rows = tempo("AGR110A", [[crop_ids[name] for name, _ in CROPS.values()], [5789], counties,
+    rows = tempo("AGR110A", [[crop_ids[name] for name, _ in CROPS.values() if name], [5789], counties,
                              [o["nomItemId"] for o in years], [options(meta, 4)[0]["nomItemId"]]], 5)
-    by_name = {name: crop for crop, (name, _) in CROPS.items()}
+    by_name = {name: crop for crop, (name, _) in CROPS.items() if name}
     yields: dict = {}
     for crop_name, _form, county, year, _unit, value in rows:
         kg = number(value)
@@ -182,15 +293,21 @@ def build_counties(names: set[str]) -> dict:
     }
 
 
-def build_commercial_yields(this_year: int) -> dict:
-    """Yields of commercial farms: (total - individual holdings) production / area, per county."""
+def build_commercial_yields(this_year: int) -> tuple[dict, dict]:
+    """Yields of commercial farms: (total - individual holdings) production / area, per county.
+
+    Also returns all-farm yields for spring barley, which AGR110A does not list: the
+    "barley and two-row barley" row minus the "barley" row of AGR108A/AGR109A.
+    """
     out: dict = {}
+    derived: dict = {}
     series: dict = {}
     for matrix, key in (("AGR108A", "area"), ("AGR109A", "production")):
         meta = get_json(f"{TEMPO}/matrix/{matrix}")
-        items = {o["label"].strip(): o["nomItemId"] for o in options(meta, 0)}
+        items = {" ".join(o["label"].split()): o["nomItemId"] for o in options(meta, 0)}
         wanted = {}
-        for crop, (name, _) in CROPS.items():
+        names = [(crop, name) for crop, (name, _) in CROPS.items() if name] + [("_barley_all", "Orz si orzoaica")]
+        for crop, name in names:
             item = items.get(name) or items.get(name.replace(" boabe", ""))
             if item:
                 wanted[item] = crop
@@ -202,17 +319,31 @@ def build_commercial_yields(this_year: int) -> dict:
                     if not o["label"].strip().upper().startswith(("TOTAL", "MACRO", "REGIUNEA", "MUN"))]
         years = [o["nomItemId"] for o in options(meta, 3)
                  if this_year - 10 <= int(o["label"].split()[-1]) < this_year]
-        labels = {o["nomItemId"]: o["label"].strip() for o in options(meta, 0)}
+        labels = {o["nomItemId"]: " ".join(o["label"].split()) for o in options(meta, 0)}
         rows = tempo(matrix, [list(wanted), forms, counties, years, [options(meta, 4)[0]["nomItemId"]]], 5)
         by_label = {labels[i]: c for i, c in wanted.items()}
-        for crop_label, form, county, year, _unit, value in rows:
+        for row in rows:
+            crop_label, form, county, year, _unit, value = row[0], row[1], row[2], row[3], row[4], row[5]
+            crop_label = " ".join(crop_label.split())
             amount = number(value)
             if amount is None:
                 continue
             kind = "total" if form.lower().startswith("total") else "individual"
             cell = series.setdefault((plain(county), by_label[crop_label], year.split()[-1]), {})
             cell[f"{key}_{kind}"] = amount
+    # Spring barley = (barley and two-row barley) - barley, cell by cell.
+    for (county, crop, year), cell in list(series.items()):
+        winter = series.get((county, "winter_barley", year))
+        if crop != "_barley_all" or not winter:
+            continue
+        spring = {k: cell[k] - winter[k] for k in cell if k in winter}
+        series[(county, "spring_barley", year)] = spring
+        if spring.get("area_total", 0) >= 200 and spring.get("production_total", 0) > 0:
+            derived.setdefault(county, {}).setdefault("spring_barley", {})[year] = round(
+                spring["production_total"] / spring["area_total"], 2)
     for (county, crop, year), cell in series.items():
+        if crop.startswith("_"):
+            continue
         try:
             area = cell["area_total"] - cell["area_individual"]
             production = cell["production_total"] - cell["production_individual"]
@@ -222,7 +353,31 @@ def build_commercial_yields(this_year: int) -> dict:
         if area < max(200, 0.1 * cell["area_total"]) or production <= 0:
             continue
         out.setdefault(county, {}).setdefault(crop, {})[year] = round(production / area, 2)
-    return out
+    return out, derived
+
+
+def eurostat_national_yields(this_year: int) -> dict:
+    """Romanian national yields (t/ha) from Eurostat apro_cpsh1, completed years only."""
+    url = ("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/apro_cpsh1"
+           f"?format=JSON&lang=EN&geo=RO&strucpro=YLD_HUMD_EU_T_HA&sinceTimePeriod={this_year - 10}")
+    data = get_json(url)
+    ids, size = data["id"], data["size"]
+    index = {k: data["dimension"][k]["category"]["index"] for k in ids}
+    out: dict = {}
+    for crop, code in EUROSTAT_YIELD.items():
+        if code not in index["crops"]:
+            continue
+        for year in index["time"]:
+            if int(year) >= this_year:
+                continue  # the current year is provisional
+            position = {"crops": index["crops"][code], "time": index["time"][year]}
+            flat = 0
+            for name, dim_size in zip(ids, size):
+                flat = flat * dim_size + position.get(name, 0)
+            value = data["value"].get(str(flat))
+            if value:
+                out.setdefault(crop, {})[year] = value
+    return {"yields_t_per_ha": out, "updated": data.get("updated")}
 
 
 def eurostat_input_prices() -> dict:
@@ -281,7 +436,14 @@ def main() -> None:
     yields, county_region, yields_updated = build_yields(this_year)
     prices, prices_updated = build_prices(this_year)
     rate, rate_day = ecb_rate(CAMPAIGN)
-    commercial = build_commercial_yields(this_year)
+    commercial, derived = build_commercial_yields(this_year)
+    for county, crops in derived.items():
+        for crop, series in crops.items():
+            yields.setdefault(county, {}).setdefault(crop, series)
+    national = eurostat_national_yields(this_year)
+    costs = dict(ICEADR_COSTS)
+    for crop, source in COST_PROXIES.items():
+        costs[crop] = {**ICEADR_COSTS[source], "proxy_of": source}
     inputs = eurostat_input_prices()
     index = cost_index(inputs)
     n_year = max(inputs["nitrogen_lei_per_kg"], key=int)
@@ -294,8 +456,10 @@ def main() -> None:
         "county_region": county_region,
         "yields_t_per_ha": yields,
         "yields_commercial_t_per_ha": commercial,
+        "yields_national_t_per_ha": national["yields_t_per_ha"],
         "prices_lei_per_t": prices,
-        "costs_lei_per_ha": ICEADR_COSTS,
+        "costs_lei_per_ha": costs,
+        "market_prices_lei_per_t": market_prices(rate),
         "cost_level_years": "2022-2023",
         "cost_index": index,
         "input_prices": inputs,
@@ -313,12 +477,15 @@ def main() -> None:
              "url": "https://iceadr.ro/wp-content/uploads/2024/02/2023_ghid-veget.pdf"},
             {"id": "apia-2026-rates", "title": "CAP direct payment rates reported for the 2026 campaign (OMADR 288/2026, as reported in the farming press; check the Order)",
              "url": "https://revista-ferma.ro/plata-avans-apia-2026-sume-pe-hectar-si-cap-de-animal/"},
-            {"id": "apia-coupled-2025", "title": "Coupled support rates for soybean, 2025 claim year (as reported; check the Order)",
+            {"id": "apia-coupled-2025", "title": "Coupled support rates for soybean, legumes for processing and sugar beet, 2025 claim year (as reported; check the Order)",
              "url": "https://www.bzi.ro/s-a-stabilit-cuantumul-pe-hectar-pentru-sprijinul-cuplat-vegetal-fermierii-asteapta-banii-de-anul-trecut-5517994"},
             {"id": "apia-ecoscheme-2026", "title": "APIA: 2026 payment application instructions, eco-scheme PD-04 (Annex 2)",
              "url": "https://apia.org.ro/wp-content/uploads/2026/03/Anexa-2.pdf"},
             {"id": "ins-agr108a-109a", "title": "INS TEMPO AGR108A and AGR109A: cultivated area and production by county and type of holding (commercial farms = total minus individual holdings)",
              "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table", "resolution": "county, yearly"},
+            *MARKET_SOURCES,
+            {"id": "eurostat-crop-yields", "title": "Eurostat apro_cpsh1: crop yields in Romania (national, EU standard humidity), used where county data is missing or thin",
+             "url": "https://ec.europa.eu/eurostat/databrowser/view/apro_cpsh1/default/table"},
             {"id": "eurostat-input-prices", "title": "Eurostat apri_ap_ina: purchase prices of agricultural inputs in Romania (ammonium nitrate, urea, diesel)",
              "url": "https://ec.europa.eu/eurostat/databrowser/view/apri_ap_ina/default/table"},
             {"id": "nitrogen-credit", "title": "Nitrogen left by pea and soybean for the next crop: Romanian fertilisation practice (30-50 kg N/ha) and Soon (2005), about 20 kg N/ha for wheat after pea",

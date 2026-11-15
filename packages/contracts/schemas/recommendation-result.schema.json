@@ -608,7 +608,8 @@
                           "type": "string",
                           "enum": [
                             "commercial_farms",
-                            "all_farms"
+                            "all_farms",
+                            "national"
                           ]
                         },
                         {
@@ -650,6 +651,7 @@
                           "enum": [
                             "regional",
                             "national",
+                            "market_estimate",
                             "farmer"
                           ]
                         },
@@ -718,6 +720,7 @@
                           "type": "string",
                           "enum": [
                             "iceadr",
+                            "proxy",
                             "farmer"
                           ]
                         },
@@ -1407,7 +1410,8 @@
                         "type": "string",
                         "enum": [
                           "commercial_farms",
-                          "all_farms"
+                          "all_farms",
+                          "national"
                         ]
                       },
                       {
@@ -1449,6 +1453,7 @@
                         "enum": [
                           "regional",
                           "national",
+                          "market_estimate",
                           "farmer"
                         ]
                       },
@@ -1517,6 +1522,7 @@
                         "type": "string",
                         "enum": [
                           "iceadr",
+                          "proxy",
                           "farmer"
                         ]
                       },
