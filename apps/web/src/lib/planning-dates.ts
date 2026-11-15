@@ -7,7 +7,7 @@ export function afterAutumnSowing(isoDate: string): boolean {
   return (month === 11 && day > 5) || month === 12 || month <= 2;
 }
 
-/** A map center from a page link (?lat=..&lon=..&name=..), limited to Romania's box. */
+/** A field chosen through the page link (?lat=..&lon=..&name=..), limited to Romania's box. */
 export function fieldFromQuery(
   search: string,
 ): { name: string; latitude: number; longitude: number } | null {

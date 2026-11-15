@@ -10,7 +10,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | --- | --- |
 | `src/app/page.tsx` | Entry point: the single full-screen map page |
 | `src/components/field-dashboard.tsx` | Map page state, planning form, request building and the results panel |
-| `src/components/dashboard/parcel-map.tsx` | Full-screen Leaflet map with field-boundary drawing and outline validation |
+| `src/components/dashboard/field-map.tsx` | Full-screen Leaflet map with point selection |
 | `src/components/dashboard/location-search.tsx` | Place search through `/api/locations` |
 | `src/components/recommendation-results.tsx` | Loading, error, complete, limited and insufficient-data states |
 | `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
@@ -26,7 +26,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | `tests/` | Pure-data, server and in-memory component checks |
 
 `/calculator` and `/chart-previews` redirect to `/`. The components of the earlier
-dashboard and calculator (`calculator.tsx`, `dashboard/field-map.tsx`,
+dashboard and calculator (`calculator.tsx`, `dashboard/parcel-map.tsx`,
 `priority-panel.tsx`, `compatibility-card.tsx`, `kpi-cards.tsx`, `pdf-upload.tsx`,
 `scenario-panel.tsx`, `theme-control.tsx`, `lib/demo-priorities.ts`,
 `lib/dashboard-scenario.ts`, `location-map.tsx`) are no
@@ -69,18 +69,17 @@ PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
-- Search for a place to center the map, then draw the field boundary with corner
-  clicks and freehand drags. Finish, undo or cancel the outline; up to 100 boundary
-  points are accepted, and invalid or self-intersecting polygons are rejected. The
-  map derives an interior representative coordinate and submits both it and the
-  closed GeoJSON `field_boundary`.
-  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` centers the map but
-  still requires the farmer to draw the field. The engine samples up to three
-  distributed interior points for SoilGrids and SRTM; NASA POWER remains
-  representative-point weather context.
+- Search for a place or click the map to select a point. A shared link such as
+  `/?lat=44.45&lon=26.5&name=Fundulea` selects that location. Point requests do not
+  include a boundary, so ESA WorldCover cannot establish land-cover suitability;
+  results show that it must be checked before planting.
 - The form sends the shared request: availability date (not before today), previous
   crop with source and harvest year (not after the current year), current rotation,
   soil texture and pH, irrigation, excluded crops and a hypothetical scenario.
+- An optional crop selector lists the crops supported by the regional rules. The
+  selected crop is assessed as the next crop and requested in a rotation; the best
+  overall plan is retained. The rotation chart marks plans that include it, and the
+  page explains if no eligible sampled rotation was found.
 - **What matters most?** maps to the four engine priorities: all at 3, with the chosen
   focus at 5 ("A balanced plan" keeps all four at 3).
 - Scenario steps are the same in the form and in the results what-if (−3…+5 °C in

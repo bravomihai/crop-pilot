@@ -122,25 +122,13 @@ test("month snapshots respect advertised dates, interval gaps, and sampling peri
   );
 });
 test("supported form crops and documentary history sources match the merged request contract", () => {
+  const rules = JSON.parse(readFileSync(
+    new URL("../../../services/engine/fieldshift/evaluator/rules/ro_south.json", import.meta.url),
+    "utf8",
+  )) as { crops: { id: string; name: string }[] };
   assert.deepEqual(
-    RULE_CROPS.map(([id]) => id),
-    [
-      "winter_wheat",
-      "winter_barley",
-      "winter_rapeseed",
-      "maize",
-      "sunflower",
-      "soybean",
-      "pea",
-      "oats",
-      "sorghum",
-      "dry_beans",
-      "sugar_beet",
-      "spring_barley",
-      "triticale",
-      "winter_rye",
-      "potato",
-    ],
+    RULE_CROPS.map(([id, name]) => [id, name]),
+    rules.crops.map(({ id, name }) => [id, name]),
   );
   assert.ok(
     !HISTORY_SOURCES.some(([source]) => (source as string) === "satellite"),

@@ -28,6 +28,7 @@ import copy
 import json
 import os
 import re
+from datetime import date
 from functools import lru_cache
 from unittest import mock
 from pathlib import Path
@@ -363,6 +364,30 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
         for plan in r["plans"] + [r["baseline"]]
     ]
     assert shown(result) == shown(reference)
+
+def test_selected_crop_assessment_and_rotation_use_the_same_real_engine(monkeypatch):
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(pipeline, "build_environment", lambda request: environment())
+    monkeypatch.setattr(
+        pipeline,
+        "assess_land_cover",
+        lambda boundary: ({"status": "uncertain", "message": "Check land cover locally."}, []),
+    )
+    request = dashboard_request(
+        available_from=date.today().isoformat(),
+        preferred_crop="potato",
+        assessment_crops=["potato"],
+    )
+    result = pipeline.recommend(request, "chosen-crop")
+    assert next_route_errors(request, result, "chosen-crop") == []
+    assert result["crop_assessment"]["selected"][0]["crop_id"] == "potato"
+    assert result["crop_assessment"]["selected"][0]["status"] == "uncertain"
+    assert any(step["crop_id"] == "potato" for plan in result["plans"] for step in plan["steps"])
+    original = pipeline.recommend(
+        {key: value for key, value in request.items() if key not in {"preferred_crop", "assessment_crops"}},
+        "without-crop",
+    )
+    assert result["plans"][0] == original["plans"][0]
 
 
 # --- Merge with PR #7: duplicate messages in the result --------------------------------------

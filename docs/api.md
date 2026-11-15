@@ -61,10 +61,20 @@ that do not use these fields need no changes. Complete examples:
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
 | `land_cover: {status, message}` | computed result | Satellite screening: `cropland`, `incompatible`, or `uncertain`; display the message prominently |
 | `assessment_crops: crop_id[0–15]` | request | Optional individual crops to screen; an empty list requests alternative crop screening without choosing a crop |
+| `preferred_crop: crop_id` | request | Optional crop to include in a rotation where an eligible sampled sequence exists; the top-ranked plan remains unchanged |
 | `crop_assessment: {selected, alternatives, disclaimer}` | computed result | Individual crop assessments and up to three alternatives; separate from successive rotation plans |
 | `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
 
 `productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+
+The web form sends a selected crop in both `preferred_crop` and `assessment_crops`.
+Among the three alternatives, the recommender keeps the best-ranked plan and, if
+necessary, replaces another option with the highest-ranked eligible sampled sequence
+containing the selected crop. The crop can appear at any step. If none is eligible or
+it is excluded, the result reports that none was found; sampling may leave other
+sequences unexplored. The individual assessment considers the crop as the next crop,
+so a later rotation step can have different succession constraints. Demo fixtures do
+not assess the selected crop or generate a matching rotation.
 
 Computed requests with a boundary send its geometry to Microsoft Planetary Computer
 for ESA WorldCover 2021 land-cover statistics. Available pixels uniformly showing tree cover, built-up land,

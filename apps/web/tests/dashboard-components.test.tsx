@@ -4,7 +4,8 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { resultSchema } from "@croppilot/contracts";
-import FieldDashboard from "../src/components/field-dashboard";
+import FieldDashboard, { PreferredCropInput } from "../src/components/field-dashboard";
+import FieldMap from "../src/components/dashboard/field-map";
 import ParcelMap from "../src/components/dashboard/parcel-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
 import RecommendationResults from "../src/components/recommendation-results";
@@ -17,32 +18,53 @@ import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
 import { RevealPanel, SurvivalPanel } from "../src/components/survival-mode";
 import { buildChallenge, revealChoice } from "../src/lib/survival";
 import { fullExampleRequest } from "../src/lib/api";
+import { RULE_CROPS } from "../src/lib/crop-options";
 import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
 } from "../src/lib/demo-priorities";
 
-test("main page starts with location search and field-boundary drawing without dashboard clutter", () => {
+test("main page starts with location search and point selection without dashboard clutter", () => {
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
     "CropPilot",
     "Prototype",
     "Pick your field.",
-    "Search for a place, then draw your field boundary on the map.",
-    "Draw field",
-    "No account. Nothing saved.",
+    "Search for a place or click the map.",
+    "Use map centre",
+    "stays in this tab",
   ])
     assert.ok(textContent.includes(text), text);
-  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Use map centre|COMING SOON|href="\/calculator"|dashboard-sidebar/);
+  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Draw field|COMING SOON|href="\/calculator"|dashboard-sidebar/);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(ids.length, new Set(ids).size);
   for (const match of html.matchAll(/href="#([^"]+)"/g))
     assert.ok(ids.includes(match[1]), match[1]);
 });
 
-test("field map offers boundary drawing controls and no point-selection fallback", () => {
+test("main field map offers point selection without boundary drawing", () => {
+  const html = renderToStaticMarkup(createElement(FieldMap, {
+    view: { latitude: 44.56, longitude: 27.35 },
+    selection: { latitude: 44.56, longitude: 27.35 },
+    onSelect: () => {},
+  }));
+  assert.match(html, /Click anywhere to move your pin/);
+  assert.match(html, /Clear field location/);
+  assert.doesNotMatch(html, /Draw|Finish outline/);
+});
+
+test("crop selector offers every supported crop and an optional default", () => {
+  const html = renderToStaticMarkup(createElement(PreferredCropInput, { value: "", onChange: () => {} }));
+  assert.match(html, /Recommend the best rotations/);
+  for (const [id, name] of RULE_CROPS) {
+    assert.ok(html.includes(`value="${id}"`), id);
+    assert.ok(html.includes(name), name);
+  }
+});
+
+test("the separate parcel map offers boundary drawing controls", () => {
   const html = renderToStaticMarkup(createElement(ParcelMap, {
     view: { latitude: 44.56, longitude: 27.35 },
     selection: null,
@@ -224,7 +246,56 @@ test("land-cover warnings appear before plans and explain incompatible fields", 
   assert.doesNotMatch(incompatible, /class="plan"/);
 });
 
-test("rotation calendar appears before plan details and missing plans are explained", () => {
+test("chosen crop assessment and rotation chart explain uncertainty and the selected plan", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+    "utf8",
+  ));
+  const result = resultSchema.parse({
+    ...fixture,
+    mode: "computed",
+    crop_assessment: {
+      selected: [{ crop_id: "winter_wheat", crop_name: "Winter wheat", status: "uncertain", score: 0.6, message: "Check soil pH." }],
+      alternatives: [{ crop_id: "pea", crop_name: "Pea", score: 0.7 }],
+      disclaimer: "Estimates only.",
+    },
+  });
+  const html = renderToStaticMarkup(createElement(RecommendationResults, {
+    result, busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat", assessment_crops: ["winter_wheat"] },
+  }));
+  assert.match(html, /Needs checking/);
+  assert.match(html, /Check soil pH/);
+  assert.match(html, /Estimated growing potential: 60 \/ 100/);
+  assert.match(html, /Your chosen crop appears in Plan 1/);
+  assert.match(html, /Other crops to consider: Pea/);
+  assert.match(html, /Rotation calendar/);
+  assert.match(html, /Outlined bars mark your chosen crop/);
+  assert.match(html, /class="timeline-crop is-preferred"/);
+
+  const missing = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, plans: [] }, busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(missing, /No eligible rotation with this crop was found/);
+  const unsuitable = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, crop_assessment: { ...result.crop_assessment!, selected: [
+      { ...result.crop_assessment!.selected[0], status: "not_recommended", message: "Soil pH is outside the provisional range." },
+    ] } },
+    busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(unsuitable, /Not recommended as the next crop/);
+  assert.match(unsuitable, /Soil pH is outside the provisional range/);
+  const demo = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, mode: "demo", crop_assessment: undefined },
+    busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(demo, /Demo plans are fictional and do not assess/);
+});
+
+test("main results place the summary before the calendar and explain missing plans", () => {
   const fixture = JSON.parse(readFileSync(
     new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
     "utf8",
@@ -234,9 +305,9 @@ test("rotation calendar appears before plan details and missing plans are explai
     busy: false,
     error: "",
   }));
+  assert.ok(html.indexOf("AT A GLANCE") < html.indexOf("Rotation calendar"));
   assert.ok(html.indexOf("Rotation calendar") < html.indexOf('class="plan"'));
   assert.ok(html.indexOf('class="plan"') < html.indexOf("How each plan would have done"));
-  assert.match(html, /Three crops do not necessarily mean three years/);
   assert.equal((html.match(/id="timeline-title"/g) ?? []).length, 1);
   const firstSowing = new Date(`${fixture.plans[0].steps[0].sowing_window.start}T00:00:00Z`);
   firstSowing.setUTCDate(firstSowing.getUTCDate() - 120);
@@ -252,49 +323,7 @@ test("rotation calendar appears before plan details and missing plans are explai
     busy: false,
     error: "",
   }));
-  assert.match(empty, /No crop plans could be generated/);
-  assert.doesNotMatch(empty, /notice--warning/);
-});
-
-test("computed crop comparison shows selected crop uncertainty and alternatives", () => {
-  const fixture = JSON.parse(readFileSync(
-    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
-    "utf8",
-  ));
-  const result = resultSchema.parse({
-    ...fixture,
-    mode: "computed",
-    crop_assessment: {
-      selected: [
-        { crop_id: "potato", crop_name: "Potato", status: "uncertain", score: 0.4, message: "Soil pH is unknown. Other crops scored higher.", sowing_window: { start: "2027-04-01", end: "2027-04-20" } },
-        { crop_id: "maize", crop_name: "Maize", status: "not_recommended", score: null, message: "Check the crop history." },
-      ],
-      alternatives: [{ crop_id: "pea", crop_name: "Pea", score: 0.6, harvest_window: { start: "2027-07-01", end: "2027-07-20" } }],
-      disclaimer: "Estimates only.",
-    },
-  });
-  const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
-  assert.match(html, /Potato<\/h4>.*Needs checking/);
-  assert.match(html, /Soil pH is unknown\. Other crops scored higher/);
-  assert.match(html, /Next sowing<\/dt><dd>1 Apr 2027 – 20 Apr 2027/);
-  assert.match(html, /Maize<\/h4>.*Not recommended/);
-  assert.match(html, /Check the crop history/);
-  assert.match(html, /Pea<\/h5><span>60 \/ 100/);
-  assert.match(html, /Harvest: 1 Jul 2027 – 20 Jul 2027/);
-  assert.match(html, /Estimates only/);
-  assert.ok(html.indexOf("Your crop choices") < html.indexOf("Rotation calendar"));
-  assert.ok(html.indexOf("Rotation calendar") < html.indexOf('class="plan"'));
-  const suggestionsOnly = renderToStaticMarkup(createElement(RecommendationResults, {
-    result: { ...result, crop_assessment: { ...result.crop_assessment!, selected: [] } },
-    busy: false,
-    error: "",
-    request: fullExampleRequest,
-    onRecalculate: () => {},
-  }));
-  assert.match(suggestionsOnly, /Crops to consider/);
-  assert.match(suggestionsOnly, /Suggested crops/);
-  assert.match(suggestionsOnly, /<details class="result-scenario"><summary>Explore a different climate scenario/);
-  assert.ok(suggestionsOnly.indexOf("Rotation calendar") < suggestionsOnly.indexOf("Explore a different climate scenario"));
+  assert.match(empty, /The available data cannot support any plans/);
 });
 
 test("five English priority sliders render with neutral defaults, labels, values, and a reset control", () => {

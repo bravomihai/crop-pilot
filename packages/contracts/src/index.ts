@@ -68,6 +68,8 @@ export const requestSchema = z
     crop_count: z.literal(3).default(3),
     history: z.array(cropHistorySchema).max(30).default([]),
     assessment_crops: z.array(cropIdSchema).max(15).optional(),
+    // Keep the best-ranked plan and, where possible, include a plan with this crop.
+    preferred_crop: cropIdSchema.optional(),
     // The rotation the farmer follows today, as one cycle (e.g. ["maize", "winter_wheat"]).
     // When present, the result also contains `baseline`: that cycle continued for the
     // next three main crops and evaluated like the plans, so they can be compared.

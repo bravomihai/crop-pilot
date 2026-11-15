@@ -24,6 +24,19 @@ Local web and engine health endpoints responded; the running engine was not rest
 or tested with the newly merged code. Node 26 remains outside the supported range.
 These checks do not validate agronomic recommendations.
 
+On 2026-11-15, the web interface was aligned with main's point-based workflow and
+results layout. The UI suite (47 tests), web backend suite (123 tests), and typecheck
+passed; the localhost page was opened and showed point selection. The land-cover
+uncertainty notice and opt-in AI summary remain, and the expanded crop catalog remains
+available. These checks do not verify land use or agronomic advice.
+
+On 2026-11-15, the selected-crop form and rotation highlight were added. The engine
+suite passed 265 tests, the web UI suite 49 tests, the web backend suite 123 tests,
+and typechecking and contract generation passed. A synthetic point request through
+localhost returned three computed plans, including a potato rotation and an uncertain
+potato assessment; the form and results were also checked in the browser. Node 26 was
+outside the supported version range. This does not validate field suitability or agronomy.
+
 ## Current integrated state
 
 - The application has a Next.js interface/backend, a Python engine, generated Zod/JSON
@@ -36,9 +49,8 @@ These checks do not validate agronomic recommendations.
   deterministic sample of up to 500 rotations is evaluated when the search space is
   larger; the result discloses sampling. Rankings are screening estimates, not agronomic
   validation.
-- The API accepts an optional GeoJSON field boundary; the main map now requires a
-  drawn field outline and submits its closed boundary plus a derived interior
-  representative coordinate. For a boundary, SoilGrids and SRTM sample up to three
+- The API accepts an optional GeoJSON field boundary; the main map selects a point
+  and does not send a boundary. For boundary requests, SoilGrids and SRTM sample up to three
   distributed interior points. NASA POWER remains representative-point context.
   Sparse sampling is not parcel-wide raster zonal statistics.
 - Computed recommendations screen field boundaries using ESA WorldCover 2021 via
@@ -47,11 +59,11 @@ These checks do not validate agronomic recommendations.
   incompatible classes. This historical 10 m classification cannot verify present
   conditions or legal land use; mixed, unavailable and unsupported fields remain
   uncertain. The submitted boundary is sent to the provider.
-- The main page can draw up to five non-overlapping parts inside the field and request
-  separate crop comparisons and rotations. All form details other than crop choices
-  apply to every part, and any unoutlined land is excluded. Individual crop comparisons
-  use provisional single-crop evaluator scores and explicitly report missing soil data;
-  they are not scientifically validated crop suitability or yield forecasts.
+- The main page uses the main branch's point-based workflow and results layout; field
+  parts are not exposed there. An optional crop selector requests an individual
+  assessment and a rotation including the crop where an eligible sequence is found.
+  Such assessments use provisional single-crop evaluator scores and are not
+  validated suitability or yield forecasts.
 - The demo generator respects chronological order and exclusions and does not fabricate
   agronomic scores. Compose, AWS preparation, and active GitHub checks are documented.
 - The real P3 evaluator and P4 recommender integrate with the pipeline without a
