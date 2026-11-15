@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { HistorySource, Location, RecommendationRequest } from "@fieldshift/contracts";
 import { useRecommendations } from "@/lib/use-recommendations";
 import { RULE_CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
+import { afterAutumnSowing, fieldFromQuery } from "@/lib/planning-dates";
 import CurrentRotationInput from "./current-rotation-input";
 import Icon from "./dashboard/icon";
 import LocationSearch from "./dashboard/location-search";
@@ -11,7 +12,12 @@ import FieldMap from "./dashboard/field-map";
 import RecommendationResults from "./recommendation-results";
 
 type Focus = "balanced" | "water" | "soil" | "climate" | "productivity";
+
 type Panel = "details" | "results" | null;
+
+// Same ranges and steps as the what-if controls on the results panel.
+const TEMPERATURE_STEPS = Array.from({ length: 17 }, (_, i) => -3 + i * 0.5);
+const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
 
 export default function FieldDashboard() {
   const [view, setView] = useState<Location>({ name: "Bărăgan", latitude: 44.567, longitude: 27.35 });
@@ -29,6 +35,7 @@ export default function FieldDashboard() {
   const [excludedCrops, setExcludedCrops] = useState<string[]>([]);
   const [temperature, setTemperature] = useState(0);
   const [rainfall, setRainfall] = useState(0);
+  const [today, setToday] = useState("");
   const { result, lastRequest, busy, error, calculate, recalculate, cancel, clear } = useRecommendations();
   const info = useRef<HTMLDialogElement>(null);
   const resultsHeading = useRef<HTMLHeadingElement>(null);
@@ -36,8 +43,23 @@ export default function FieldDashboard() {
 
   useEffect(() => {
     const date = new Date();
-    setAvailableFrom(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`);
+    const isoToday = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    setToday(isoToday);
+    setAvailableFrom(isoToday);
+    // A shared or demo link can open with a field already chosen: /?lat=44.45&lon=26.5&name=Fundulea
+    const field = fieldFromQuery(window.location.search);
+    if (field) {
+      setSelection(field);
+      setView(field);
+    }
   }, []);
+  // A what-if recalculation changes the scenario of the shown result; keep the form in step,
+  // so "Edit details" then "Calculate" does not silently return to the old scenario.
+  useEffect(() => {
+    if (!lastRequest) return;
+    setTemperature(lastRequest.scenario.temp_change_c);
+    setRainfall(lastRequest.scenario.rain_change_pct);
+  }, [lastRequest]);
   useEffect(() => {
     if (panel === "results") resultsHeading.current?.focus();
   }, [panel]);
@@ -111,8 +133,10 @@ export default function FieldDashboard() {
             </div>
             <form className="map-plan-form" onSubmit={analyse} onChange={clear}>
               <div className="planner-fields">
-                <label htmlFor="available-from">Available from<input id="available-from" type="date" required value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} /></label>
+                <label htmlFor="available-from">Available from<input id="available-from" type="date" required min={today || undefined} aria-describedby="available-from-hint" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} /></label>
+                {afterAutumnSowing(availableFrom) && <p className="field-hint" id="available-from-hint">Autumn sowing usually ends in early November, so plans will start with spring crops. If the field is free earlier, pick that date.</p>}
                 <label htmlFor="previous-crop">Previous crop<select id="previous-crop" value={previousCrop} onChange={e => setPreviousCrop(e.target.value)}><option value="">Not sure / no previous crop</option>{RULE_CROPS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+                <CurrentRotationInput prefix="map-rotation" badge="Recommended" value={currentRotation} onChange={value => { clear(); setCurrentRotation(value); }} />
                 <div className="planner-field-row">
                   <label htmlFor="soil-texture">Soil type<select id="soil-texture" value={texture} onChange={e => setTexture(e.target.value as typeof texture)}><option value="unknown">Not sure</option><option value="sandy">Sandy</option><option value="loamy">Loamy</option><option value="clay">Clay</option><option value="silty">Silty</option></select></label>
                   <label htmlFor="irrigation">Irrigation<select id="irrigation" value={irrigated ? "yes" : "no"} onChange={e => setIrrigated(e.target.value === "yes")}><option value="no">Rain-fed</option><option value="yes">Available</option></select></label>
@@ -124,13 +148,12 @@ export default function FieldDashboard() {
                     <label htmlFor="soil-ph">Soil pH<input id="soil-ph" type="number" min={0} max={14} step={0.1} placeholder="Unknown" value={ph} onChange={e => setPh(e.target.value)} /></label>
                     <div className="planner-field-row">
                       <label htmlFor="history-source">History source<select id="history-source" value={historySource} onChange={e => setHistorySource(e.target.value as HistorySource)}>{HISTORY_SOURCES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-                      <label htmlFor="harvest-year">Harvest year<input id="harvest-year" type="number" min={1950} max={2150} placeholder="Unknown" value={harvestYear} onChange={e => setHarvestYear(e.target.value)} /></label>
+                      <label htmlFor="harvest-year">Harvest year<input id="harvest-year" type="number" min={1950} max={today ? Number(today.slice(0, 4)) : 2150} placeholder="Unknown" value={harvestYear} onChange={e => setHarvestYear(e.target.value)} /></label>
                     </div>
-                    <CurrentRotationInput prefix="map-rotation" value={currentRotation} onChange={value => { clear(); setCurrentRotation(value); }} />
-                    <fieldset className="crop-exclusions"><legend>Crops to avoid</legend><div>{RULE_CROPS.map(([id, label]) => <label key={id}><input type="checkbox" checked={excludedCrops.includes(id)} onChange={e => setExcludedCrops(old => e.target.checked ? [...old, id] : old.filter(crop => crop !== id))} /><span>{label}</span></label>)}</div></fieldset>
+                    <fieldset className="crop-exclusions"><legend>Crops to avoid</legend><div>{RULE_CROPS.map(([id, label]) => <label key={id}><input type="checkbox" aria-label={`Avoid ${label}`} checked={excludedCrops.includes(id)} onChange={e => setExcludedCrops(old => e.target.checked ? [...old, id] : old.filter(crop => crop !== id))} /><span>{label}</span></label>)}</div></fieldset>
                     <fieldset className="climate-options"><legend>Climate scenario <small>Hypothetical</small></legend><div className="planner-field-row">
-                      <label htmlFor="scenario-temperature">Temperature<select id="scenario-temperature" value={temperature} onChange={e => setTemperature(Number(e.target.value))}>{[-3, -2, -1, 0, 1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n === 0 ? "Unchanged" : `${n > 0 ? "+" : ""}${n}°C`}</option>)}</select></label>
-                      <label htmlFor="scenario-rainfall">Rainfall<select id="scenario-rainfall" value={rainfall} onChange={e => setRainfall(Number(e.target.value))}>{[-50, -25, 0, 25, 50].map(n => <option key={n} value={n}>{n === 0 ? "Unchanged" : `${n > 0 ? "+" : ""}${n}%`}</option>)}</select></label>
+                      <label htmlFor="scenario-temperature">Temperature<select id="scenario-temperature" value={temperature} onChange={e => setTemperature(Number(e.target.value))}>{TEMPERATURE_STEPS.map(n => <option key={n} value={n}>{n === 0 ? "Unchanged" : `${n > 0 ? "+" : ""}${n}°C`}</option>)}</select></label>
+                      <label htmlFor="scenario-rainfall">Rainfall<select id="scenario-rainfall" value={rainfall} onChange={e => setRainfall(Number(e.target.value))}>{RAINFALL_STEPS.map(n => <option key={n} value={n}>{n === 0 ? "Unchanged" : `${n > 0 ? "+" : ""}${n}%`}</option>)}</select></label>
                     </div></fieldset>
                   </div>
                 </details>

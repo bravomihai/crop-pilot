@@ -14,6 +14,10 @@ def main():
     parser.add_argument("--email", required=True)
     parser.add_argument("--token-parameter", default="/fieldshift/production/internal-token")
     parser.add_argument("--database-parameter", default="/fieldshift/production/database-password")
+    parser.add_argument(
+        "--ai-summary-key-parameter", default="",
+        help="Optional SecureString with an Anthropic API key; without it the AI summary stays off",
+    )
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}", args.domain):
         parser.error("Provide a valid lowercase public domain")
@@ -46,8 +50,14 @@ def main():
         "DOMAIN": args.domain, "ACME_EMAIL": args.email,
         "POSTGRES_USER": "fieldshift", "POSTGRES_DB": "fieldshift",
         "POSTGRES_PASSWORD": password, "INTERNAL_API_TOKEN": token,
-        "ENGINE_MODE": "demo", "ENABLE_NASA_POWER": "false", "CACHE_ENABLED": "true",
+        "ENGINE_MODE": "computed", "ENABLE_NASA_POWER": "true", "CACHE_ENABLED": "true",
+        "AI_SUMMARY_ENABLED": "false",
     }
+    if args.ai_summary_key_parameter:
+        ai_key = parameter(args.ai_summary_key_parameter)
+        if not re.fullmatch(r"[A-Za-z0-9_-]{20,}", ai_key):
+            parser.error("The AI summary key parameter does not look like an API key")
+        data.update({"ANTHROPIC_API_KEY": ai_key, "AI_SUMMARY_ENABLED": "true"})
     fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w") as file:
         file.write("\n".join(f"{key}={value}" for key, value in data.items()) + "\n")

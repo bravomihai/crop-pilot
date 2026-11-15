@@ -1,7 +1,7 @@
 """Stateless boundary used by HTTP and future channel adapters."""
 
 import os
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from .data_service import build_environment
 from .demo import recommend_demo
@@ -22,7 +22,28 @@ FIELD_DATA_GAP = (
 )
 
 
+def start_from_today(request: dict, today: date | None = None) -> tuple[dict, str | None]:
+    """A past availability date would produce plans in the past: start from today instead."""
+    today = today or date.today()
+    given = date.fromisoformat(request["available_from"])
+    if given >= today:
+        return request, None
+    note = (
+        f"The field availability date ({given.isoformat()}) is in the past; the plans start "
+        f"from today ({today.isoformat()})."
+    )
+    return {**request, "available_from": today.isoformat()}, note
+
+
 def recommend(request: dict, request_id: str) -> dict:
+    request, note = start_from_today(request)
+    result = _recommend_mode(request, request_id)
+    if note:
+        result["assumptions"] = [note] + result["assumptions"]
+    return result
+
+
+def _recommend_mode(request: dict, request_id: str) -> dict:
     mode = os.getenv("ENGINE_MODE", "demo")
     if mode == "demo":
         return recommend_demo(request, request_id)
@@ -42,16 +63,10 @@ def computed_result(
     request: dict, request_id: str, environment: dict, rules: dict, evaluate
 ) -> dict:
     """Combine the NASA data summary with P3 evidence and P4 rotation plans."""
-    evaluation_gaps = []
-
-    def evaluate_candidate(rotation, farm, data, crop_rules):
-        result = evaluate(rotation, farm, data, crop_rules)
-        evaluation_gaps.extend(result.get("data_gaps", []))
-        return result
-
-    plans = recommend_rotations(
-        request, environment, rules, evaluate_candidate
-    )
+    # P4's outcome already carries the data gaps of the shown plans, the baseline and,
+    # for an empty result, the gaps common to every evaluated sequence. Copying the gaps
+    # of all evaluated sequences here flooded results with per-sequence variants.
+    plans = recommend_rotations(request, environment, rules, evaluate)
     outcome = getattr(plans, "outcome", None)
     if outcome is not None and outcome.fixture:
         raise NotImplementedError("Fixture evaluations cannot back computed mode")
@@ -65,7 +80,6 @@ def computed_result(
     data_gaps = (
         list(environment.get("data_gaps", []))
         + list(rules.get("data_gaps", []))
-        + evaluation_gaps
         + (outcome.data_gaps if outcome else [])
     )
     if request.get("field_boundary"):

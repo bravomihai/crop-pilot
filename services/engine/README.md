@@ -10,7 +10,8 @@ accounts, and the engine does not persist requests.
 - Integration: `fieldshift/pipeline.py` and `fieldshift/api.py`.
 - Fictional demo: `fieldshift/demo.py`; never use its calendar function in the real engine.
 
-`ENGINE_MODE=demo` returns clearly labelled examples. `computed` requires the real
+`ENGINE_MODE=computed` (the default in `.env.example`, with `ENABLE_NASA_POWER=true`) runs the
+real engine; `demo` returns clearly labelled examples. `computed` requires the real
 data and evaluation modules and returns 503 when they are unavailable; there is no
 automatic fallback to demo. No yield or profit forecast is implemented. The POWER
 adapter requires separate live verification; see `docs/status.md` for recorded checks.

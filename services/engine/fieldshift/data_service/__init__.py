@@ -1,6 +1,9 @@
 """P2 owns this interface. Return crop-independent data and source metadata."""
 
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import datetime, timezone
 
 from ..geography import field_sample_points
@@ -9,7 +12,8 @@ from .climate import climate_context
 from .daily import clean_daily
 from .indicators import monthly_temperature_summary
 from .power import fetch_power
-from .terrain import fetch_slopes
+from .soil import fetch_soil
+from .terrain import fetch_slope, fetch_slopes
 
 
 SOIL_NUMERIC_FIELDS = (
@@ -92,13 +96,74 @@ def build_environment(request: dict) -> dict:
             "NASA data ingestion is disabled; configure and validate P2 integration"
         )
     years = int(os.getenv("HISTORY_YEARS", "20"))
+    # About 65 KB of daily POWER data per year: above ~30 years an entry exceeds the shared
+    # (web) cache's 2 MB limit and only the local disk cache (FIELDSHIFT_CACHE_DIR) keeps it.
     if not 1 <= years <= 45:
         raise ValueError("HISTORY_YEARS must be between 1 and 45")
     end = datetime.now(timezone.utc).year - 1
     location = request["location"]
     latitude = float(location["latitude"])
     longitude = float(location["longitude"])
-    power = fetch_power(latitude, longitude, max(1981, end - years + 1), end)
+    field_boundary = request.get("field_boundary")
+    sample_points = (
+        field_sample_points(field_boundary, location)
+        if field_boundary
+        else [{"latitude": latitude, "longitude": longitude}]
+    )
+    # The three providers are independent: query them in parallel under one deadline that
+    # leaves room for evaluation inside the web app's 90 s ENGINE_TIMEOUT_MS. NASA POWER is
+    # required; SoilGrids and SRTM are optional and become data gaps when late.
+    deadline = time.monotonic() + float(os.getenv("DATA_DEADLINE_S", "60"))
+    remaining = lambda: max(0.0, deadline - time.monotonic())
+    pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="p2-fetch")
+
+    def fetch_soil_data():
+        if not field_boundary:
+            return fetch_soil(latitude, longitude)
+        return _aggregate_soil(
+            [
+                soil_service.fetch_soil(point["latitude"], point["longitude"])
+                for point in sample_points
+            ]
+        )
+
+    def fetch_slope_data():
+        if field_boundary:
+            return fetch_slopes(
+                [(point["latitude"], point["longitude"]) for point in sample_points]
+            )
+        slope, sources, gaps = fetch_slope(latitude, longitude)
+        return [slope], sources, gaps
+
+    try:
+        power_job = pool.submit(fetch_power, latitude, longitude, max(1981, end - years + 1), end)
+        soil_job = pool.submit(fetch_soil_data)
+        slope_job = pool.submit(fetch_slope_data)
+        try:
+            power = power_job.result(timeout=remaining())
+        except FutureTimeout as error:
+            raise TimeoutError("NASA POWER did not respond within the data deadline") from error
+        try:
+            soil_result = soil_job.result(timeout=remaining())
+        except FutureTimeout:
+            soil_result = (
+                None,
+                [],
+                ["SoilGrids did not respond in time; soil properties are unknown."],
+            )
+        try:
+            slope_result = slope_job.result(timeout=remaining())
+        except FutureTimeout:
+            slope_result = (
+                [None] * len(sample_points),
+                [],
+                [
+                    "SRTM slope did not respond in time; erosion risk is not included "
+                    "in the soil score."
+                ],
+            )
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
     elevation = power.get("elevation_m")
     raw_daily = power.get("daily", [])
     daily, quality = clean_daily(raw_daily, latitude, elevation)
@@ -132,17 +197,7 @@ def build_environment(request: dict) -> dict:
             "in the NASA POWER record."
         )
 
-    field_boundary = request.get("field_boundary")
-    sample_points = (
-        field_sample_points(field_boundary, location)
-        if field_boundary
-        else [{"latitude": latitude, "longitude": longitude}]
-    )
-    soil_observations = [
-        soil_service.fetch_soil(point["latitude"], point["longitude"])
-        for point in sample_points
-    ]
-    soil, soil_sources, soil_gaps = _aggregate_soil(soil_observations)
+    soil, soil_sources, soil_gaps = soil_result
     sources.extend(soil_sources)
     data_gaps.extend(soil_gaps)
     static = {}
@@ -154,9 +209,7 @@ def build_environment(request: dict) -> dict:
             "Soil is the ISRIC SoilGrids 0–30 cm modelled estimate at 250 m, "
             "not a field analysis."
         )
-    slope_values, terrain_sources, terrain_gaps = fetch_slopes(
-        [(point["latitude"], point["longitude"]) for point in sample_points]
-    )
+    slope_values, terrain_sources, terrain_gaps = slope_result
     sources.extend(terrain_sources)
     data_gaps.extend(terrain_gaps)
     valid_slopes = [slope for slope in slope_values if slope is not None]

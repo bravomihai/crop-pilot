@@ -10,12 +10,20 @@ Examples: `packages/contracts/examples/`.
 | POST | `/api/recommendations` | Complete form → result in the same request |
 | GET | `/api/engine/status` | Engine connectivity, mode, and contract compatibility; no agronomic calculation |
 | GET | `/api/health` | Service identity/contract version; does not check external services |
+| POST | `/api/summary` | Optional AI summary of a computed result, `{result, language: "en"|"ro"}`; 503 `summary_not_configured` without `ANTHROPIC_API_KEY`. Body ≤ 256 KB; the gateway allows 6/min per IP (burst 2) |
 
 There are no endpoints for users, authentication, farms, or saved results. Calculation
 does not require login. Next.js validates the schema and at least one positive priority.
 
 Errors: `{code,error,request_id}`. `400` invalid form, `413` oversized request,
-`502` unreachable engine/invalid response, `503` unconfigured/unimplemented engine.
+`422 unsupported_location` (point outside Romania or invalid field outline, rejected by
+the engine), `499 request_cancelled` (the browser cancelled the request; the engine call
+is aborted too), `502` unreachable engine/invalid response, `503` unconfigured/unimplemented engine.
+
+An availability date before today is not rejected: the engine plans from today and says
+so as the first assumption, so no plan starts in the past. Inputs that have no effect (an
+irrigation limit with irrigation off, a crop shortlist with `selected_crops_only` false,
+shortlisted crops without rules or also excluded) are reported in `assumptions`.
 Responses contain no stack traces or connection details. Results are not cached by
 the browser or proxy. Display text uses English; location search requests English
 provider labels and includes the language in its public-data cache key.

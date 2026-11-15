@@ -1068,3 +1068,40 @@
     max-width: 78px;
   }
 }
+
+.results-evidence { display: grid; gap: 8px; margin: 18px 0; }
+.results-evidence .evidence-heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px; }
+.results-evidence h3 { margin: 0; }
+.results-evidence label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.results-evidence select { min-height: 32px; }
+.results-evidence .evidence-note { margin: 0; font-size: 13px; line-height: 1.5; opacity: 0.8; }
+
+.glossary { margin: 16px 0; }
+.glossary summary { cursor: pointer; font-weight: 600; }
+.glossary dl { display: grid; gap: 10px; margin: 12px 0; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.glossary h4 { margin: 16px 0 0; }
+
+.ai-summary { display: grid; gap: 10px; margin: 16px 0; padding: 14px 16px; border: 1px solid currentColor; border-radius: 10px; border-color: rgba(31, 107, 74, 0.35); }
+.ai-summary h3 { margin: 0; }
+.ai-summary-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ai-summary-button, .print-sheet-button { min-height: 34px; padding: 6px 12px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.ai-summary-button:disabled { opacity: 0.6; cursor: progress; }
+.ai-summary-headline { font-weight: 600; margin: 0; }
+.ai-summary-body { display: grid; gap: 12px; }
+.ai-summary-body article { display: grid; gap: 4px; }
+.ai-summary-body h4, .ai-summary-body p { margin: 0; }
+.ai-summary-error { margin: 0; font-size: 14px; }
+.print-sheet-button { margin: 12px 0; }
+@media print {
+  .map-canvas, .map-header, .map-planner, .reopen-planner, .reopen-results, .map-signature, .results-panel-header button,
+  .what-if-panel, .results-what-if, .ai-summary-controls, .print-sheet-button, .cancel-calculation, .skip-link { display: none !important; }
+  .map-experience, .map-results-panel, .map-results-scroll { position: static !important; inset: auto !important; width: auto !important; max-height: none !important; overflow: visible !important; box-shadow: none !important; transform: none !important; }
+  .map-results-panel[hidden] { display: block !important; }
+  details { display: block; }
+  details > :not(summary) { display: block !important; }
+  /* Print the AI summary only when one was written (otherwise an empty heading). */
+  .ai-summary:not(:has(.ai-summary-body)) { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+}

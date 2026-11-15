@@ -71,13 +71,14 @@ runtime and interface states; earlier checks are not new claims of scientific va
 ## Remaining team work
 
 - P2: continue live POWER and SoilGrids checks across Romanian agricultural locations,
-  quality review, and justified integration of additional sources.
+  station comparisons, quality review, and justified integration of additional sources.
 - P3: validate regional rules, crop parameters, hazard thresholds, water-balance
   assumptions, rotation compatibility, and calendars with Romanian agronomists.
 - P3/P4: validate end-to-end outputs against field observations, including baseline
   rotation comparisons, scenario behavior, and screening-score interpretation.
-- Data: implement dense parcel-wide raster statistics and improve the water balance with
-  effective rainfall, runoff, and drainage. SoilGrids available-water values remain
+- Data: validate rainfall partition and water-balance behavior against independent
+  observations before introducing a runoff estimate. Dense parcel-wide raster statistics
+  remain future work. SoilGrids available-water values remain
   pedotransfer estimates, not local measurements.
 - Catalog: review and validate the 15-crop regional catalog and add further crops only
   with suitable parameter evidence.
@@ -268,3 +269,54 @@ Geocoding now requests English provider labels and uses language-specific cache 
 so earlier Romanian responses are not reused. Updated the provider-language regression
 check. Verified: contracts/web TypeScript, 82 backend/data checks, 51 focused Python
 checks (evaluator, English output, and contracts), and whitespace validation.
+
+## Whole-application audit and fixes — 2026-11-14
+
+Integrated `origin/demo-improvements` (Tudor) into local `alexia`; `origin/maria` is not
+merged yet (see Remaining team work). Fixed:
+
+- Result data gaps no longer copy every evaluated sequence's gaps (up to 15 near-identical
+  winterkill lines); P3 writes one winterkill note per crop.
+- A past availability date plans from today and says so, instead of producing plans in
+  the past; the date field cannot go before today; harvest year cannot be in the future.
+- Inputs without effect (irrigation limit with irrigation off, unapplied or conflicting
+  crop shortlist) are reported; high elevation (> 800 m) is disclosed.
+- The current rotation's `violations` are agronomic rules only (exclusions reported apart).
+- NASA POWER, SoilGrids and SRTM are fetched in parallel under `DATA_DEADLINE_S` (60 s);
+  late soil/slope become data gaps, a late POWER answer fails the request.
+- The engine's 422 reason (outside Romania, invalid outline) reaches the farmer.
+- Results show past-season replay and observed yearly climate (rainfall, temperature,
+  hot days); the form's scenario steps match the what-if and follow a recalculation.
+- CI now runs the UI tests. `docs/frontend.md` and `docs/api.md` describe the current app.
+
+Verified: Python 223 passed; web TypeScript, backend 87/87, UI 30/30, production build.
+**Live** (real NASA POWER, SoilGrids, SRTM; temporary local engine in computed mode and
+the built web app; Next.js `/api/recommendations`): Fundulea 8.1 s, complete with
+baseline, 17 replayed seasons and 20 climate years; the same field with +2 °C / −20 %
+rain 6.6 s; Suceava 10.0 s on provisional rules with low confidence; Budapest 422.
+In the browser, the demo link, Calculate, the new charts and a +2 °C what-if worked, and
+the form followed the what-if scenario. Not verified: Docker, NGINX, PostgreSQL cache,
+AWS, the GitHub workflow, screen readers and touch devices. Not agronomic validation.
+
+## Integration of `demo-improvements` up to `e5b8391` — 2026-11-14
+
+Merged Tudor's crop-check rules (`b614bf1`), past-season replay and climate charts
+(`17c910f`), glossary (`e566a58`), and AI summary with print sheet (`e5b8391`) into
+local `alexia`, on top of the audit fixes. The duplicate replay/climate section from the
+audit was dropped in favour of Tudor's `results-evidence.tsx`; its replay note now says
+when a hypothetical scenario was applied. Fixed for the AI summary: the gateway's 32 KB
+body limit would have rejected every summary request (results are 100+ KB), so
+`/api/summary` gets a 256 KB limit and its own rate limit (6/min per IP), and the page
+sends a trimmed, contract-valid result; switching language cancels a pending summary;
+an empty summary section is not printed.
+
+Verified: Python 227 passed; web backend 95/95, UI 32/32, TypeScript, schemas unchanged,
+production build. **Live** (real NASA POWER, SoilGrids, SRTM; temporary local computed
+engine and built web app, in a browser): Fundulea with previous crop, current rotation
+maize → winter wheat, water focus (36 % weight) and pea avoided produced three plans
+without pea and the current-rotation baseline; replay (2007–2023) and climate
+(2006–2025) charts show computed data; a +2 °C what-if updated the replay note and the
+form; the AI summary showed "not set up" (no key configured) with the plans still
+usable; Romanian labels display with diacritics; print rules keep only the results.
+**Not verified live:** an actual AI summary (no `ANTHROPIC_API_KEY`; covered by tests
+with a mocked client), NGINX/Caddy limits (configuration only), Docker and AWS.
