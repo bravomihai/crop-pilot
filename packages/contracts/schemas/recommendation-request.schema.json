@@ -117,6 +117,18 @@
         "additionalProperties": false
       }
     },
+    "assessment_crops": {
+      "maxItems": 15,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "preferred_crop": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
     "current_rotation": {
       "minItems": 1,
       "maxItems": 5,

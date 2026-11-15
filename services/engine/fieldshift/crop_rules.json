@@ -5,15 +5,15 @@
     "boundary_source_id": "romania-admin-boundary",
     "thermal_bands": {
       "warm": {
-        "name": "cald",
+        "name": "warm",
         "minimum_mean_apr_sep_c": 18
       },
       "temperate": {
-        "name": "temperat",
+        "name": "temperate",
         "minimum_mean_apr_sep_c": 16
       },
       "cool": {
-        "name": "răcoros"
+        "name": "cool"
       }
     },
     "zone_adjustments": {
@@ -37,7 +37,7 @@
   "crops": [
     {
       "id": "pea",
-      "name": "Mazăre",
+      "name": "Pea",
       "family": "fabaceae",
       "sowing_month": 3,
       "duration_days": 90,
@@ -54,7 +54,7 @@
     },
     {
       "id": "maize",
-      "name": "Porumb",
+      "name": "Maize",
       "family": "poaceae",
       "sowing_month": 4,
       "duration_days": 150,
@@ -71,7 +71,7 @@
     },
     {
       "id": "winter_wheat",
-      "name": "Grâu de toamnă",
+      "name": "Winter wheat",
       "family": "poaceae",
       "sowing_month": 10,
       "duration_days": 240,
@@ -88,7 +88,7 @@
     },
     {
       "id": "winter_barley",
-      "name": "Orz de toamnă",
+      "name": "Winter barley",
       "family": "poaceae",
       "sowing_month": 10,
       "duration_days": 200,
@@ -105,7 +105,7 @@
     },
     {
       "id": "sunflower",
-      "name": "Floarea-soarelui",
+      "name": "Sunflower",
       "family": "asteraceae",
       "sowing_month": 4,
       "duration_days": 130,

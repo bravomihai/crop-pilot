@@ -3,51 +3,157 @@
 This file includes historical verification records. Later entries describe newer
 runtime and interface states; earlier checks are not new claims of scientific validation.
 
+## Main integration into maria
+
+The main-branch integration retains drawn fields, separately analysed field parts,
+crop-first comparisons, and the rotation calendar. The map opens on Romania; the
+results also include main's at-a-glance and full-screen controls. AI summaries remain
+opt-in and disclose the OpenAI request.
+
+On 2026-11-15, the merged engine suite passed 259 tests; web UI and backend suites
+passed 42 and 102 tests, and typechecking passed. A synthetic computed request through
+localhost returned three plans and potato/pea assessments with uncertain land cover.
+Node 26 was used despite the repository's Node version range. These checks do not
+validate crop advice or current land use.
+
+On the later 2026-11-15 main integration, 262 Python tests, 47 web UI tests, 123 web
+backend tests, typechecking, and contract generation passed. The UI fixture checks
+include historical challenge comparisons and the initial wait before sowing. The
+offline engine integration test stubs both point and boundary terrain requests.
+Local web and engine health endpoints responded; the running engine was not restarted
+or tested with the newly merged code. Node 26 remains outside the supported range.
+These checks do not validate agronomic recommendations.
+
+On 2026-11-15, the web interface was aligned with main's point-based workflow and
+results layout. The UI suite (47 tests), web backend suite (123 tests), and typecheck
+passed; the localhost page was opened and showed point selection. The land-cover
+uncertainty notice and opt-in AI summary remain, and the expanded crop catalog remains
+available. These checks do not verify land use or agronomic advice.
+
+On 2026-11-15, the selected-crop form and rotation highlight were added. The engine
+suite passed 265 tests, the web UI suite 49 tests, the web backend suite 123 tests,
+and typechecking and contract generation passed. A synthetic point request through
+localhost returned three computed plans, including a potato rotation and an uncertain
+potato assessment; the form and results were also checked in the browser. Node 26 was
+outside the supported version range. This does not validate field suitability or agronomy.
+
+On the subsequent main integration, the selected crop assessment, preferred rotation,
+and full crop catalog were retained alongside main's per-plan money estimates. The
+estimates use historical data and are not forecasts; they do not change plan ranking.
+Engine tests passed 278/278, UI tests 52/52, web backend tests 123/123, and
+typechecking and contract generation passed. A focused engine test verified the selected crop and unchanged
+ranking with a farmer-supplied price. A synthetic localhost request returned three
+computed plans with money estimates, a potato-containing rotation and an uncertain
+potato assessment; point-based land-cover suitability remained uncertain. Node 26 was
+outside the supported version range. These checks do not validate agronomic advice.
+
+The later main integration adopted the system appearance and map controls while retaining
+the crop selector, assessments, preferred rotations and maria's data changes. UI tests
+passed 52/52, web backend tests 123/123, typechecking passed, and 51 focused engine
+tests passed. A synthetic localhost browser calculation showed the selected potato
+assessment, the best plan and a potato-containing plan in the rotation calendar. This
+does not validate field suitability or agronomy. Node 26 remained outside the supported
+version range.
+
+## Current integrated state
+
+- The application has a Next.js interface/backend, a Python engine, generated Zod/JSON
+  contracts, a stateless recommendation endpoint, and an optional public-data cache.
+- NASA POWER daily data and monthly/annual summaries, FAO-56 ET0, SoilGrids 0–30 cm
+  estimates, data provenance, missing-data reporting, and quality counters are integrated.
+- Romania-wide point validation uses the national boundary. Outside the southern and
+  south-eastern rules zone, project thermal bands shift crop calendars provisionally.
+- The engine has 15 crop rules and a deterministic P3/P4 rotation recommender. A
+  deterministic sample of up to 500 rotations is evaluated when the search space is
+  larger; the result discloses sampling. Rankings are screening estimates, not agronomic
+  validation.
+- The API accepts an optional GeoJSON field boundary; the main map selects a point
+  and does not send a boundary. For boundary requests, SoilGrids and SRTM sample up to three
+  distributed interior points. NASA POWER remains representative-point context.
+  Sparse sampling is not parcel-wide raster zonal statistics.
+- Computed recommendations screen field boundaries using ESA WorldCover 2021 via
+  Microsoft Planetary Computer, displaying uncertainty as information and no
+  crop plans when available pixels uniformly show tree cover, water, built-up land and other
+  incompatible classes. This historical 10 m classification cannot verify present
+  conditions or legal land use; mixed, unavailable and unsupported fields remain
+  uncertain. The submitted boundary is sent to the provider.
+- The main page uses the main branch's point-based workflow and results layout; field
+  parts are not exposed there. An optional crop selector requests an individual
+  assessment and a rotation including the crop where an eligible sequence is found.
+  Such assessments use provisional single-crop evaluator scores and are not
+  validated suitability or yield forecasts.
+- The demo generator respects chronological order and exclusions and does not fabricate
+  agronomic scores. Compose, AWS preparation, and active GitHub checks are documented.
+- The real P3 evaluator and P4 recommender integrate with the pipeline without a
+  computed-to-demo fallback. Crop calendars, suitability parameters, hazard thresholds,
+  and rotation guidance need Romanian agronomist review; computed results remain
+  provisional and are not validated cultivation recommendations.
+- The full Python engine suite passed 194 tests locally after the catalog update and
+  performance adjustment. Web typecheck, 82 backend tests, and 25 UI tests also passed.
+  External-service availability and agronomic validity are not implied by these checks.
+
 ## Written in the repository
 
 - pnpm workspace: one Next.js application for interface/backend and one Python service.
 - Zod contract and generated JSON Schemas; requests/results contain no user entities.
-- Form with locality/point, availability date, optional history/soil, and priorities.
+- Form with locality search and drawn field boundary, availability date, optional
+  history/soil, and priorities.
 - Leaflet/OpenStreetMap, Open-Meteo/GeoNames search, and three cards with calendars.
 - Frontend adapter for independent development and visibly labelled demo mode.
 - Stateless Next.js endpoint with validation, timeout, and result checks.
 - Prisma/PostgreSQL for optional public-data caching, with an initial migration.
 - Internal Python API, pipeline, and P2/P3/P4 interfaces.
-- NASA POWER daily-data adapter; not checked live during the rebuild.
 - Demo generator respecting chronological order and exclusions, without fabricated scores.
-- Compose configuration, AWS instructions, and an initially inactive CI reference.
-- P4: deterministic recommendation engine in `recommender/`. It generates sequences from
-  P3's rules, classifies them as feasible/infeasible/unknown, checks calendars, applies
-  normalized priority weights with intervals for missing scores, runs Pareto analysis,
-  selects diverse plans with disclosed trade-offs, compares a scenario against the
-  reference climate, and writes explanations and a qualitative confidence grade from the
-  evidence. It evaluates `current_rotation` as `baseline` (violations are agronomic rules
-  only; the farmer's own exclusions are reported separately) and caps confidence at "low"
-  on provisional rules. Integration with real P2 data, P3 and the web app is covered by
-  `test_p3_p4_integration.py`, `test_p4_web_integration.py` and
-  `test_app_audit_fixes.py`. This is not agronomic validation.
+- Compose configuration, AWS instructions, and the active GitHub checks workflow.
+- P4 (branch `alexia`): deterministic recommendation engine in `recommender/` with
+  bounded sequence generation from P3 rules; feasible/infeasible/unknown classification;
+  calendar checks (including autumn crops and `available_from`); normalized weights;
+  intervals for missing scores; Pareto analysis; diverse selection with disclosed
+  trade-offs; scenario/reference-climate comparison when confirmed by P3; explanations
+  and qualitative confidence derived from evidence. Integrated in `pipeline.py` without
+  fallback. P4 user-facing output is English. Adapted to the extended `main` contract:
+  optional `productivity`; `current_rotation` → P3-evaluated `baseline` (with `violations`,
+  omitted with an explanation when P3 supplies no calendar/sources); `history[].source`
+  used in confidence and `local_checks`; `plan.scores` with `null` for unknown.
+  Climate-scenario comparison uses the reference climate, separate from the current rotation.
+  `pipeline.py` again calls `recommend_rotations`, so P5 `tests/test_api.py` passes.
+  P3–P4 integration was checked with real modules (`load_rules`, `evaluate`, pipeline)
+  and the historical NASA POWER fixture (Bărăgan, 2005–2025) in place of P2: 23 tests
+  in `test_p3_p4_integration.py` cover the contract, feasibility, unchanged P3 scores,
+  priorities, scenario vs. reference climate, a current rotation with violations,
+  exclusions/history, uncovered zones, missing data, and repeatability.
+  A cold complete request takes about 14–16 seconds, around 18% of the 90-second
+  `ENGINE_TIMEOUT_MS`; P3 replay accounts for over 98% of the time. Tests found five
+  P4 bugs that were fixed: a scenario disabled by an unknown crop in the current
+  rotation; lost P3 reasons outside coverage and for empty results; unpropagated P3
+  assumptions; and below-median wording when displayed values were equal.
+  Python suite: 162 passed, 0 failed (2026-11-14). This is not agronomic validation;
+  HTTP `computed` remains 503 until P2 is ready. pnpm was not run in that verification
+  because `node_modules` was absent; contracts were unchanged.
   Details: [P4_IMPLEMENTATION_REPORT.md](P4_IMPLEMENTATION_REPORT.md).
 
 ## Remaining team work
 
-- All: one live end-to-end check in a browser with real servers in computed mode before
-  the demo, using fields warmed into the local cache (`python -m fieldshift.warm`).
-- P1: remove the unused earlier dashboard and calculator components once the `maria`
-  branch is settled; optionally display `monthly_climate`.
-- P2: review the `maria` branch (Romania-wide crop rules, field sampling) with P3 and P4
-  before merging; it lowers P4's search limit to 500 sequences, which should be a
-  test-only setting instead.
-- P3: agronomist review of the southern rules and the provisional thermal-band shifts;
-  high-altitude and wetland sites are only disclosed, not excluded.
+- P2: continue live POWER and SoilGrids checks across Romanian agricultural locations,
+  station comparisons, quality review, and justified integration of additional sources.
+- P3: validate regional rules, crop parameters, hazard thresholds, water-balance
+  assumptions, rotation compatibility, and calendars with Romanian agronomists.
+- P3/P4: validate end-to-end outputs against field observations, including baseline
+  rotation comparisons, scenario behavior, and screening-score interpretation.
+- Data: validate rainfall partition and water-balance behavior against independent
+  observations before introducing a runoff estimate. Dense parcel-wide raster statistics
+  remain future work. SoilGrids available-water values remain
+  pedotransfer estimates, not local measurements.
+- Catalog: review and validate the 15-crop regional catalog and add further crops only
+  with suitable parameter evidence.
+- P1: UX/accessibility refinement, comparisons, and source-detail presentation.
 - P5: VPS deployment and real secrets; confirm the GitHub workflow passes. The Python
   engine keeps computing after a cancelled request (no cooperative cancellation).
 
 ## Intentionally outside this version
 
 Accounts, email/login, persistent sessions, farmer profiles, saved analyses, SMS,
-WhatsApp, drawing a field outline in the interface (the contract's optional
-`field_boundary` is accepted by the engine), precise yield/profit predictions, trained
-ML, and CMIP6.
+WhatsApp, precise yield/profit predictions, trained ML, and CMIP6.
 
 ## Initial verification limits (historical)
 
@@ -144,7 +250,11 @@ token could not publish workflows. To activate it, move the file to
   SRTM elevations. The dataset covers 60°S–60°N, so its coverage includes Romania.
 - The engine requests one 3×3 neighborhood around each submitted point, calculates a
   Horn slope estimate in percent, caches the response, and passes `static.slope_pct` to
-  the existing erosion component. It does not calculate parcel-wide slope from a polygon.
+  the existing erosion component. For a field boundary, it samples up to three
+  distributed points in one batched elevation request and averages available slopes.
+  SoilGrids is sampled at the same points and its numeric properties are averaged before
+  deriving texture and available water. These are sparse point samples, not parcel-wide
+  raster statistics; NASA POWER remains at the representative regional grid cell.
 - OpenTopoData receives the point coordinates. Its published public API limits are
   1 request/second and 1000 requests/day; this is suitable for a prototype, not a
   confirmed production-scale service.
@@ -184,6 +294,50 @@ Calculate reaches the existing API but returns `engine_not_configured`: the loca
 web app has no configured engine credentials, and no engine responds on port
 8000. No planner service, database, migration, or deployment was started, and no
 successful agronomic computation is claimed.
+
+## Drawn field boundaries in the main map — 2026-11-15
+
+The main map now requires a drawn field boundary instead of a selected map point.
+Search centers the map; corner clicks and freehand drags trace the outline, with
+finish, undo, cancel, and clear controls. Boundaries are capped at 100 points to fit
+the request contract; invalid and self-intersecting shapes are rejected. The frontend
+submits the closed GeoJSON polygon and derives an interior
+representative coordinate for the existing API contract. SoilGrids and SRTM use
+up to three distributed interior samples; NASA POWER remains representative-point
+weather context. This is sparse sampling, not parcel-wide raster statistics.
+
+Verified: web TypeScript, 35 UI/geometry tests, 98 web backend/data tests, and 20
+Python boundary/data-service tests passed. In a local browser, synthetic pointer
+events traced an outline, and Calculate sent a closed polygon and representative
+point to an intercepted request. Physical gestures and live data providers were not
+verified. The local engine status returned `engine_not_configured`, so no end-to-end
+calculation or computed agronomic validity is claimed.
+
+## Local computed field request — 2026-11-15
+
+Configured the local web and engine services with a shared service token in ignored
+environment files, with the optional cache disabled. The web status endpoint reported
+the computed engine reachable. A synthetic Fundulea field polygon submitted through
+the web API returned a computed `complete` result with three three-crop plans, NASA
+POWER weather, and SRTM terrain. SoilGrids timed out and was reported as missing;
+separate SoilGrids endpoint checks also timed out. No browser-to-result flow, other
+locations, or agronomic validity were verified by this check.
+
+## Satellite land-cover screening
+
+The local engine was restarted with the screening code. Synthetic polygon requests
+through the web API returned zero plans for a field classified as tree cover and
+three computed plans for one classified as cropland. The latter reported a SoilGrids
+timeout. Offline tests cover mixed and unavailable classifications and the results
+warning. These checks do not establish current land use or agronomic validity.
+
+## Field parts and crop comparisons
+
+In the local browser, two synthetic parts were drawn, assigned potato and pea, and
+calculated separately through the computed web API. Both returned crop comparisons
+and rotation plans; the results reported unknown soil pH, and one part had mixed
+satellite land cover. The separate comparison scores and provisional alternative crops
+are not a field assessment or agronomic validation. SoilGrids timed out locally.
 
 ## Local calculator restored and zoom capped — 2026-11-14
 
@@ -585,3 +739,15 @@ keeping the simplified interface. Both implementation records are preserved.
 Verified on the merged tree: TypeScript, 43 UI tests, contract generation with
 no generated schema changes, and whitespace checks. Required CI will verify
 the full integrated build before merge; no additional visual review was run.
+
+
+## Results theme consistency and keyboard scrolling — 2026-11-15
+
+Results, Survival Mode, money estimates and summary placeholders use the shared
+theme colors and panel styles. The results scrollbar is hidden while the scroll
+region remains focusable and labelled for keyboard access.
+
+Merged the latest main, preserving crop-planning additions. Verified: TypeScript,
+all 52 UI tests, regenerated schemas without changes and whitespace checks.
+Required GitHub CI verifies the full build and containers before merge. Browser
+appearance and gestures were not visually reviewed in this change.

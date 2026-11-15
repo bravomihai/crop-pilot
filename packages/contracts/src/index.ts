@@ -67,6 +67,9 @@ export const requestSchema = z
     available_from: dateSchema,
     crop_count: z.literal(3).default(3),
     history: z.array(cropHistorySchema).max(30).default([]),
+    assessment_crops: z.array(cropIdSchema).max(15).optional(),
+    // Keep the best-ranked plan and, where possible, include a plan with this crop.
+    preferred_crop: cropIdSchema.optional(),
     // The rotation the farmer follows today, as one cycle (e.g. ["maize", "winter_wheat"]).
     // When present, the result also contains `baseline`: that cycle continued for the
     // next three main crops and evaluated like the plans, so they can be compared.
@@ -332,6 +335,35 @@ export const resultSchema = z
     // counted in `status` and may repeat a plan's sequence.
     baseline: planSchema.optional(),
     monthly_climate: z.array(monthlyClimateSchema),
+    land_cover: z
+      .object({
+        status: z.enum(["cropland", "incompatible", "uncertain"]),
+        message: z.string().min(1),
+      })
+      .strict()
+      .optional(),
+    crop_assessment: z
+      .object({
+        selected: z.array(z.object({
+          crop_id: cropIdSchema,
+          crop_name: z.string().min(1),
+          status: z.enum(["not_recommended", "uncertain", "assessed"]),
+          score: z.number().min(0).max(1).nullable(),
+          message: z.string().min(1),
+          sowing_window: windowSchema.optional(),
+          harvest_window: windowSchema.optional(),
+        }).strict()),
+        alternatives: z.array(z.object({
+          crop_id: cropIdSchema,
+          crop_name: z.string().min(1),
+          score: z.number().min(0).max(1),
+          sowing_window: windowSchema.optional(),
+          harvest_window: windowSchema.optional(),
+        }).strict()).max(3),
+        disclaimer: z.string().min(1),
+      })
+      .strict()
+      .optional(),
     // Observed yearly climate at the location (from the data the plans were evaluated on).
     climate_context: climateContextSchema.optional(),
     assumptions: z.array(z.string()),

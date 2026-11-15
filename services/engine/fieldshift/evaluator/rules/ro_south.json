@@ -12,7 +12,8 @@
   "review_status": {
     "verified_against_source": [
       "FAO-56 Table 11 stage lengths, Table 12 Kc mid/end, Table 19 available water, Table 22 root depth and depletion fraction, Table 24 Ky (read from the online book, 2026-11-14)",
-      "FAO EcoCrop temperature and pH ranges (read from a mirror of the FAO database, 2026-11-14)"
+      "FAO-56 Table 11 continental potato stage example, Table 12 potato Kc, Table 22 potato root depth/depletion, and Table 24 potato Ky",
+      "FAO EcoCrop temperature and pH ranges for the original seven crops (read from a mirror of the FAO database, 2026-11-14)"
     ],
     "expert_estimates_pending_agronomist_review": [
       "sowing and harvest windows for the region",
@@ -21,11 +22,17 @@
       "soil index components and weights",
       "yield factors for succession class and late sowing",
       "Kc ini for barley, maize, sunflower, pea, soybean, rapeseed (FAO-56 crop-group values; the per-crop column was not readable online)",
+      "Ky for spring barley (not listed in FAO-56 Table 24; 1.0 is assumed)",
       "stage fractions for winter barley and winter rapeseed (FAO-56 has no row; winter wheat fractions are used)",
       "Ky for barley and rapeseed (not listed in FAO-56 Table 24; 1.0 is assumed)",
+      "Romanian sowing and harvest windows, crop-specific EcoCrop temperature/pH ranges, hazard thresholds, and rotation guidance for oats, grain sorghum, dry beans, sugar beet, spring barley, triticale, winter rye, and potatoes",
+      "Using winter-wheat proxies for triticale and winter rye where crop-specific FAO-56 values are unavailable",
       "cover crop suggestions for bare-soil gaps and their timing"
     ]
   },
+  "data_gaps": [
+    "The added oats, grain sorghum, dry bean, sugar beet, spring barley, triticale, winter rye, and potato calendars, crop-specific temperature/pH ranges, hazard thresholds, and rotation rules are provisional estimates and need Romanian agronomist validation; triticale and winter rye also use winter-wheat proxies for some crop parameters."
+  ],
   "settings": {
     "turnaround_days": 7,
     "min_sowing_window_days": 5,
@@ -201,36 +208,279 @@
         "heat": { "tmax_c": 28, "stages": ["mid"], "severe_days": 15, "severity": 0.5 },
         "seedling_frost": { "tmin_c": -6, "days_after_sowing": [10, 45], "severity": 0.6 }
       }
+    },
+    {
+      "id": "oats",
+      "name": "Oats",
+      "family": "Poaceae",
+      "legume": false,
+      "winter": false,
+      "sowing": { "start": "03-01", "optimal_end": "03-25", "latest": "04-05" },
+      "harvest": { "start": "07-05", "end": "07-25", "year_offset": 0 },
+      "stage_fractions": [0.15, 0.19, 0.44, 0.22],
+      "kc": { "ini": 0.3, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.25 },
+      "root_depth_m": [1.0, 1.5],
+      "depletion_fraction": 0.55,
+      "ky": 1.0,
+      "ecocrop": { "topt": [15, 25], "tabs": [4, 32], "ph_opt": [5.5, 7.0], "ph_abs": [4.5, 8.0] },
+      "residue": 0.7,
+      "max_consecutive": 1,
+      "return_years": 2,
+      "hazards": {
+        "heat": { "tmax_c": 30, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.4 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.4 }
+      }
+    },
+    {
+      "id": "sorghum",
+      "name": "Grain sorghum",
+      "family": "Poaceae",
+      "legume": false,
+      "winter": false,
+      "sowing": { "start": "05-01", "optimal_end": "05-20", "latest": "06-01" },
+      "harvest": { "start": "09-20", "end": "10-20", "year_offset": 0 },
+      "stage_fractions": [0.16, 0.28, 0.32, 0.24],
+      "kc": { "ini": 0.3, "mid": 1.05, "mid_irrigated": 1.05, "end": 0.55 },
+      "root_depth_m": [1.0, 2.0],
+      "depletion_fraction": 0.55,
+      "ky": 0.9,
+      "ecocrop": { "topt": [26, 35], "tabs": [10, 45], "ph_opt": [5.5, 7.5], "ph_abs": [4.5, 8.5] },
+      "residue": 0.8,
+      "max_consecutive": 1,
+      "return_years": 2,
+      "hazards": {
+        "heat": { "tmax_c": 38, "stages": ["mid"], "severe_days": 15, "severity": 0.4 },
+        "seedling_frost": { "tmin_c": 4, "days_after_sowing": [10, 45], "severity": 0.6 }
+      }
+    },
+    {
+      "id": "dry_beans",
+      "name": "Dry beans",
+      "family": "Fabaceae",
+      "legume": true,
+      "winter": false,
+      "sowing": { "start": "05-01", "optimal_end": "05-20", "latest": "06-01" },
+      "harvest": { "start": "08-20", "end": "09-20", "year_offset": 0 },
+      "stage_fractions": [0.18, 0.27, 0.36, 0.19],
+      "kc": { "ini": 0.4, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.35 },
+      "root_depth_m": [0.6, 0.9],
+      "depletion_fraction": 0.45,
+      "ky": 1.15,
+      "ecocrop": { "topt": [18, 25], "tabs": [10, 30], "ph_opt": [6.0, 7.5], "ph_abs": [5.0, 8.0] },
+      "residue": 0.3,
+      "max_consecutive": 1,
+      "return_years": 3,
+      "hazards": {
+        "heat": { "tmax_c": 32, "stages": ["mid"], "severe_days": 12, "severity": 0.5 },
+        "seedling_frost": { "tmin_c": -1, "days_after_sowing": [10, 45], "severity": 0.6 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.5 }
+      }
+    },
+    {
+      "id": "sugar_beet",
+      "name": "Sugar beet",
+      "family": "Amaranthaceae",
+      "legume": false,
+      "winter": false,
+      "sowing": { "start": "03-20", "optimal_end": "04-15", "latest": "04-25" },
+      "harvest": { "start": "09-20", "end": "10-25", "year_offset": 0 },
+      "stage_fractions": [0.16, 0.22, 0.31, 0.31],
+      "kc": { "ini": 0.35, "mid": 1.2, "mid_irrigated": 1.2, "end": 0.7 },
+      "root_depth_m": [0.7, 1.2],
+      "depletion_fraction": 0.55,
+      "ky": 1.0,
+      "ecocrop": { "topt": [15, 25], "tabs": [4, 35], "ph_opt": [6.0, 8.0], "ph_abs": [5.0, 8.5] },
+      "residue": 0.5,
+      "max_consecutive": 1,
+      "return_years": 4,
+      "hazards": {
+        "heat": { "tmax_c": 35, "stages": ["mid"], "severe_days": 15, "severity": 0.4 },
+        "seedling_frost": { "tmin_c": -3, "days_after_sowing": [10, 45], "severity": 0.5 }
+      }
+    },
+    {
+      "id": "spring_barley",
+      "name": "Spring barley",
+      "family": "Poaceae",
+      "legume": false,
+      "winter": false,
+      "sowing": { "start": "03-01", "optimal_end": "03-25", "latest": "04-05" },
+      "harvest": { "start": "06-25", "end": "07-20", "year_offset": 0 },
+      "stage_fractions": [0.15, 0.19, 0.44, 0.22],
+      "kc": { "ini": 0.3, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.25 },
+      "root_depth_m": [1.0, 1.5],
+      "depletion_fraction": 0.55,
+      "ky": 1.0,
+      "ecocrop": { "topt": [15, 20], "tabs": [2, 35], "ph_opt": [6.0, 7.5], "ph_abs": [5.0, 8.5] },
+      "residue": 0.7,
+      "max_consecutive": 1,
+      "return_years": 2,
+      "hazards": {
+        "heat": { "tmax_c": 32, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.4 },
+        "seedling_frost": { "tmin_c": -4, "days_after_sowing": [10, 45], "severity": 0.5 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.4 }
+      }
+    },
+    {
+      "id": "triticale",
+      "name": "Triticale",
+      "family": "Poaceae",
+      "legume": false,
+      "winter": true,
+      "sowing": { "start": "09-25", "optimal_end": "10-15", "latest": "10-25" },
+      "harvest": { "start": "07-01", "end": "07-25", "year_offset": 1 },
+      "stage_fractions": [0.48, 0.22, 0.22, 0.08],
+      "kc": { "ini": 0.3, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.25 },
+      "root_depth_m": [1.5, 1.8],
+      "depletion_fraction": 0.55,
+      "ky": 1.05,
+      "ecocrop": { "topt": [15, 23], "tabs": [5, 30], "ph_opt": [5.5, 7.5], "ph_abs": [4.5, 8.5] },
+      "residue": 0.8,
+      "max_consecutive": 1,
+      "return_years": 2,
+      "hazards": {
+        "heat": { "tmax_c": 32, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.5 },
+        "winterkill": { "tmin_c": -18, "months": [12, 1, 2], "severity": 0.8 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.4 }
+      }
+    },
+    {
+      "id": "winter_rye",
+      "name": "Winter rye",
+      "family": "Poaceae",
+      "legume": false,
+      "winter": true,
+      "sowing": { "start": "09-20", "optimal_end": "10-10", "latest": "10-20" },
+      "harvest": { "start": "06-25", "end": "07-20", "year_offset": 1 },
+      "stage_fractions": [0.48, 0.22, 0.22, 0.08],
+      "kc": { "ini": 0.3, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.25 },
+      "root_depth_m": [1.5, 1.8],
+      "depletion_fraction": 0.55,
+      "ky": 1.05,
+      "ecocrop": { "topt": [12, 20], "tabs": [0, 30], "ph_opt": [5.5, 7.0], "ph_abs": [4.5, 8.0] },
+      "residue": 0.8,
+      "max_consecutive": 1,
+      "return_years": 2,
+      "hazards": {
+        "heat": { "tmax_c": 30, "stages": ["mid", "late"], "severe_days": 12, "severity": 0.4 },
+        "winterkill": { "tmin_c": -20, "months": [12, 1, 2], "severity": 0.8 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.4 }
+      }
+    },
+    {
+      "id": "potato",
+      "name": "Potato",
+      "family": "Solanaceae",
+      "legume": false,
+      "winter": false,
+      "sowing": { "start": "03-20", "optimal_end": "04-20", "latest": "05-01" },
+      "harvest": { "start": "08-01", "end": "09-30", "year_offset": 0 },
+      "stage_fractions": [0.19, 0.23, 0.35, 0.23],
+      "kc": { "ini": 0.5, "mid": 1.15, "mid_irrigated": 1.15, "end": 0.75 },
+      "root_depth_m": [0.4, 0.6],
+      "depletion_fraction": 0.35,
+      "ky": 1.1,
+      "ecocrop": { "topt": [15, 22], "tabs": [5, 30], "ph_opt": [5.0, 6.5], "ph_abs": [4.5, 8.0] },
+      "residue": 0.2,
+      "max_consecutive": 1,
+      "return_years": 4,
+      "hazards": {
+        "heat": { "tmax_c": 30, "stages": ["mid"], "severe_days": 12, "severity": 0.5 },
+        "seedling_frost": { "tmin_c": -2, "days_after_sowing": [10, 45], "severity": 0.6 },
+        "sowing_drought": { "rain_mm": 20, "days_before": 20, "days_after": 20, "severity": 0.5 }
+      }
     }
   ],
   "successor": {
     "winter_wheat": {
       "winter_wheat": "forbidden", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "good",
-      "sunflower": "good", "soybean": "good", "pea": "good"
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "poor",
+      "winter_rye": "poor", "potato": "good"
     },
     "winter_barley": {
       "winter_wheat": "poor", "winter_barley": "forbidden", "winter_rapeseed": "good", "maize": "good",
-      "sunflower": "good", "soybean": "good", "pea": "good"
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "poor",
+      "winter_rye": "poor", "potato": "good"
     },
     "winter_rapeseed": {
       "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "forbidden", "maize": "good",
-      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor"
+      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor", "oats": "good", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
     },
     "maize": {
       "winter_wheat": "ok", "winter_barley": "ok", "winter_rapeseed": "poor", "maize": "ok",
-      "sunflower": "good", "soybean": "good", "pea": "good"
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "poor",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "ok",
+      "winter_rye": "ok", "potato": "good"
     },
     "sunflower": {
       "winter_wheat": "ok", "winter_barley": "ok", "winter_rapeseed": "forbidden", "maize": "ok",
-      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor"
+      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor", "oats": "good", "sorghum": "good",
+      "dry_beans": "poor", "sugar_beet": "good", "spring_barley": "good", "triticale": "ok",
+      "winter_rye": "ok", "potato": "good"
     },
     "soybean": {
       "winter_wheat": "ok", "winter_barley": "ok", "winter_rapeseed": "forbidden", "maize": "good",
-      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor"
+      "sunflower": "forbidden", "soybean": "forbidden", "pea": "poor", "oats": "good", "sorghum": "good",
+      "dry_beans": "poor", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
     },
     "pea": {
       "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "good", "maize": "good",
-      "sunflower": "poor", "soybean": "poor", "pea": "forbidden"
+      "sunflower": "poor", "soybean": "poor", "pea": "forbidden", "oats": "good", "sorghum": "good",
+      "dry_beans": "poor", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
+    },
+    "oats": {
+      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "good",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "forbidden", "sorghum": "poor",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "poor",
+      "winter_rye": "poor", "potato": "good"
+    },
+    "sorghum": {
+      "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "good", "maize": "poor",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "good", "sorghum": "forbidden",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
+    },
+    "dry_beans": {
+      "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "good", "maize": "good",
+      "sunflower": "poor", "soybean": "poor", "pea": "poor", "oats": "good", "sorghum": "good",
+      "dry_beans": "forbidden", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
+    },
+    "sugar_beet": {
+      "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "good", "maize": "good",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "good", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "forbidden", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "good"
+    },
+    "spring_barley": {
+      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "poor",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "forbidden", "triticale": "poor",
+      "winter_rye": "poor", "potato": "good"
+    },
+    "triticale": {
+      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "ok",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "forbidden",
+      "winter_rye": "poor", "potato": "good"
+    },
+    "winter_rye": {
+      "winter_wheat": "poor", "winter_barley": "poor", "winter_rapeseed": "good", "maize": "ok",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "poor", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "poor", "triticale": "poor",
+      "winter_rye": "forbidden", "potato": "good"
+    },
+    "potato": {
+      "winter_wheat": "good", "winter_barley": "good", "winter_rapeseed": "good", "maize": "good",
+      "sunflower": "good", "soybean": "good", "pea": "good", "oats": "good", "sorghum": "good",
+      "dry_beans": "good", "sugar_beet": "good", "spring_barley": "good", "triticale": "good",
+      "winter_rye": "good", "potato": "forbidden"
     }
   },
   "successor_reasons": {
@@ -245,21 +495,60 @@
     "cereal_diseases": {
       "pairs": [
         ["winter_wheat", "winter_wheat"], ["winter_wheat", "winter_barley"],
-        ["winter_barley", "winter_wheat"], ["winter_barley", "winter_barley"]
+        ["winter_barley", "winter_wheat"], ["winter_barley", "winter_barley"],
+        ["winter_wheat", "oats"], ["winter_barley", "oats"],
+        ["oats", "winter_wheat"], ["oats", "winter_barley"], ["oats", "oats"],
+        ["winter_wheat", "spring_barley"], ["winter_barley", "spring_barley"],
+        ["spring_barley", "winter_wheat"], ["spring_barley", "winter_barley"],
+        ["spring_barley", "spring_barley"],
+        ["winter_wheat", "triticale"], ["winter_barley", "triticale"],
+        ["triticale", "winter_wheat"], ["triticale", "winter_barley"], ["triticale", "triticale"],
+        ["winter_wheat", "winter_rye"], ["winter_barley", "winter_rye"],
+        ["winter_rye", "winter_wheat"], ["winter_rye", "winter_barley"], ["winter_rye", "winter_rye"],
+        ["oats", "spring_barley"], ["spring_barley", "oats"],
+        ["oats", "triticale"], ["triticale", "oats"], ["oats", "winter_rye"], ["winter_rye", "oats"],
+        ["spring_barley", "triticale"], ["triticale", "spring_barley"],
+        ["spring_barley", "winter_rye"], ["winter_rye", "spring_barley"],
+        ["triticale", "winter_rye"], ["winter_rye", "triticale"]
       ],
-      "text": "straw cereals after straw cereals build up foot and leaf diseases"
+      "text": "small-grain cereals after small-grain cereals can build up foot and leaf diseases"
     },
     "fusarium": {
-      "pairs": [["maize", "winter_wheat"], ["maize", "winter_barley"]],
+      "pairs": [
+        ["maize", "winter_wheat"], ["maize", "winter_barley"],
+        ["maize", "triticale"], ["maize", "winter_rye"]
+      ],
       "text": "maize residues carry Fusarium to the following cereal, and the late harvest delays sowing"
     },
+    "potato_rotation": {
+      "pairs": [["potato", "potato"]],
+      "text": "potatoes need a multi-year break to reduce soil-borne disease pressure"
+    },
     "legume_after_legume": {
-      "pairs": [["pea", "soybean"], ["soybean", "pea"], ["soybean", "soybean"], ["pea", "pea"]],
+      "pairs": [
+        ["pea", "soybean"], ["soybean", "pea"], ["soybean", "soybean"], ["pea", "pea"],
+        ["dry_beans", "pea"], ["pea", "dry_beans"], ["dry_beans", "soybean"], ["soybean", "dry_beans"],
+        ["dry_beans", "dry_beans"]
+      ],
       "text": "legume after legume wastes fixed nitrogen and shares root diseases"
     },
     "nitrogen": {
-      "pairs": [["pea", "winter_wheat"], ["pea", "winter_barley"], ["pea", "winter_rapeseed"], ["pea", "maize"], ["soybean", "maize"]],
-      "text": "the legume leaves nitrogen and an early-cleared, moist seedbed"
+      "pairs": [
+        ["pea", "winter_wheat"], ["pea", "winter_barley"], ["pea", "winter_rapeseed"], ["pea", "maize"],
+        ["pea", "oats"], ["pea", "sorghum"], ["pea", "sugar_beet"], ["pea", "spring_barley"],
+        ["pea", "triticale"], ["pea", "winter_rye"], ["pea", "potato"], ["soybean", "maize"],
+        ["soybean", "winter_wheat"], ["soybean", "winter_barley"], ["soybean", "oats"], ["soybean", "sorghum"],
+        ["soybean", "sugar_beet"], ["soybean", "spring_barley"], ["soybean", "triticale"], ["soybean", "winter_rye"],
+        ["soybean", "potato"], ["dry_beans", "winter_wheat"], ["dry_beans", "winter_barley"],
+        ["dry_beans", "winter_rapeseed"], ["dry_beans", "maize"], ["dry_beans", "oats"],
+        ["dry_beans", "sorghum"], ["dry_beans", "sugar_beet"], ["dry_beans", "spring_barley"],
+        ["dry_beans", "triticale"], ["dry_beans", "winter_rye"], ["dry_beans", "potato"]
+      ],
+      "text": "a preceding legume may leave nitrogen and an earlier-cleared seedbed"
+    },
+    "related_summer_grasses": {
+      "pairs": [["maize", "sorghum"], ["sorghum", "maize"]],
+      "text": "repeated summer grass crops may share pest and disease pressure; local review is needed"
     }
   },
   "cover_crops": {
@@ -299,7 +588,15 @@
     "soybean": "Check that the soybean maturity group fits the area and that seed is inoculated if soybean is new on the field.",
     "pea": "Check pea root-disease history; keep at least four years between pea crops.",
     "winter_wheat": { "text": "Check Fusarium risk and bury or chop the maize residues: wheat follows maize.", "after": ["maize"] },
-    "winter_barley": "Check winter hardiness of the barley variety for this area."
+    "winter_barley": "Check winter hardiness of the barley variety for this area.",
+    "oats": "Confirm the spring-oat variety and sowing window; check whether cereal disease history makes a small-grain successor unsuitable.",
+    "sorghum": "Confirm the grain-sorghum hybrid's maturity and harvest moisture requirements for the local area.",
+    "dry_beans": "Check bean root-disease history, harvest conditions, and inoculation needs; keep legumes apart in the rotation.",
+    "sugar_beet": "Confirm local sugar-beet processor access, contract requirements, and soil compaction risk.",
+    "spring_barley": "Check the spring-barley variety and sowing conditions; keep it separated from other small-grain cereals where disease pressure is known.",
+    "triticale": "Confirm winter triticale variety suitability and treat wheat-based water and climate parameters as provisional proxies.",
+    "winter_rye": "Confirm local rye variety and market or feed use; its crop parameters are provisional winter-wheat proxies.",
+    "potato": "Check local seed-potato health, soil drainage, and the four-year potato return interval."
   },
   "sources": [
     {

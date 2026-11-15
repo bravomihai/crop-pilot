@@ -304,6 +304,33 @@ test("rejects excluded crops returned by engine", async () => {
   value.constraints.excluded_crops = [fixture.plans[0].steps[0].crop_id];
   await check(await POST(request(value)), 502, "invalid_engine_result");
 });
+test("computed crop assessment must match requested crops and exclusions", async () => {
+  const value = structuredClone(input);
+  value.assessment_crops = ["potato"];
+  value.constraints.excluded_crops = ["sugar_beet"];
+  changeResult = (r) => {
+    r.mode = "computed";
+    r.crop_assessment = {
+      selected: [{ crop_id: "potato", crop_name: "Potato", status: "uncertain", score: null, message: "Check soil." }],
+      alternatives: [],
+      disclaimer: "Estimates only.",
+    };
+  };
+  await check(await POST(request(value)), 200);
+  const original = changeResult;
+  changeResult = (r) => {
+    original(r);
+    r.crop_assessment.alternatives = [{ crop_id: "sugar_beet", crop_name: "Sugar beet", score: 0.8 }];
+  };
+  await check(await POST(request(value)), 502, "invalid_engine_result");
+  changeResult = (r) => {
+    original(r);
+    r.crop_assessment.selected[0].crop_id = "maize";
+  };
+  await check(await POST(request(value)), 502, "invalid_engine_result");
+  changeResult = (r) => { r.mode = "computed"; };
+  await check(await POST(request(value)), 502, "invalid_engine_result");
+});
 for (const count of [0, 1, 2, 3]) {
   test(`accepts computed contract with ${count} valid plans`, async () => {
     changeResult = (r) => {

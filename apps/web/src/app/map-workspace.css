@@ -130,6 +130,10 @@
 .map-back-button { display: flex; align-items: center; gap: 13px; background: var(--surface); border: 0; color: var(--accent); padding: 10px 12px; border-radius: 10px; font-size: 11px !important; }
 .map-results-scroll { min-height: 0; overflow: auto; padding: 24px 28px; overscroll-behavior: contain; }
 .map-results-scroll .results { padding: 0; margin: 0; border: 0; background: transparent; }
+.chosen-crop { margin: 18px 0; padding: var(--card-padding); border: 1px solid var(--border); border-radius: var(--card-radius); background: var(--surface); color: var(--ink); }
+.chosen-crop h3 { margin: 4px 0 8px; }
+.chosen-crop p { line-height: 1.5; }
+.chosen-crop small { line-height: 1.5; }
 .map-results-scroll .section-heading { margin-bottom: 16px; }
 .map-results-scroll .section-heading .eyebrow { display: none; }
 .map-results-scroll .section-heading h2 { font-size: 16px; letter-spacing: -.3px; }

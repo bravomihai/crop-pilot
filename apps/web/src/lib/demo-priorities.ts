@@ -148,6 +148,41 @@ const PROFILES: Record<DemoCropId, FarmingPriorities> = {
     logistics: 95,
     cleanup: 95,
   },
+  dry_beans: {
+    investment: 50,
+    water: 45,
+    regeneration: 75,
+    logistics: 50,
+    cleanup: 45,
+  },
+  spring_barley: {
+    investment: 35,
+    water: 40,
+    regeneration: 30,
+    logistics: 30,
+    cleanup: 35,
+  },
+  triticale: {
+    investment: 35,
+    water: 40,
+    regeneration: 30,
+    logistics: 35,
+    cleanup: 35,
+  },
+  winter_rye: {
+    investment: 35,
+    water: 35,
+    regeneration: 30,
+    logistics: 30,
+    cleanup: 30,
+  },
+  potato: {
+    investment: 85,
+    water: 80,
+    regeneration: 20,
+    logistics: 80,
+    cleanup: 70,
+  },
 };
 
 export function normalisePriorities(

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { requestSchema } from "@croppilot/contracts";
 import {
   addCorner,
   addFreehand,
   createParcel,
+  MAX_BOUNDARY_POINTS,
+  validateFieldPart,
   tracePoints,
   type Coordinate,
   type DrawSegment,
@@ -30,6 +33,69 @@ test("WGS84 polygon gives hectares and a centre in latitude/longitude contract o
   assert.ok(Math.abs(field.location.longitude - 26.0005) < 1e-8);
   assert.deepEqual(field.boundary?.[0], field.boundary?.at(-1));
   assert.deepEqual(rectangle.length, 4);
+});
+
+test("a drawn field can be sent in the recommendation request", () => {
+  const field = createParcel(rectangle);
+  assert.ok(field.boundary);
+  const request = requestSchema.parse({
+    location: field.location,
+    field_boundary: { type: "Polygon", coordinates: [field.boundary] },
+    available_from: "2026-11-15",
+    priorities: { water: 3, soil: 3, climate: 3 },
+    constraints: { irrigated: false, excluded_crops: [] },
+    scenario: { temp_change_c: 0, rain_change_pct: 0 },
+  });
+  assert.deepEqual(request.field_boundary?.coordinates[0], field.boundary);
+  assert.deepEqual(request.location, field.location);
+});
+
+test("field parts must stay inside the field and not overlap", () => {
+  const field = createParcel(rectangle);
+  const left = createParcel([[26, 44], [26.0005, 44], [26.0005, 44.001], [26, 44.001]]);
+  const right = createParcel([[26.0005, 44], [26.001, 44], [26.001, 44.001], [26.0005, 44.001]]);
+  const overlapping = createParcel([[26.0004, 44], [26.0009, 44], [26.0009, 44.001], [26.0004, 44.001]]);
+  const outside = createParcel([[25.9998, 44], [26.0002, 44], [26.0002, 44.001], [25.9998, 44.001]]);
+  assert.doesNotThrow(() => validateFieldPart(field, left, []));
+  assert.doesNotThrow(() => validateFieldPart(field, right, [left]));
+  assert.throws(() => validateFieldPart(field, overlapping, [left]), /cannot overlap/);
+  assert.throws(() => validateFieldPart(field, outside, []), /inside the field/);
+  assert.throws(() => validateFieldPart(field, right, Array(5).fill(left)), /at most 5/);
+});
+
+test("concave field boundaries keep the NASA representative point inside the parcel", () => {
+  const field = createParcel([
+    [26, 44],
+    [26.004, 44],
+    [26.004, 44.001],
+    [26.001, 44.001],
+    [26.001, 44.004],
+    [26, 44.004],
+  ]);
+  const [longitude, latitude] = [
+    field.location.longitude,
+    field.location.latitude,
+  ];
+  assert.ok(longitude > 26 && longitude < 26.004);
+  assert.ok(latitude > 44 && latitude < 44.004);
+  assert.ok(latitude < 44.001 || longitude < 26.001);
+});
+
+test("field boundaries respect the request contract's point limit", () => {
+  const detailed = Array.from(
+    { length: MAX_BOUNDARY_POINTS + 1 },
+    (_, index) => {
+      const angle = (2 * Math.PI * index) / (MAX_BOUNDARY_POINTS + 1);
+      return [
+        26 + 0.001 * Math.cos(angle),
+        44 + 0.001 * Math.sin(angle),
+      ] as Coordinate;
+    },
+  );
+  assert.throws(
+    () => createParcel(detailed),
+    new RegExp(`at most ${MAX_BOUNDARY_POINTS} points`),
+  );
 });
 
 test("clockwise and counterclockwise outlines measure the same field", () => {
@@ -360,7 +426,7 @@ test("autumn sowing hint covers 6 November to the end of February only", async (
   assert.equal(afterAutumnSowing("not a date"), false);
 });
 
-test("a page link can preselect a field inside Romania only", async () => {
+test("a page link can center the map inside Romania only", async () => {
   const { fieldFromQuery } = await import("../src/lib/planning-dates");
   assert.deepEqual(fieldFromQuery("?lat=44.45&lon=26.5&name=Example%20field"), { name: "Example field", latitude: 44.45, longitude: 26.5 });
   assert.equal(fieldFromQuery("?lat=44.45&lon=26.5")?.name, "Your field");

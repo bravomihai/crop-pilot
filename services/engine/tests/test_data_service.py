@@ -6,8 +6,110 @@ import httpx
 import pytest
 
 from fieldshift import data_service
-from fieldshift.data_service import climate, daily, power, soil, terrain
+from fieldshift.data_service import climate, daily, land_cover, power, soil, terrain
 from fieldshift.evaluator import evaluate, load_rules
+
+
+@pytest.mark.parametrize(
+    ("classes", "expected"),
+    [
+        ([10], "incompatible"),
+        ([80], "incompatible"),
+        ([50], "incompatible"),
+        ([40], "cropland"),
+        ([10, 40], "uncertain"),
+        ([30], "uncertain"),
+    ],
+)
+def test_satellite_screening_classifies_field(monkeypatch, classes, expected):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+                         [26.491, 44.444], [26.491, 44.441]]],
+    }
+
+    def post(url, params, json, timeout):
+        assert json["geometry"] == boundary
+        assert params["item"] == "ESA_WorldCover_10m_2021_v200_N42E024"
+        stats = {"histogram": [[10] * len(classes), classes], "count": 10 * len(classes)}
+        return httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": stats}}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(land_cover.httpx, "post", post)
+    assessment, sources = land_cover.assess_land_cover(boundary)
+    assert assessment["status"] == expected
+    assert "2021" in assessment["message"]
+    assert sources[0]["id"] == "esa-worldcover-2021"
+
+
+def test_satellite_screening_does_not_hide_unavailable_or_incomplete_data(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+                         [26.491, 44.444], [26.491, 44.441]]],
+    }
+
+    def fail(url, **kwargs):
+        raise httpx.ConnectError("unavailable")
+
+    monkeypatch.setattr(land_cover.httpx, "post", fail)
+    assessment, sources = land_cover.assess_land_cover(boundary)
+    assert assessment["status"] == "uncertain"
+    assert "service failed" in assessment["message"]
+    assert sources == []
+
+    def incomplete(url, **kwargs):
+        return httpx.Response(200, json={}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(land_cover.httpx, "post", incomplete)
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
+    assert land_cover.assess_land_cover(None)[0]["status"] == "uncertain"
+
+    def unknown_class(url, **kwargs):
+        return httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": {
+                "histogram": [[10], [999]], "count": 10,
+            }}}},
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(land_cover.httpx, "post", unknown_class)
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
+
+
+def test_satellite_screening_flags_tile_boundary_and_too_few_pixels(monkeypatch):
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [[[26.999, 44.441], [27.001, 44.441], [27.001, 44.444],
+                         [26.999, 44.444], [26.999, 44.441]]],
+    }
+    assert "tile boundary" in land_cover.assess_land_cover(boundary)[0]["message"]
+    large = {
+        "type": "Polygon",
+        "coordinates": [[[26.1, 44.1], [26.2, 44.1], [26.2, 44.2],
+                         [26.1, 44.2], [26.1, 44.1]]],
+    }
+    assert "too large" in land_cover.assess_land_cover(large)[0]["message"]
+    boundary["coordinates"][0] = [
+        [26.491, 44.441], [26.494, 44.441], [26.494, 44.444],
+        [26.491, 44.444], [26.491, 44.441],
+    ]
+    monkeypatch.setattr(
+        land_cover.httpx,
+        "post",
+        lambda url, **kwargs: httpx.Response(
+            200,
+            json={"properties": {"statistics": {"map_b1": {
+                "histogram": [[1], [10]], "count": 1,
+            }}}},
+            request=httpx.Request("POST", url),
+        ),
+    )
+    assert land_cover.assess_land_cover(boundary)[0]["status"] == "uncertain"
 
 
 def test_fao56_et0_uses_dewpoint_and_matches_example_18():
@@ -235,6 +337,37 @@ def test_fetch_slope_queries_and_caches_a_srtm30m_neighborhood(monkeypatch):
     assert len(writes) == 1
 
 
+def test_fetch_slopes_batches_field_samples_and_caches_each_neighborhood(monkeypatch):
+    rising = [
+        {"dataset": "srtm30m", "elevation": value}
+        for value in (0, 3, 6, 0, 3, 6, 0, 3, 6)
+    ]
+    flat = [{"dataset": "srtm30m", "elevation": 100} for _ in range(9)]
+    requests = []
+    writes = []
+    monkeypatch.setattr(terrain.cache, "read", lambda key: None)
+    monkeypatch.setattr(terrain.cache, "write", lambda key, value: writes.append(value))
+    monkeypatch.setattr(terrain.cache, "key_for", lambda value: str(value["lat"]))
+
+    def mock_get(url, params, timeout):
+        requests.append(params)
+        return httpx.Response(
+            200,
+            json={"status": "OK", "results": rising + flat},
+            request=httpx.Request("GET", url),
+        )
+
+    monkeypatch.setattr(terrain.httpx, "get", mock_get)
+
+    slopes, sources, gaps = terrain.fetch_slopes([(45.0, 25.0), (45.1, 25.1)])
+
+    assert slopes == [pytest.approx(13.73, abs=0.1), 0]
+    assert sources[0]["id"] == "srtm30m-opentopodata"
+    assert gaps == []
+    assert requests[0]["locations"].count("|") == 17
+    assert len(writes) == 2
+
+
 def test_fetch_slope_reports_missing_samples_and_provider_errors(monkeypatch):
     monkeypatch.setattr(terrain.cache, "read", lambda key: None)
     monkeypatch.setattr(terrain.cache, "write", lambda key, value: None)
@@ -362,35 +495,53 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
             "data_gaps": [],
         },
     )
-    monkeypatch.setattr(
-        data_service,
-        "fetch_soil",
-        lambda lat, lon: (
+    soil_calls = []
+
+    def fake_soil(lat, lon):
+        index = len(soil_calls)
+        soil_calls.append((lat, lon))
+        return (
             {
-                "clay_pct": 30,
-                "sand_pct": 30,
-                "silt_pct": 40,
-                "ph": 7.0,
+                "clay_pct": 30 + index * 2,
+                "sand_pct": 40 - index * 2,
+                "silt_pct": 30,
+                "ph": 7.0 + index * 0.1,
+                "organic_carbon_pct": 1.0,
                 "texture": "loamy",
                 "awc_m3_m3": 0.15,
                 "source": "soilgrids",
             },
             [{"id": "soilgrids", "title": "ISRIC SoilGrids"}],
             [],
-        ),
-    )
-    monkeypatch.setattr(
-        data_service,
-        "fetch_slope",
-        lambda lat, lon: (
-            2.5,
+        )
+
+    monkeypatch.setattr(data_service.soil_service, "fetch_soil", fake_soil)
+    slope_calls = []
+
+    def fake_slopes(points):
+        slope_calls.append(points)
+        return (
+            [2.0, 3.0, 4.0],
             [{"id": "srtm30m-opentopodata", "title": "SRTM"}],
             [],
-        ),
-    )
+        )
+
+    monkeypatch.setattr(data_service, "fetch_slopes", fake_slopes)
 
     request = {
         "location": {"latitude": 44.45, "longitude": 26.5},
+        "field_boundary": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [26.4, 44.4],
+                    [26.5, 44.4],
+                    [26.5, 44.5],
+                    [26.4, 44.5],
+                    [26.4, 44.4],
+                ]
+            ],
+        },
         "available_from": f"{end_year + 1}-10-01",
         "history": [],
         "constraints": {"irrigated": False, "excluded_crops": []},
@@ -403,8 +554,12 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
     assert len(environment["monthly_climate"]) == 11 * 12
     assert environment["daily"][0]["tmin"] == -5.0
     assert environment["static"]["elevation_m"] == 70
-    assert environment["static"]["soil"]["awc_m3_m3"] == 0.15
-    assert environment["static"]["slope_pct"] == 2.5
+    assert len(soil_calls) == 3
+    assert len(slope_calls[0]) == 3
+    assert environment["static"]["soil"]["clay_pct"] == 32
+    assert environment["static"]["soil"]["ph"] == 7.1
+    assert environment["static"]["slope_pct"] == 3.0
+    assert any("sparse" in item.lower() for item in environment["assumptions"])
     assert environment["climate_context"]["period"] == {
         "start_year": first_year,
         "end_year": end_year,
@@ -415,7 +570,7 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
     result = evaluate(["pea", "winter_wheat", "maize"], request, environment, rules)
     assert result["criteria"]["water"]["score"] is not None
     assert result["soil_inputs"]["texture_from"] == "regional"
-    assert result["soil_inputs"]["awc"] == 0.15
+    assert result["soil_inputs"]["awc"] == environment["static"]["soil"]["awc_m3_m3"]
 
 
 def test_local_cache_serves_repeat_requests_without_network(tmp_path, monkeypatch):
