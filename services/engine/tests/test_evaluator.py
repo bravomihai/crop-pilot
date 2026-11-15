@@ -49,6 +49,28 @@ def test_rules_cover_the_southern_plains_only():
     assert outside["crops"] == [] and "outside" in outside["data_gaps"][0]
 
 
+def test_crop_display_names_are_english_and_do_not_keep_unused_localized_aliases(rules):
+    active_rules = rules
+    assert all("name_ro" not in crop for crop in active_rules["crops"])
+    assert {crop["id"]: crop["name"] for crop in active_rules["crops"]}["winter_wheat"] == "Winter wheat"
+
+    profile = json.loads(
+        (Path(__file__).parents[1] / "fieldshift" / "crop_rules.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert {crop["name"] for crop in profile["crops"]} == {
+        "Pea",
+        "Maize",
+        "Winter wheat",
+        "Winter barley",
+        "Sunflower",
+    }
+    assert {
+        band["name"] for band in profile["region"]["thermal_bands"].values()
+    } == {"warm", "temperate", "cool"}
+
+
 def test_new_crop_rules_and_successor_matrix_are_complete(rules):
     crops = {crop["id"]: crop for crop in rules["crops"]}
     new_ids = {

@@ -211,7 +211,6 @@
     {
       "id": "oats",
       "name": "Oats",
-      "name_ro": "Ovăz",
       "family": "Poaceae",
       "legume": false,
       "winter": false,
@@ -234,7 +233,6 @@
     {
       "id": "sorghum",
       "name": "Grain sorghum",
-      "name_ro": "Sorg",
       "family": "Poaceae",
       "legume": false,
       "winter": false,
@@ -257,7 +255,6 @@
     {
       "id": "dry_beans",
       "name": "Dry beans",
-      "name_ro": "Fasole boabe",
       "family": "Fabaceae",
       "legume": true,
       "winter": false,
@@ -281,7 +278,6 @@
     {
       "id": "sugar_beet",
       "name": "Sugar beet",
-      "name_ro": "Sfeclă de zahăr",
       "family": "Amaranthaceae",
       "legume": false,
       "winter": false,
@@ -304,7 +300,6 @@
     {
       "id": "spring_barley",
       "name": "Spring barley",
-      "name_ro": "Orz de primăvară",
       "family": "Poaceae",
       "legume": false,
       "winter": false,
@@ -328,7 +323,6 @@
     {
       "id": "triticale",
       "name": "Triticale",
-      "name_ro": "Triticale",
       "family": "Poaceae",
       "legume": false,
       "winter": true,
@@ -352,7 +346,6 @@
     {
       "id": "winter_rye",
       "name": "Winter rye",
-      "name_ro": "Secară de toamnă",
       "family": "Poaceae",
       "legume": false,
       "winter": true,
@@ -376,7 +369,6 @@
     {
       "id": "potato",
       "name": "Potato",
-      "name_ro": "Cartof",
       "family": "Solanaceae",
       "legume": false,
       "winter": false,
