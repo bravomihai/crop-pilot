@@ -106,10 +106,13 @@ export default function FieldMap(props: Props) {
   return (
     <section className="map-canvas" aria-label="Field map">
       <div className="satellite-map" ref={container} tabIndex={0} role="region" aria-label="Field location map. Click to select your field, or pan with arrow keys and choose Use map centre." aria-describedby="map-instructions" />
-      <div className="map-toolbar" role="group" aria-label="Location controls">
-        <span><Icon name="pin" size={17} />{props.selection ? "Click anywhere to move your pin" : "Click the map to place your field"}</span>
-        <button type="button" disabled={!ready} onClick={useCentre}>Use map centre<Icon name="pin" size={16} /></button>
-        {props.selection && <button type="button" className="map-clear" aria-label="Clear field location" onClick={() => props.onSelect(null)}><Icon name="trash" size={17} /></button>}
+      <div className="map-footer">
+        <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
+        <div className="map-toolbar" role="group" aria-label="Location controls">
+          <span><Icon name="pin" size={17} />{props.selection ? "Click anywhere to move your pin" : "Click the map to place your field"}</span>
+          <button type="button" disabled={!ready} onClick={useCentre}>Use map centre<Icon name="pin" size={16} /></button>
+          {props.selection && <button type="button" className="map-clear" aria-label="Clear field location" onClick={() => props.onSelect(null)}><Icon name="trash" size={17} /></button>}
+        </div>
       </div>
       <p className={`map-instructions ${failed ? "has-error" : ""}`} id="map-instructions" role="status">{failed ? "Map unavailable. Try a location search." : !ready ? "Loading map…" : ""}</p>
       {tileError && <p className="tile-warning" role="status">Satellite imagery is unavailable. Try reloading the page or use a location search.</p>}
