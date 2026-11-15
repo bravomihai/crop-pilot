@@ -94,8 +94,10 @@ main() {
   for service in engine web; do
     container=$("${compose[@]}" ps --all --quiet "$service")
     image_ref=$(docker inspect --format '{{.Config.Image}}' "$container")
-    expected=$(docker image inspect --format '{{.Id}}' "$image_ref")
-    actual=$(docker inspect --format '{{.Image}}' "$container")
+    # Docker's index/config IDs differ across image stores; compare platform manifests.
+    platform=$(docker inspect --format '{{.ImageManifestDescriptor.Platform.OS}}/{{.ImageManifestDescriptor.Platform.Architecture}}' "$container")
+    expected=$(docker image inspect --platform "$platform" --format '{{.Id}}' "$image_ref")
+    actual=$(docker inspect --format '{{.ImageManifestDescriptor.Digest}}' "$container")
     [[ $actual == "$expected" ]] || fail "$service is not running the image just built"
   done
   python3 infra/check-local.py --url http://127.0.0.1:18080

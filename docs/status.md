@@ -347,3 +347,18 @@ OpenAI key remains unset on the server.
 Normal updates explicitly pull gateway/maintenance images before replacement,
 without pulling or replacing PostgreSQL. Automatic deployment was enabled after
 the initial installation checks; the next main merge exercises that path.
+
+
+### Docker 29 image verification
+
+The first push-triggered deployment built and updated the application to main
+commit 1fc2933, but the final image check falsely rejected the unchanged engine.
+Docker's running container referenced its platform manifest/config while the
+default image lookup returned an OCI index with build attestations. Verified
+on the real VPS that the engine's platform manifest exactly matched the newly
+built engine image and that public HTTPS served the expected web commit.
+
+Deployment verification now compares platform manifests using API 1.49+.
+Six deployment regression tests include distinct legacy config/index/platform
+IDs and a negative case that still rejects a genuinely stale running image.
+The remaining main/actor, migration and health gates are unchanged.

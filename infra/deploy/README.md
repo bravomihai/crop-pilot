@@ -8,6 +8,10 @@ main deployment. A Git revert does not undo database migrations or changed data.
 
 ## Account and configuration
 
+The configured VPS uses Docker 29. Image verification requires Docker API 1.49+
+for platform-specific image inspection. It compares the running platform
+manifest with the built image, avoiding mismatched OCI index/config IDs.
+
 The dedicated `croppilot-deploy` account can traverse `/home/ubuntu`, update this
 checkout and `.git`, read its ignored `.env`, and run Docker through membership
 in the `docker` group. File ACLs grant access to this project, following the
