@@ -15,10 +15,11 @@ runtime and interface states; earlier checks are not new claims of scientific va
   deterministic sample of up to 500 rotations is evaluated when the search space is
   larger; the result discloses sampling. Rankings are screening estimates, not agronomic
   validation.
-- The API accepts an optional GeoJSON field boundary; the current map interface submits
-  a point. For a boundary, SoilGrids and SRTM sample up to three distributed interior
-  points. NASA POWER remains representative-point context. Sparse sampling is not
-  parcel-wide raster zonal statistics.
+- The API accepts an optional GeoJSON field boundary; the main map now requires a
+  drawn field outline and submits its closed boundary plus a derived interior
+  representative coordinate. For a boundary, SoilGrids and SRTM sample up to three
+  distributed interior points. NASA POWER remains representative-point context.
+  Sparse sampling is not parcel-wide raster zonal statistics.
 - The demo generator respects chronological order and exclusions and does not fabricate
   agronomic scores. Compose, AWS preparation, and active GitHub checks are documented.
 - The real P3 evaluator and P4 recommender integrate with the pipeline without a
@@ -33,7 +34,8 @@ runtime and interface states; earlier checks are not new claims of scientific va
 
 - pnpm workspace: one Next.js application for interface/backend and one Python service.
 - Zod contract and generated JSON Schemas; requests/results contain no user entities.
-- Form with locality/point, availability date, optional history/soil, and priorities.
+- Form with locality search and drawn field boundary, availability date, optional
+  history/soil, and priorities.
 - Leaflet/OpenStreetMap, Open-Meteo/GeoNames search, and three cards with calendars.
 - Frontend adapter for independent development and visibly labelled demo mode.
 - Stateless Next.js endpoint with validation, timeout, and result checks.
@@ -88,8 +90,7 @@ runtime and interface states; earlier checks are not new claims of scientific va
 ## Intentionally outside this version
 
 Accounts, email/login, persistent sessions, farmer profiles, saved analyses, SMS,
-WhatsApp, field-outline input in the public interface, precise yield/profit predictions,
-trained ML, and CMIP6.
+WhatsApp, precise yield/profit predictions, trained ML, and CMIP6.
 
 ## Initial verification limits (historical)
 
@@ -230,6 +231,24 @@ Calculate reaches the existing API but returns `engine_not_configured`: the loca
 web app has no configured engine credentials, and no engine responds on port
 8000. No planner service, database, migration, or deployment was started, and no
 successful agronomic computation is claimed.
+
+## Drawn field boundaries in the main map — 2026-11-15
+
+The main map now requires a drawn field boundary instead of a selected map point.
+Search centers the map; corner clicks and freehand drags trace the outline, with
+finish, undo, cancel, and clear controls. Boundaries are capped at 100 points to fit
+the request contract; invalid and self-intersecting shapes are rejected. The frontend
+submits the closed GeoJSON polygon and derives an interior
+representative coordinate for the existing API contract. SoilGrids and SRTM use
+up to three distributed interior samples; NASA POWER remains representative-point
+weather context. This is sparse sampling, not parcel-wide raster statistics.
+
+Verified: web TypeScript, 35 UI/geometry tests, 98 web backend/data tests, and 20
+Python boundary/data-service tests passed. In a local browser, synthetic pointer
+events traced an outline, and Calculate sent a closed polygon and representative
+point to an intercepted request. Physical gestures and live data providers were not
+verified. The local engine status returned `engine_not_configured`, so no end-to-end
+calculation or computed agronomic validity is claimed.
 
 ## Local calculator restored and zoom capped — 2026-11-14
 

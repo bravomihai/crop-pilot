@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { resultSchema } from "@fieldshift/contracts";
 import FieldDashboard from "../src/components/field-dashboard";
-import FieldMap from "../src/components/dashboard/field-map";
+import ParcelMap from "../src/components/dashboard/parcel-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
 import RecommendationResults from "../src/components/recommendation-results";
 import PriorityPanel from "../src/components/dashboard/priority-panel";
@@ -20,34 +20,37 @@ import {
   rankDemoCrops,
 } from "../src/lib/demo-priorities";
 
-test("main page starts with location search and a point map without dashboard clutter", () => {
+test("main page starts with location search and field-boundary drawing without dashboard clutter", () => {
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
     "FieldShift",
     "Prototype",
     "Pick your field.",
-    "Search for a place or click the map.",
-    "Use map centre",
-    "stays in this tab",
+    "Search for a place, then draw your field boundary on the map.",
+    "Draw field",
+    "No account. Nothing saved.",
   ])
     assert.ok(textContent.includes(text), text);
-  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Draw field|Draw a field|COMING SOON|KPI|href="\/calculator"|dashboard-sidebar/);
+  assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Use map centre|COMING SOON|href="\/calculator"|dashboard-sidebar/);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(ids.length, new Set(ids).size);
   for (const match of html.matchAll(/href="#([^"]+)"/g))
     assert.ok(ids.includes(match[1]), match[1]);
 });
 
-test("field map offers point relocation and clear controls without polygon drawing", () => {
-  const html = renderToStaticMarkup(createElement(FieldMap, {
+test("field map offers boundary drawing controls and no point-selection fallback", () => {
+  const html = renderToStaticMarkup(createElement(ParcelMap, {
     view: { latitude: 44.56, longitude: 27.35 },
-    selection: { latitude: 44.56, longitude: 27.35 },
+    selection: null,
+    color: "#123c2f",
+    opacity: 0.2,
     onSelect: () => {},
+    onDrawingChange: () => {},
   }));
-  assert.match(html, /Click anywhere to move your pin/);
-  assert.match(html, /Clear field location/);
-  assert.doesNotMatch(html, /Draw|Finish outline|hectares|polygon/);
+  assert.match(html, /Draw field/);
+  assert.match(html, /Draw the field boundary using corner clicks/);
+  assert.doesNotMatch(html, /Use map centre|Selected map centre/);
 });
 
 test("compatibility cards show three interactive alternatives with explicit demo qualifications", () => {

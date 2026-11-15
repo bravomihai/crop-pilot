@@ -8,7 +8,8 @@ import { afterAutumnSowing, fieldFromQuery } from "@/lib/planning-dates";
 import CurrentRotationInput from "./current-rotation-input";
 import Icon from "./dashboard/icon";
 import LocationSearch from "./dashboard/location-search";
-import FieldMap from "./dashboard/field-map";
+import ParcelMap from "./dashboard/parcel-map";
+import type { FieldSelection } from "@/lib/parcel-geometry";
 import RecommendationResults from "./recommendation-results";
 
 type Focus = "balanced" | "water" | "soil" | "climate" | "productivity";
@@ -21,7 +22,8 @@ const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
 
 export default function FieldDashboard() {
   const [view, setView] = useState<Location>({ name: "Bărăgan", latitude: 44.567, longitude: 27.35 });
-  const [selection, setSelection] = useState<Location | null>(null);
+  const [selection, setSelection] = useState<FieldSelection | null>(null);
+  const [drawing, setDrawing] = useState(false);
   const [panel, setPanel] = useState<Panel>("details");
   const [availableFrom, setAvailableFrom] = useState("");
   const [previousCrop, setPreviousCrop] = useState("");
@@ -46,12 +48,9 @@ export default function FieldDashboard() {
     const isoToday = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     setToday(isoToday);
     setAvailableFrom(isoToday);
-    // A shared or demo link can open with a field already chosen: /?lat=44.45&lon=26.5&name=Fundulea
+    // Shared links center the map; the farmer still traces the field boundary.
     const field = fieldFromQuery(window.location.search);
-    if (field) {
-      setSelection(field);
-      setView(field);
-    }
+    if (field) setView(field);
   }, []);
   // A what-if recalculation changes the scenario of the shown result; keep the form in step,
   // so "Edit details" then "Calculate" does not silently return to the old scenario.
@@ -64,25 +63,34 @@ export default function FieldDashboard() {
     if (panel === "results") resultsHeading.current?.focus();
   }, [panel]);
 
-  function selectField(value: Location | null) {
+  function selectField(value: FieldSelection | null) {
     clear();
     setSelection(value);
     if (value) setPanel("details");
   }
   function chooseLocation(location: Location) {
     clear();
-    setSelection(location);
+    setSelection(null);
     setView(location);
     setPanel("details");
   }
   async function analyse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selection) return;
+    if (drawing) {
+      return;
+    }
+    if (!selection?.boundary) {
+      return;
+    }
     const priorities = { water: 3, soil: 3, climate: 3, productivity: 3 };
     if (focus !== "balanced") priorities[focus] = 5;
     const input: RecommendationRequest = {
       schema_version: "1.0",
-      location: selection,
+      location: selection.location,
+      field_boundary: {
+        type: "Polygon",
+        coordinates: [selection.boundary],
+      },
       available_from: availableFrom,
       crop_count: 3,
       history: previousCrop ? [{ crop_id: previousCrop, source: historySource, ...(harvestYear ? { harvest_year: Number(harvestYear) } : {}) }] : [],
@@ -99,7 +107,17 @@ export default function FieldDashboard() {
   return (
     <main className={`map-experience ${panel ? "is-panel-open" : ""}`} id="main">
       <a className="skip-link" href="#field-details" onClick={() => setPanel("details")}>Skip to field details</a>
-      <FieldMap view={view} selection={selection} onSelect={selectField} />
+      <ParcelMap
+        view={view}
+        selection={selection}
+        color="#123c2f"
+        opacity={0.2}
+        onSelect={selectField}
+        onDrawingChange={(value) => {
+          setDrawing(value);
+          if (value) setPanel("details");
+        }}
+      />
 
       <header className="map-header">
         <a className="map-brand" href="#main" aria-label="FieldShift home">
@@ -120,7 +138,7 @@ export default function FieldDashboard() {
         </div>
         {!selection ? (
           <div className="planner-welcome">
-            <p>Search for a place or click the map.</p>
+            <p>Search for a place, then draw your field boundary on the map.</p>
             <div className="planner-steps" aria-label="Planning steps"><span className="active"><b>1</b>Field</span><i /><span><b>2</b>Details</span><i /><span><b>3</b>Plans</span></div>
             <span className="local-note">No account. Nothing saved.</span>
           </div>
@@ -128,7 +146,7 @@ export default function FieldDashboard() {
           <>
             <div className="selected-field" role="status">
               <span className="selected-field-icon"><Icon name="field" size={22} /></span>
-              <div><strong>{selection.name ?? "Your field"}</strong><small>{Math.abs(selection.latitude).toFixed(4)}° {selection.latitude < 0 ? "S" : "N"} · {Math.abs(selection.longitude).toFixed(4)}° {selection.longitude < 0 ? "W" : "E"}</small></div>
+              <div><strong>{selection.location.name ?? "Your field"}</strong><small>Approx. {selection.areaHectares?.toFixed(2) ?? "unknown"} ha · boundary drawn</small></div>
               <Icon name="check" size={18} />
             </div>
             <form className="map-plan-form" onSubmit={analyse} onChange={clear}>
@@ -158,7 +176,7 @@ export default function FieldDashboard() {
                   </div>
                 </details>
               </div>
-              <footer className="planner-action"><button className="calculate-button" type="submit" disabled={busy || !availableFrom}>{busy ? "Calculating…" : "Calculate"}<Icon name="arrow" size={18} /></button></footer>
+              <footer className="planner-action"><button className="calculate-button" type="submit" disabled={busy || drawing || !availableFrom || !selection?.boundary}>{busy ? "Calculating…" : "Calculate"}<Icon name="arrow" size={18} /></button></footer>
             </form>
           </>
         )}

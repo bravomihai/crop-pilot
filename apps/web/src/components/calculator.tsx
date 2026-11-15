@@ -12,63 +12,12 @@ import FormSection from "./ui/form-section";
 import Notice from "./ui/notice";
 import CurrentRotationInput from "./current-rotation-input";
 import { RULE_CROPS as CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
-import { createParcel, type Coordinate } from "@/lib/parcel-geometry";
+import {
+  createParcel,
+  MAX_BOUNDARY_POINTS,
+  type Coordinate,
+} from "@/lib/parcel-geometry";
 import { useRecommendations } from "@/lib/use-recommendations";
-
-function containsPoint(point: Coordinate, points: Coordinate[]): boolean {
-  const [longitude, latitude] = point;
-  let inside = false;
-  for (
-    let index = 0, previous = points.length - 1;
-    index < points.length;
-    previous = index, index += 1
-  ) {
-    const [x1, y1] = points[index];
-    const [x2, y2] = points[previous];
-    const cross = (longitude - x1) * (y2 - y1) - (latitude - y1) * (x2 - x1);
-    if (
-      Math.abs(cross) < 1e-10 &&
-      longitude >= Math.min(x1, x2) &&
-      longitude <= Math.max(x1, x2) &&
-      latitude >= Math.min(y1, y2) &&
-      latitude <= Math.max(y1, y2)
-    ) {
-      return true;
-    }
-    if ((y1 > latitude) !== (y2 > latitude)) {
-      const crossingLongitude =
-        x1 + ((latitude - y1) * (x2 - x1)) / (y2 - y1);
-      if (longitude < crossingLongitude) inside = !inside;
-    }
-  }
-  return inside;
-}
-
-function polygonCenter(points: Coordinate[]): Coordinate {
-  let twiceArea = 0;
-  let longitude = 0;
-  let latitude = 0;
-  const ring = [...points, points[0]];
-  for (let index = 0; index < points.length; index += 1) {
-    const [x1, y1] = ring[index];
-    const [x2, y2] = ring[index + 1];
-    const cross = x1 * y2 - x2 * y1;
-    twiceArea += cross;
-    longitude += (x1 + x2) * cross;
-    latitude += (y1 + y2) * cross;
-  }
-  if (Math.abs(twiceArea) < 1e-10) {
-    return [
-      points.reduce((sum, point) => sum + point[0], 0) / points.length,
-      points.reduce((sum, point) => sum + point[1], 0) / points.length,
-    ];
-  }
-  const center: Coordinate = [
-    longitude / (3 * twiceArea),
-    latitude / (3 * twiceArea),
-  ];
-  return containsPoint(center, points) ? center : points[0];
-}
 
 const today = () => {
   const d = new Date();
@@ -218,8 +167,10 @@ export default function Calculator({
       setError("A field boundary needs at least three points.");
       return;
     }
-    if (fieldBoundary.length > 100) {
-      setError("A field boundary can contain at most 100 points.");
+    if (fieldBoundary.length > MAX_BOUNDARY_POINTS) {
+      setError(
+        `A field boundary can contain at most ${MAX_BOUNDARY_POINTS} points.`,
+      );
       return;
     }
     if (selectedCropsOnly && selectedCrops.length < 3) {
@@ -426,16 +377,14 @@ export default function Calculator({
                   disabled={!drawingBoundary || fieldBoundary.length < 3}
                   onClick={() => {
                     try {
-                      const parcel = createParcel(fieldBoundary);
+                      const parcel = createParcel(
+                        fieldBoundary,
+                        "Field representative point",
+                      );
                       if (!parcel.boundary) {
                         throw new Error("The field boundary is invalid.");
                       }
-                      const [longitude, latitude] = polygonCenter(fieldBoundary);
-                      setLocation({
-                        name: "Field representative point",
-                        latitude: Number(latitude.toFixed(6)),
-                        longitude: Number(longitude.toFixed(6)),
-                      });
+                      setLocation(parcel.location);
                       setFieldBoundary(parcel.boundary.slice(0, -1));
                       setDrawingBoundary(false);
                       setError("");

@@ -10,7 +10,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | --- | --- |
 | `src/app/page.tsx` | Entry point: the single full-screen map page |
 | `src/components/field-dashboard.tsx` | Map page state, planning form, request building and the results panel |
-| `src/components/dashboard/field-map.tsx` | Leaflet map with one draggable field point, zoom capped at 17 |
+| `src/components/dashboard/parcel-map.tsx` | Full-screen Leaflet map with field-boundary drawing and outline validation |
 | `src/components/dashboard/location-search.tsx` | Place search through `/api/locations` |
 | `src/components/recommendation-results.tsx` | Loading, error, complete, limited and insufficient-data states |
 | `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
@@ -26,10 +26,10 @@ team before adding fields or changing request shapes. Interface text is English.
 | `tests/` | Pure-data, server and in-memory component checks |
 
 `/calculator` and `/chart-previews` redirect to `/`. The components of the earlier
-dashboard and calculator (`calculator.tsx`, `dashboard/parcel-map.tsx`,
+dashboard and calculator (`calculator.tsx`, `dashboard/field-map.tsx`,
 `priority-panel.tsx`, `compatibility-card.tsx`, `kpi-cards.tsx`, `pdf-upload.tsx`,
 `scenario-panel.tsx`, `theme-control.tsx`, `lib/demo-priorities.ts`,
-`lib/dashboard-scenario.ts`, `lib/parcel-geometry.ts`, `location-map.tsx`) are no
+`lib/dashboard-scenario.ts`, `location-map.tsx`) are no
 longer used by any page. They are kept until the open `maria` branch, which edits
 some of them, is settled; then they should be removed together with their tests.
 
@@ -70,10 +70,15 @@ calculated agronomic advice.
 
 ## Map page behaviour
 
-- Search for a place or click the map to place one field point; drag it to move it.
-  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` opens with that point
-  chosen (limited to Romania's bounding box). No field outline is sent: the contract's
-  optional `field_boundary` is supported by the engine but not offered here.
+- Search for a place to center the map, then draw the field boundary with corner
+  clicks and freehand drags. Finish, undo or cancel the outline; up to 100 boundary
+  points are accepted, and invalid or self-intersecting polygons are rejected. The
+  map derives an interior representative coordinate and submits both it and the
+  closed GeoJSON `field_boundary`.
+  A shared link such as `/?lat=44.45&lon=26.5&name=Fundulea` centers the map but
+  still requires the farmer to draw the field. The engine samples up to three
+  distributed interior points for SoilGrids and SRTM; NASA POWER remains
+  representative-point weather context.
 - The form sends the shared request: availability date (not before today), previous
   crop with source and harvest year (not after the current year), current rotation,
   soil texture and pH, irrigation, excluded crops and a hypothetical scenario.
