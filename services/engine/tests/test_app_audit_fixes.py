@@ -111,6 +111,24 @@ def test_p2_late_nasa_power_fails_the_request(monkeypatch):
             data_service.build_environment(dashboard_request())
 
 
+def test_time_before_the_first_crop_counts_as_bare_soil():
+    from fieldshift.evaluator import evaluate, load_rules
+
+    env = environment()
+    rotation = ["winter_wheat", "sunflower", "winter_wheat"]
+
+    def soil(available_from):
+        request = dashboard_request(available_from=available_from)
+        ev = evaluate(rotation, request, env, load_rules(request["location"]))
+        return ev["criteria"]["soil"]
+
+    waiting = soil("2026-11-15")      # autumn sowing has closed: about ten months until wheat
+    immediate = soil("2027-09-20")    # wheat sown about ten days later
+    assert waiting["score"] < immediate["score"]
+    assert "before the first crop" in waiting["summary"]
+    assert "before the first crop" not in immediate["summary"]
+
+
 def test_result_texts_have_no_duplicates_or_broken_wording():
     result = run(dashboard_request(), p2_built_environment(dashboard_request()))
     texts = result["assumptions"] + result["data_gaps"]

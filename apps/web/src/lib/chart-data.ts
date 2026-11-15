@@ -22,11 +22,15 @@ export const formatDate = (value: string) =>
     timeZone: "UTC",
   }).format(utcDate(value));
 
-export function timelineData(plans: RotationPlan[]) {
+/** Shared monthly axis; starts at `availableFrom` when the field is free before any sowing. */
+export function timelineData(plans: RotationPlan[], availableFrom?: string) {
   const steps = plans.flatMap((plan) => plan.steps);
   if (!steps.length) return null;
   const first = new Date(
-    Math.min(...steps.map((step) => utcDate(step.sowing_window.start))),
+    Math.min(
+      ...steps.map((step) => utcDate(step.sowing_window.start)),
+      ...(availableFrom ? [utcDate(availableFrom)] : []),
+    ),
   );
   const last = new Date(
     Math.max(...steps.map((step) => utcDate(step.harvest_window.end))),
@@ -55,22 +59,43 @@ export function timelineData(plans: RotationPlan[]) {
   };
 }
 
-export function bareGaps(plan: RotationPlan) {
-  return plan.steps
-    .slice(1)
-    .map((step, index) => {
-      const previous = plan.steps[index];
-      const start = utcDate(previous.harvest_window.end) + DAY;
-      const end = utcDate(step.sowing_window.start);
-      const fourMonths = new Date(utcDate(previous.harvest_window.end));
-      // Preserve day-of-month when possible and clamp to the target month's last day.
-      const target = new Date(
-        Date.UTC(fourMonths.getUTCFullYear(), fourMonths.getUTCMonth() + 5, 0),
-      );
-      target.setUTCDate(Math.min(fourMonths.getUTCDate(), target.getUTCDate()));
-      return { start, end, long: end > target.getTime() };
-    })
-    .filter((gap) => gap.end > gap.start);
+/** True when `end` is more than four calendar months after `from` (an ISO date). */
+function longerThanFourMonths(from: string, end: number) {
+  const base = new Date(utcDate(from));
+  // Preserve day-of-month when possible and clamp to the target month's last day.
+  const target = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 5, 0));
+  target.setUTCDate(Math.min(base.getUTCDate(), target.getUTCDate()));
+  return end > target.getTime();
+}
+
+/**
+ * Periods without a main crop: between crops and, when `availableFrom` is given, from the
+ * day the field is free until the first sowing (`initial`), as the engine's soil score counts.
+ */
+export function bareGaps(plan: RotationPlan, availableFrom?: string) {
+  const between = plan.steps.slice(1).map((step, index) => {
+    const previous = plan.steps[index];
+    const end = utcDate(step.sowing_window.start);
+    return {
+      start: utcDate(previous.harvest_window.end) + DAY,
+      end,
+      long: longerThanFourMonths(previous.harvest_window.end, end),
+      initial: false,
+    };
+  });
+  const first = plan.steps[0];
+  const initial =
+    availableFrom && first
+      ? [
+          {
+            start: utcDate(availableFrom),
+            end: utcDate(first.sowing_window.start),
+            long: longerThanFourMonths(availableFrom, utcDate(first.sowing_window.start)),
+            initial: true,
+          },
+        ]
+      : [];
+  return [...initial, ...between].filter((gap) => gap.end > gap.start);
 }
 
 /** Ordinary least squares over known observations only; unknown is not zero. */

@@ -59,6 +59,7 @@ that do not use these fields need no changes. Complete examples:
 | `plan.scores: {water, soil, climate, productivity}` | result | P3 calculates 0–1 or `null` (unknown); P4 forwards it; P1 displays it |
 | `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
+| `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
 
 `productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
 

@@ -95,6 +95,11 @@ PostgreSQL cache stores public data only.
   applied, the note says every season includes it. **Your field's climate** charts
   observed yearly indicators from `climate_context` (hot days, rain, ET₀, dry spells,
   frost days) with the engine's trend; it is never scenario-adjusted.
+- **Survival Mode** ("Challenge my plan", below the AI summary): picks the worst
+  drought, heat and erratic-rain year from observed `climate_context`, compares every
+  rotation on the same replayed season (`plan.replay[].field_free_from`), and lets the
+  farmer choose and see the modelled historical result. Logic in `src/lib/survival.ts`,
+  interface in `src/components/survival-mode.tsx`; details in `docs/survival-mode.md`.
 - **AI summary** (optional, computed results only): rewords the calculated result in
   English only. It needs `OPENAI_API_KEY` in the root `.env`; without it the page
   says the summary is not set up and everything else works. The page sends a trimmed

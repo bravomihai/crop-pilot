@@ -11,6 +11,8 @@ import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
 import { PrintSheetButton } from "./ai-summary";
 import ResultsAtAGlance, { BackToSummary } from "./results-at-a-glance";
+import RequestSummary from "./request-summary";
+import SurvivalMode from "./survival-mode";
 
 export default function RecommendationResults({
   result,
@@ -84,6 +86,7 @@ export default function RecommendationResults({
           className={busy ? "result-body is-recalculating" : "result-body"}
           aria-busy={busy}
         >
+          <RequestSummary request={request} result={result} />
           {result.mode === "demo" && (
             <Notice title="Demo · fictional results" tone="warning">
               The crops, dates, and explanations are examples. They are not
@@ -117,10 +120,15 @@ export default function RecommendationResults({
               </p>
             ))}
           <ResultsAtAGlance result={result} />
+          <SurvivalMode result={result} request={request} />
           <section className="plan-details" id="plan-details" tabIndex={-1} aria-labelledby="plan-details-title">
             <h3 id="plan-details-title" className="details-title">The plans in detail</h3>
             <ScoreComparison plans={result.plans} baseline={result.baseline} />
-            <RotationTimeline plans={result.plans} baseline={result.baseline} />
+            <RotationTimeline
+              plans={result.plans}
+              baseline={result.baseline}
+              availableFrom={request?.available_from}
+            />
             {result.baseline && (
               <div className="baseline-container">
                 <PlanCard plan={result.baseline} baseline />

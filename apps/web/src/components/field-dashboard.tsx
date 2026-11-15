@@ -193,7 +193,7 @@ export default function FieldDashboard() {
         </div>
       </section>
 
-      <span className="map-signature">FIELDSHIFT <i /> SPACE APPS 2026</span>
+      <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
       <dialog className="map-about" ref={info} aria-labelledby="about-title">
         <div className="planner-heading"><h2 id="about-title">CropPilot</h2><button type="button" className="quiet-icon" aria-label="Close about CropPilot" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
         <p>Crop planning prototype. No account; your field stays in this tab.</p>

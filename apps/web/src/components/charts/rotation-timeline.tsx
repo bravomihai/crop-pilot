@@ -10,23 +10,29 @@ import {
 export default function RotationTimeline({
   plans,
   baseline,
+  availableFrom,
 }: {
   plans: RotationPlan[];
   baseline?: RotationPlan;
+  /** The request's availability date: the empty period before each first crop is shown. */
+  availableFrom?: string;
 }) {
   const rows = [
     ...(baseline ? [{ plan: baseline, baseline: true }] : []),
     ...plans.map((plan) => ({ plan, baseline: false })),
   ];
-  const axis = timelineData(rows.map(({ plan }) => plan));
+  const axis = timelineData(
+    rows.map(({ plan }) => plan),
+    availableFrom,
+  );
   if (!axis) return null;
   return (
     <section className="analysis-chart" aria-labelledby="timeline-title">
       <h3 id="timeline-title">Rotation calendar</h3>
       <p className="chart-legend">
         Shared monthly axis · light segment: sowing window · labelled bar:
-        growing period through harvest · hatched gap: bare soil · dashed row:
-        current rotation.
+        growing period through harvest · hatched gap: bare soil, including the
+        wait before the first crop · dashed row: current rotation.
       </p>
       <div
         className="timeline-scroll"
@@ -60,7 +66,7 @@ export default function RotationTimeline({
                 className="timeline-track"
                 style={{ backgroundSize: `${100 / axis.months.length}% 100%` }}
               >
-                {bareGaps(plan).map((gap) => (
+                {bareGaps(plan, availableFrom).map((gap) => (
                   <div
                     className="timeline-gap unknown-pattern"
                     key={gap.start}
@@ -69,12 +75,20 @@ export default function RotationTimeline({
                       width: `${axis.percent(gap.end) - axis.percent(gap.start)}%`,
                     }}
                     title={
-                      gap.long
-                        ? "Bare soil, consider a cover crop"
-                        : "Gap between crops"
+                      gap.initial
+                        ? `Field empty before the first crop${gap.long ? ", consider a cover crop" : ""}`
+                        : gap.long
+                          ? "Bare soil, consider a cover crop"
+                          : "Gap between crops"
                     }
                   >
-                    {gap.long && <span>Bare soil, consider a cover crop</span>}
+                    {gap.long && (
+                      <span>
+                        {gap.initial
+                          ? "Empty before the first crop, consider a cover crop"
+                          : "Bare soil, consider a cover crop"}
+                      </span>
+                    )}
                   </div>
                 ))}
                 {plan.steps.map((step) => {
@@ -113,11 +127,13 @@ export default function RotationTimeline({
                     {formatDate(step.harvest_window.end)}.
                   </li>
                 ))}
-                {bareGaps(plan)
+                {bareGaps(plan, availableFrom)
                   .filter((gap) => gap.long)
                   .map((gap) => (
                     <li key={gap.start}>
-                      Bare soil, consider a cover crop.{" "}
+                      {gap.initial
+                        ? "Field empty before the first crop, consider a cover crop."
+                        : "Bare soil, consider a cover crop."}{" "}
                       {new Date(gap.start).toISOString().slice(0, 10)} to{" "}
                       {new Date(gap.end - DAY).toISOString().slice(0, 10)}.
                     </li>

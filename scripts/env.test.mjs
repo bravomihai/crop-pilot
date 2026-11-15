@@ -17,7 +17,7 @@ test("one root configuration shares the token and derives the local database URL
   const env = loadRootEnv({}, fixture(t, 'POSTGRES_USER=farmer\nPOSTGRES_PASSWORD="p@ss:word"\nPOSTGRES_DB=public_cache\nINTERNAL_API_TOKEN=shared_mock_token\n'));
   assert.equal(env.INTERNAL_API_TOKEN, "shared_mock_token");
   assert.equal(env.DATABASE_URL, "postgresql://farmer:p%40ss%3Aword@127.0.0.1:5432/public_cache");
-  assert.ok(env.CROPPILOT_CACHE_DIR.endsWith("services/engine/cache"));
+  assert.ok(env.CROPPILOT_CACHE_DIR.endsWith(join("services", "engine", "cache")));
 });
 
 test("container and shell settings override local values", (t) => {
