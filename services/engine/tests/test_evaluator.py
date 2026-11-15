@@ -15,6 +15,7 @@ import pytest
 
 from fieldshift.contracts import example
 from fieldshift.evaluator import evaluate, load_rules
+from fieldshift.recommender.crop_assessment import assess_crops
 
 FIXTURE = Path(__file__).parent / "fixtures" / "environment-ro-south.json"
 CRITERIA = ("water", "soil", "climate", "productivity")
@@ -39,10 +40,68 @@ def rules():
 
 def test_rules_cover_the_southern_plains_only():
     inside = load_rules({"latitude": 44.45, "longitude": 26.5})
-    assert {c["id"] for c in inside["crops"]} >= {"winter_wheat", "maize", "sunflower", "pea", "winter_barley"}
+    assert {c["id"] for c in inside["crops"]} >= {
+        "winter_wheat", "winter_barley", "winter_rapeseed", "maize", "sunflower",
+        "soybean", "pea", "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    }
     assert all(c["name"] for c in inside["crops"])
     outside = load_rules({"latitude": 46.77, "longitude": 23.6})  # Cluj, Transylvania
     assert outside["crops"] == [] and "outside" in outside["data_gaps"][0]
+
+
+def test_crop_display_names_are_english_and_do_not_keep_unused_localized_aliases(rules):
+    active_rules = rules
+    assert all("name_ro" not in crop for crop in active_rules["crops"])
+    assert {crop["id"]: crop["name"] for crop in active_rules["crops"]}["winter_wheat"] == "Winter wheat"
+
+    profile = json.loads(
+        (Path(__file__).parents[1] / "fieldshift" / "crop_rules.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert {crop["name"] for crop in profile["crops"]} == {
+        "Pea",
+        "Maize",
+        "Winter wheat",
+        "Winter barley",
+        "Sunflower",
+    }
+    assert {
+        band["name"] for band in profile["region"]["thermal_bands"].values()
+    } == {"warm", "temperate", "cool"}
+
+
+def test_new_crop_rules_and_successor_matrix_are_complete(rules):
+    crops = {crop["id"]: crop for crop in rules["crops"]}
+    new_ids = {
+        "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    }
+    assert new_ids <= crops.keys()
+    assert all(crops[crop_id]["family"] and crops[crop_id]["ecocrop"] for crop_id in new_ids)
+    assert crops["dry_beans"]["legume"] is True
+    assert crops["sugar_beet"]["legume"] is False
+    expected_successors = set(crops)
+    assert set(rules["successor"]) == expected_successors
+    assert all(set(row) == expected_successors for row in rules["successor"].values())
+    assert any("provisional" in gap and "agronomist" in gap for gap in rules["data_gaps"])
+
+
+@pytest.mark.parametrize(
+    "rotation",
+    [
+        ["oats", "dry_beans", "sorghum"],
+        ["sugar_beet", "oats", "dry_beans"],
+        ["potato", "spring_barley", "dry_beans"],
+        ["triticale", "potato", "winter_rye"],
+    ],
+)
+def test_new_crop_rotations_are_evaluable(rotation, request_, environment, rules):
+    out = evaluate(rotation, request_, environment, rules)
+    assert out["feasibility"] == "feasible"
+    assert [step["crop_id"] for step in out["calendar"]] == rotation
+    assert out["criteria"]["water"]["score"] is not None
 
 
 def test_every_cited_source_is_listed(rules):
@@ -68,6 +127,16 @@ def test_output_shape_matches_what_the_recommender_reads(request_, environment, 
     assert out["fixture"] is False and out["scenario_applied"] is False
     assert len(out["details"]) == 3 and len(out["replay"]) >= 15
     assert out["local_checks"]
+
+def test_individual_crop_assessment_uses_real_evaluator(request_, environment, rules):
+    request_["assessment_crops"] = ["potato"]
+    result = assess_crops(request_, environment, rules, evaluate)
+    assert result["selected"][0]["crop_id"] == "potato"
+    assert result["selected"][0]["score"] is not None
+    assert result["selected"][0]["sowing_window"]["start"] >= request_["available_from"]
+    assert result["selected"][0]["harvest_window"]["start"] > result["selected"][0]["sowing_window"]["end"]
+    assert result["alternatives"]
+    assert all(crop["crop_id"] != "potato" for crop in result["alternatives"])
 
 
 def test_calendar_is_ordered_and_does_not_overlap(request_, environment, rules):

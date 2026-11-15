@@ -29,7 +29,7 @@ team before adding fields or changing request shapes. Interface text is English.
 dashboard and calculator (`calculator.tsx`, `dashboard/parcel-map.tsx`,
 `priority-panel.tsx`, `compatibility-card.tsx`, `kpi-cards.tsx`, `pdf-upload.tsx`,
 `scenario-panel.tsx`, `theme-control.tsx`, `lib/demo-priorities.ts`,
-`lib/dashboard-scenario.ts`, `lib/parcel-geometry.ts`, `location-map.tsx`) are no
+`lib/dashboard-scenario.ts`, `location-map.tsx`) are no
 longer used by any page. They are kept until the open `maria` branch, which edits
 some of them, is settled; then they should be removed together with their tests.
 
@@ -69,13 +69,17 @@ PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
-- Search for a place or click the map to place one field point; drag it to move it.
-  A shared link such as `/?lat=44.45&lon=26.5&name=Example%20field` opens with that point
-  chosen (limited to Romania's bounding box). No field outline is sent: the contract's
-  optional `field_boundary` is supported by the engine but not offered here.
+- Search for a place or click the map to select a point. A shared link such as
+  `/?lat=44.45&lon=26.5&name=Fundulea` selects that location. Point requests do not
+  include a boundary, so ESA WorldCover cannot establish land-cover suitability;
+  results show that it must be checked before planting.
 - The form sends the shared request: availability date (not before today), previous
   crop with source and harvest year (not after the current year), current rotation,
   soil texture and pH, irrigation, excluded crops and a hypothetical scenario.
+- An optional crop selector lists the crops supported by the regional rules. The
+  selected crop is assessed as the next crop and requested in a rotation; the best
+  overall plan is retained. The rotation chart marks plans that include it, and the
+  page explains if no eligible sampled rotation was found.
 - **What matters most?** maps to the four engine priorities: all at 3, with the chosen
   focus at 5 ("A balanced plan" keeps all four at 3).
 - Scenario steps are the same in the form and in the results what-if (−3…+5 °C in
@@ -95,22 +99,34 @@ PostgreSQL cache stores public data only.
   applied, the note says every season includes it. **Your field's climate** charts
   observed yearly indicators from `climate_context` (hot days, rain, ET₀, dry spells,
   frost days) with the engine's trend; it is never scenario-adjusted.
-- **Survival Mode** ("Challenge my plan", below the AI summary): picks the worst
+- **Survival Mode** ("Challenge my plan", below the at-a-glance summary): picks the worst
   drought, heat and erratic-rain year from observed `climate_context`, compares every
   rotation on the same replayed season (`plan.replay[].field_free_from`), and lets the
   farmer choose and see the modelled historical result. Logic in `src/lib/survival.ts`,
   interface in `src/components/survival-mode.tsx`; details in `docs/survival-mode.md`.
-- **AI summary** (optional, computed results only): rewords the calculated result in
-  English only. It needs `OPENAI_API_KEY` in the root `.env`; without it the page
-  says the summary is not set up and everything else works. The page sends a trimmed
-  result (no replay, monthly or yearly climate rows, no coordinates reach the model);
-  numbers not found in the result make the server reject the summary.
+- **AI summary** (optional, computed results only): on request, rewords the calculated
+  result in English. It needs `OPENAI_API_KEY`; without it the page reports that the
+  summary is unavailable and everything else works. The model receives the field name
+  and a trimmed result, but not coordinates or source IDs. Numbers not found in the
+  result make the server reject the summary.
 - **Print for your agronomist** prints only the results (plans, current rotation,
   scores, calendar, charts, local checks, sources, assumptions, missing data and the
   disclaimer); the map, form, what-if and buttons are left out, and the AI summary is
   printed only when one was written.
 - `mode: demo` results carry a visible **Demo · fictional results** notice.
 - `monthly_climate` is returned by the engine but not displayed yet.
+
+## Check changes
+
+```powershell
+corepack pnpm --recursive typecheck
+corepack pnpm --filter @croppilot/web test:ui
+corepack pnpm --filter @croppilot/web test:backend
+git diff --check
+```
+
+The automated checks do not verify browser gestures, layout, tile services, or
+external integrations; check those manually in a browser at narrow and wide widths.
 
 ## NASA regional context layers
 

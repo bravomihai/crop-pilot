@@ -140,7 +140,7 @@ def load_provisional_romania_rules(location: dict, environment: dict) -> dict:
     )
     rules["data_gaps"] = [
         "No local crop-rule profile is available for this region; the southern Romania crop catalog is used with a provisional climate-based calendar shift."
-    ]
+    ] + rules.get("data_gaps", [])
     profile_source_ids = {
         "romania-admin-boundary",
         "ro-thermal-bands",

@@ -9,11 +9,27 @@ CATALOG = {
     "winter_wheat": ("Winter wheat", 10, 7),
     "winter_barley": ("Winter barley", 10, 6),
     "sunflower": ("Sunflower", 4, 9),
+    "oats": ("Oats", 3, 7),
+    "sorghum": ("Grain sorghum", 5, 10),
+    "dry_beans": ("Dry beans", 5, 9),
+    "sugar_beet": ("Sugar beet", 3, 10),
+    "spring_barley": ("Spring barley", 3, 7),
+    "triticale": ("Triticale", 10, 7),
+    "winter_rye": ("Winter rye", 10, 7),
+    "potato": ("Potato", 4, 9),
 }
 SEQUENCES = [
     ("pea", "winter_wheat", "maize"),
     ("winter_wheat", "sunflower", "winter_barley"),
     ("winter_barley", "pea", "winter_wheat"),
+    ("oats", "dry_beans", "sorghum"),
+    ("sorghum", "sugar_beet", "oats"),
+    ("dry_beans", "oats", "sugar_beet"),
+    ("sugar_beet", "sorghum", "dry_beans"),
+    ("spring_barley", "potato", "winter_rye"),
+    ("triticale", "dry_beans", "spring_barley"),
+    ("potato", "winter_rye", "triticale"),
+    ("winter_rye", "potato", "sorghum"),
 ]
 
 
@@ -59,7 +75,7 @@ def recommend_demo(request: dict, request_id: str) -> dict:
         for sequence in SEQUENCES
         if not excluded.intersection(sequence)
         and (selected is None or set(sequence).issubset(selected))
-    ]
+    ][:3]
     plans = []
     for index, sequence in enumerate(sequences):
         plans.append(

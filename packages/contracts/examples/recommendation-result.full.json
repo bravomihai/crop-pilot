@@ -358,6 +358,25 @@
     }
   ],
   "monthly_climate": [],
+  "land_cover": {
+    "status": "uncertain",
+    "message": "Fictional example: verify the current field conditions before planting."
+  },
+  "crop_assessment": {
+    "selected": [
+      {
+        "crop_id": "potato",
+        "crop_name": "Potato",
+        "status": "uncertain",
+        "score": null,
+        "message": "Fictional example: soil conditions are unknown.",
+        "sowing_window": { "start": "2027-04-01", "end": "2027-04-20" },
+        "harvest_window": { "start": "2027-08-01", "end": "2027-09-01" }
+      }
+    ],
+    "alternatives": [],
+    "disclaimer": "Fictional example only; not a crop recommendation."
+  },
   "baseline": {
     "id": "baseline",
     "label": "Current rotation continued",

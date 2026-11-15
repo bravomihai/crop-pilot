@@ -25,6 +25,11 @@ export const DEMO_CROPS = [
     dry: 38,
     wet: 14,
   },
+  { id: "dry_beans", name: "Dry beans", base: 84, heat: 34, dry: 32, wet: 18 },
+  { id: "spring_barley", name: "Spring barley", base: 85, heat: 28, dry: 25, wet: 17 },
+  { id: "triticale", name: "Triticale", base: 86, heat: 24, dry: 23, wet: 16 },
+  { id: "winter_rye", name: "Winter rye", base: 85, heat: 22, dry: 20, wet: 18 },
+  { id: "potato", name: "Potato", base: 87, heat: 32, dry: 34, wet: 12 },
 ] as const;
 
 export type DemoCropId = (typeof DEMO_CROPS)[number]["id"];

@@ -12,17 +12,13 @@ type PlanSummary = {
 };
 type Summary = { headline: string; plans: PlanSummary[] };
 type State =
-  | { status: "idle" | "loading" | "unavailable" }
+  | { status: "idle" | "loading" }
+  | { status: "unavailable"; message: string }
   | { status: "ready"; summary: Summary };
 
-/**
- * Asks the server for a plain-words explanation of a calculated result as soon as it is
- * shown. When the server has no AI set up, or the explanation fails its checks, the page
- * simply keeps the calculated texts: nothing is shown in its place.
- */
-function usePlainWords(result: RecommendationResult): State {
+function usePlainWords(result: RecommendationResult, enabled: boolean): State {
   const [state, setState] = useState<State>({ status: "idle" });
-  const eligible = result.mode === "computed" && result.plans.length > 0;
+  const eligible = enabled && result.mode === "computed" && result.plans.length > 0;
   useEffect(() => {
     if (!eligible) {
       setState({ status: "idle" });
@@ -37,12 +33,13 @@ function usePlainWords(result: RecommendationResult): State {
       signal: controller.signal,
     })
       .then(async (response) => {
-        if (!response.ok) throw new Error();
+        if (!response.ok) throw new Error("The AI summary is unavailable. The calculated results are unchanged.");
         const summary = (await response.json()) as Summary;
         if (!controller.signal.aborted) setState({ status: "ready", summary });
       })
-      .catch(() => {
-        if (!controller.signal.aborted) setState({ status: "unavailable" });
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setState({ status: "unavailable", message: error instanceof Error ? error.message : "The AI summary is unavailable. The calculated results are unchanged." });
       });
     return () => controller.abort();
   }, [result, eligible]);
@@ -51,7 +48,19 @@ function usePlainWords(result: RecommendationResult): State {
 
 /** The explanation in plain words, inside the "At a glance" card. */
 export default function PlainWordsSummary({ result }: { result: RecommendationResult }) {
-  const state = usePlainWords(result);
+  const [requested, setRequested] = useState<RecommendationResult | null>(null);
+  const enabled = requested === result;
+  const state = usePlainWords(result, enabled);
+  if (result.mode !== "computed" || !result.plans.length) return null;
+  if (!enabled)
+    return (
+      <div className="plain-words">
+        <button type="button" className="ai-summary-button" onClick={() => setRequested(result)}>
+          Summarise in plain words
+        </button>
+        <p className="plain-words-note">Sends the calculated summary, including the field name, to OpenAI.</p>
+      </div>
+    );
   if (state.status === "loading")
     return (
       <div className="plain-words is-loading" role="status">
@@ -60,6 +69,7 @@ export default function PlainWordsSummary({ result }: { result: RecommendationRe
         <span className="sr-only">Writing an explanation of these results…</span>
       </div>
     );
+  if (state.status === "unavailable") return <p role="status">{state.message}</p>;
   if (state.status !== "ready") return null;
   const { summary } = state;
   const names = new Map<string, string>([

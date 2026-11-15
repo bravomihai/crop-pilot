@@ -1,6 +1,6 @@
 from datetime import date
 from fieldshift.contracts import example, validate
-from fieldshift.demo import recommend_demo, demo_steps
+from fieldshift.demo import CATALOG, recommend_demo, demo_steps
 
 
 def test_fixtures_match_contracts():
@@ -19,13 +19,7 @@ def test_three_steps_are_temporal_not_calendar_years():
 
 def test_exclusions_do_not_force_three_invalid_alternatives():
     request = example("recommendation-request")
-    request["constraints"]["excluded_crops"] = [
-        "pea",
-        "winter_wheat",
-        "winter_barley",
-        "maize",
-        "sunflower",
-    ]
+    request["constraints"]["excluded_crops"] = list(CATALOG)
     output = recommend_demo(request, "test")
     assert output["status"] == "insufficient_data" and output["plans"] == []
 
@@ -35,3 +29,16 @@ def test_every_demo_response_is_marked_as_fictional():
     assert output["mode"] == "demo"
     assert all(p["confidence"] == "low" for p in output["plans"])
     assert output["sources"][0]["id"] == "demo-fixture"
+
+
+def test_selected_new_romanian_crops_are_available_in_demo_mode():
+    request = example("recommendation-request")
+    request["constraints"]["selected_crops"] = ["spring_barley", "potato", "winter_rye"]
+    request["constraints"]["selected_crops_only"] = True
+    output = recommend_demo(request, "test")
+    assert output["plans"]
+    assert {step["crop_id"] for step in output["plans"][0]["steps"]} == {
+        "spring_barley",
+        "potato",
+        "winter_rye",
+    }

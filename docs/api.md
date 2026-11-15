@@ -59,6 +59,10 @@ that do not use these fields need no changes. Complete examples:
 | `plan.scores: {water, soil, climate, productivity}` | result | P3 calculates 0–1 or `null` (unknown); P4 forwards it; P1 displays it |
 | `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
+| `land_cover: {status, message}` | computed result | Satellite screening: `cropland`, `incompatible`, or `uncertain`; display the message prominently |
+| `assessment_crops: crop_id[0–15]` | request | Optional individual crops to screen; an empty list requests alternative crop screening without choosing a crop |
+| `preferred_crop: crop_id` | request | Optional crop to include in a rotation where an eligible sampled sequence exists; the top-ranked plan remains unchanged |
+| `crop_assessment: {selected, alternatives, disclaimer}` | computed result | Individual crop assessments and up to three alternatives; separate from successive rotation plans |
 | `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
 | `money_inputs: {prices_lei_per_t, costs_lei_per_ha}` | request | P1 collects the farmer's own price and cost per crop for the money estimate; not stored |
 | `plan.economics` | result | P3 estimates lei per hectare and year (income, costs, CAP payments, margin; ranges, `null` = unknown); not a forecast and not used for ranking; P1 displays it |
@@ -66,6 +70,36 @@ that do not use these fields need no changes. Complete examples:
 `productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast. `economics`
 is a rough estimate from county yield statistics, past regional prices, published cost budgets and
 reported CAP payment rates (see `docs/economics-design.md`); it is not a forecast either.
+
+The web form sends a selected crop in both `preferred_crop` and `assessment_crops`.
+Among the three alternatives, the recommender keeps the best-ranked plan and, if
+necessary, replaces another option with the highest-ranked eligible sampled sequence
+containing the selected crop. The crop can appear at any step. If none is eligible or
+it is excluded, the result reports that none was found; sampling may leave other
+sequences unexplored. The individual assessment considers the crop as the next crop,
+so a later rotation step can have different succession constraints. Demo fixtures do
+not assess the selected crop or generate a matching rotation.
+
+Computed requests with a boundary send its geometry to Microsoft Planetary Computer
+for ESA WorldCover 2021 land-cover statistics. Available pixels uniformly showing tree cover, built-up land,
+water, wetland, snow/ice, mangrove, or moss/lichen yields `insufficient_data` and no
+plans. Mixed classes, missing data, tile crossings, very small fields, and large
+fields that cannot be screened at full resolution are uncertain: plans may still be
+shown alongside the land-cover uncertainty. Cropland classifications also require field checks.
+The historical 10 m classification is not current ground truth, a soil assessment,
+or a legal land-use determination. No alternative land use is inferred.
+
+Each optional individual crop assessment runs the evaluator on one crop, including
+history, exclusions, irrigation and the requested hypothetical scenario. Alternatives
+are ranked by the evaluator's provisional relative growing-potential score, not by
+rotation-priority weights. Crop comparisons include the next sowing and harvest windows
+when available; different crops may have windows in different years. Missing pH or soil texture prevents confirming crop fit;
+unknown pH is omitted from the score and unknown texture uses the evaluator's loam
+assumption. The score is not a yield, profit, probability or field measurement, and
+crop rules need local expert review. Incompatible land cover returns no assessments.
+Unsupported selected crops are reported as uncertain. The main page can submit up to
+five independently drawn, non-overlapping parts as separate requests; all other form
+details apply to every part, and unoutlined areas are not analysed.
 
 ## Future integration
 

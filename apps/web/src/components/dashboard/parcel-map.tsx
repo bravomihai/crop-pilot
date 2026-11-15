@@ -7,6 +7,8 @@ import {
   addCorner,
   addFreehand,
   createParcel,
+  MAX_BOUNDARY_POINTS,
+  MAX_FIELD_PARTS,
   tracePoints,
   type Coordinate,
   type DrawSegment,
@@ -15,21 +17,26 @@ import {
 import Icon from "./icon";
 import RegionalMapContext from "../regional-map-context";
 
+const MAX_MAP_ZOOM = 17;
+
 type Commands = {
   start: () => void;
+  startPart: () => void;
   finish: () => void;
   undo: () => void;
   cancel: () => void;
   clear: () => void;
-  point: () => void;
 };
 type Props = {
   view: Location;
+  zoom?: number;
   selection: FieldSelection | null;
   color: string;
   opacity: number;
   onSelect: (selection: FieldSelection | null) => void;
   onDrawingChange: (drawing: boolean) => void;
+  parts?: FieldSelection[];
+  onAddPart?: (part: FieldSelection) => void;
 };
 
 export default function ParcelMap(props: Props) {
@@ -43,11 +50,10 @@ export default function ParcelMap(props: Props) {
   const [ready, setReady] = useState(false);
   const [drawing, setDrawing] = useState(false);
   const [vertices, setVertices] = useState(0);
-  const [message, setMessage] = useState(
-    "Draw a field boundary, or use a point to start planning.",
-  );
+  const [message, setMessage] = useState("Draw your field boundary on the map.");
   const [tileError, setTileError] = useState(false);
   const [referenceError, setReferenceError] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -58,14 +64,16 @@ export default function ParcelMap(props: Props) {
         const element = container.current;
         const initial = latest.current.view;
         const instance = L.map(element, {
-          zoomControl: true,
+          zoomControl: false,
           preferCanvas: true,
-        }).setView([initial.latitude, initial.longitude], 13);
+          maxZoom: MAX_MAP_ZOOM,
+        }).setView([initial.latitude, initial.longitude], latest.current.zoom ?? 13);
         map.current = instance;
+        L.control.zoom({ position: "bottomright" }).addTo(instance);
         const imagery = L.tileLayer(
           "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
           {
-            maxZoom: 19,
+            maxZoom: MAX_MAP_ZOOM,
             attribution:
               'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
           },
@@ -73,7 +81,7 @@ export default function ParcelMap(props: Props) {
         const labels = L.tileLayer(
           "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
           {
-            maxZoom: 19,
+            maxZoom: MAX_MAP_ZOOM,
             attribution: "Labels &copy; Esri",
             pane: "overlayPane",
           },
@@ -81,7 +89,7 @@ export default function ParcelMap(props: Props) {
         const roads = L.tileLayer(
           "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
           {
-            maxZoom: 19,
+            maxZoom: MAX_MAP_ZOOM,
             attribution:
               "Roads &copy; Esri, HERE, Garmin, OpenStreetMap contributors",
             pane: "overlayPane",
@@ -93,7 +101,7 @@ export default function ParcelMap(props: Props) {
         const streets = L.tileLayer(
           "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           {
-            maxZoom: 19,
+            maxZoom: MAX_MAP_ZOOM,
             attribution:
               '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           },
@@ -102,7 +110,7 @@ export default function ParcelMap(props: Props) {
           .layers(
             { Satellite: satellite, "Street map": streets },
             {},
-            { position: "bottomleft" },
+            { position: "bottomright" },
           )
           .addTo(instance);
         L.control
@@ -124,6 +132,7 @@ export default function ParcelMap(props: Props) {
           interactive: false,
         }).addTo(instance);
         let active = false;
+        let drawingPart = false;
         let segments: DrawSegment[] = [];
         let gesture: {
           id: number;
@@ -168,7 +177,7 @@ export default function ParcelMap(props: Props) {
           const points = [...tracePoints(segments), ...extra];
           if (points.length > 1)
             L.polyline(latLngs(points), {
-              color: "#93c5fd",
+              color: "#ffffff",
               weight: 3,
               interactive: false,
             }).addTo(sketch);
@@ -181,12 +190,17 @@ export default function ParcelMap(props: Props) {
               radius: index === 0 ? 7 : 4,
               color: "#fff",
               weight: 2,
-              fillColor: index === 0 ? "#2563eb" : "#60a5fa",
+              fillColor: "#123c2f",
               fillOpacity: 1,
               interactive: false,
             }).addTo(sketch),
           );
-          setVertices(tracePoints(segments).length);
+          const count = tracePoints(segments).length;
+          setVertices(count);
+          if (count >= MAX_BOUNDARY_POINTS)
+            setMessage(
+              `The ${MAX_BOUNDARY_POINTS}-point limit is reached. Finish the outline or undo a gesture.`,
+            );
         }
         function resetSketch() {
           segments = [];
@@ -205,15 +219,17 @@ export default function ParcelMap(props: Props) {
         function finish() {
           if (!active) return;
           try {
-            const field = createParcel(tracePoints(segments), "Selected field");
+            const field = createParcel(tracePoints(segments), drawingPart ? `Part ${(latest.current.parts?.length ?? 0) + 1}` : "Selected field");
+            if (drawingPart) latest.current.onAddPart?.(field);
+            else latest.current.onSelect(field);
             stop();
-            latest.current.onSelect(field);
-            instance.fitBounds(L.latLngBounds(latLngs(field.boundary!)), {
-              padding: [36, 36],
-              maxZoom: 17,
-            });
+            if (!drawingPart)
+              instance.fitBounds(L.latLngBounds(latLngs(field.boundary!)), {
+                padding: [36, 36],
+                maxZoom: 17,
+              });
             setMessage(
-              `Field selected. Approximate area: ${field.areaHectares!.toFixed(2)} ha. Boundary stays in this tab.`,
+              `${drawingPart ? "Part" : "Field"} selected. Approximate area: ${field.areaHectares!.toFixed(2)} ha. In computed mode, soil and terrain use up to three samples inside the boundary.`,
             );
           } catch (cause) {
             setMessage(
@@ -226,6 +242,7 @@ export default function ParcelMap(props: Props) {
         commands.current = {
           start() {
             resetSketch();
+            drawingPart = false;
             active = true;
             selected.clearLayers();
             latest.current.onSelect(null);
@@ -233,8 +250,18 @@ export default function ParcelMap(props: Props) {
             setDrawing(true);
             latest.current.onDrawingChange(true);
             setMessage(
-              "Click for corners; hold and drag for curves. Click the first point, double-click, or choose Finish to close.",
+              `Click for corners; hold and drag for curves. Click the first point, double-click, or choose Finish to close. Maximum ${MAX_BOUNDARY_POINTS} points.`,
             );
+            element.focus();
+          },
+          startPart() {
+            resetSketch();
+            drawingPart = true;
+            active = true;
+            interactions(false);
+            setDrawing(true);
+            latest.current.onDrawingChange(true);
+            setMessage("Draw a closed part inside the field without overlapping another part.");
             element.focus();
           },
           finish,
@@ -250,36 +277,20 @@ export default function ParcelMap(props: Props) {
           cancel() {
             stop();
             setMessage(
-              "Drawing cancelled. Start again or use a point on the map.",
+              "Drawing cancelled. Start again to trace the field boundary.",
             );
           },
           clear() {
             stop();
             selected.clearLayers();
             latest.current.onSelect(null);
-            setMessage("Field cleared. Draw a new outline or use a point.");
-          },
-          point() {
-            stop();
-            const centre = instance.getCenter();
-            latest.current.onSelect({
-              boundary: null,
-              areaHectares: null,
-              location: {
-                name: "Selected map centre",
-                latitude: centre.lat,
-                longitude: centre.lng,
-              },
-            });
-            setMessage(
-              "Map centre selected. Area is unknown without a boundary.",
-            );
+            setMessage("Field cleared. Draw a new boundary to continue.");
           },
         };
         renderSelection.current = () => {
           selected.clearLayers();
-          const { selection, color, opacity } = latest.current;
-          if (!selection || active) return;
+          const { selection, color, opacity, parts = [] } = latest.current;
+          if (!selection || (active && !drawingPart)) return;
           if (selection.boundary)
             L.polygon(latLngs(selection.boundary), {
               color,
@@ -287,16 +298,15 @@ export default function ParcelMap(props: Props) {
               fillColor: color,
               fillOpacity: opacity,
             }).addTo(selected);
-          L.circleMarker(
-            [selection.location.latitude, selection.location.longitude],
-            {
-              radius: 5,
-              color: "#fff",
+          parts.forEach((part, index) => {
+            if (!part.boundary) return;
+            L.polygon(latLngs(part.boundary), {
+              color: "#ffffff",
               weight: 2,
-              fillColor: "#2563eb",
-              fillOpacity: 1,
-            },
-          ).addTo(selected);
+              fillColor: color,
+              fillOpacity: 0.4,
+            }).bindTooltip(`Part ${index + 1}`, { permanent: true }).addTo(selected);
+          });
         };
         function down(event: PointerEvent) {
           if (
@@ -306,6 +316,12 @@ export default function ParcelMap(props: Props) {
             (event.target as Element).closest(".leaflet-control")
           )
             return;
+          if (tracePoints(segments).length >= MAX_BOUNDARY_POINTS) {
+            setMessage(
+              `The ${MAX_BOUNDARY_POINTS}-point limit is reached. Finish the outline or undo a gesture.`,
+            );
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           const point = instance.mouseEventToContainerPoint(event);
@@ -377,15 +393,23 @@ export default function ParcelMap(props: Props) {
             finish();
             return;
           }
-          if (current.freehand || moved)
-            segments = addFreehand(
-              segments,
-              [...current.points, point],
-              current.tolerance,
-            );
-          else segments = addCorner(segments, point);
-          paintSketch();
+          const updated =
+            current.freehand || moved
+              ? addFreehand(
+                  segments,
+                  [...current.points, point],
+                  current.tolerance,
+                )
+              : addCorner(segments, point);
           guide.setLatLngs([]);
+          if (tracePoints(updated).length > MAX_BOUNDARY_POINTS) {
+            setMessage(
+              `That stroke exceeds the ${MAX_BOUNDARY_POINTS}-point limit. Undo a gesture or redraw a shorter section.`,
+            );
+            return;
+          }
+          segments = updated;
+          paintSketch();
         }
         function cancelPointer() {
           release();
@@ -463,11 +487,11 @@ export default function ParcelMap(props: Props) {
     if (!ready) return;
     if (appliedView.current !== props.view) commands.current?.cancel();
     appliedView.current = props.view;
-    map.current?.setView([props.view.latitude, props.view.longitude], 13);
-  }, [props.view, ready]);
+    map.current?.setView([props.view.latitude, props.view.longitude], props.zoom ?? 13);
+  }, [props.view, props.zoom, ready]);
   useEffect(() => {
     renderSelection.current?.();
-  }, [props.selection, props.color, props.opacity, ready]);
+  }, [props.selection, props.parts, props.color, props.opacity, ready]);
 
   return (
     <section className="dashboard-card map-card" aria-labelledby="map-title">
@@ -519,15 +543,14 @@ export default function ParcelMap(props: Props) {
             </button>
           </>
         )}
-        {!drawing && (
+        {!drawing && props.selection && props.onAddPart && (
           <button
-            className="text-button"
+            className="button button--secondary"
             type="button"
-            disabled={!ready}
-            onClick={() => commands.current?.point()}
+            disabled={!ready || (props.parts?.length ?? 0) >= MAX_FIELD_PARTS}
+            onClick={() => commands.current?.startPart()}
           >
-            <Icon name="pin" size={15} />
-            Use map centre
+            Draw field part
           </button>
         )}
         <button
@@ -545,7 +568,7 @@ export default function ParcelMap(props: Props) {
         ref={container}
         tabIndex={0}
         role="region"
-        aria-label="Satellite map. Use the drawing toolbar to trace a field. You can also pan with arrow keys and choose Use map centre."
+        aria-label="Satellite map. Draw the field boundary using corner clicks and drags for curved edges."
         aria-describedby="map-instructions"
       />
       <div className="map-caption">
@@ -579,10 +602,23 @@ export default function ParcelMap(props: Props) {
           drawing remain separate from these reference layers.
         </p>
       )}
-      <RegionalMapContext
-        map={ready ? map.current : null}
-        location={props.selection?.location}
-      />
+      <details
+        className="map-context-menu"
+        onToggle={(event) => setContextOpen(event.currentTarget.open)}
+      >
+        <summary aria-label="NASA layers">
+          <Icon name="satellite" size={17} />
+          <span>NASA layers</span>
+        </summary>
+        {contextOpen && (
+          <div className="map-context-content">
+            <RegionalMapContext
+              map={ready ? map.current : null}
+              location={props.selection?.location}
+            />
+          </div>
+        )}
+      </details>
     </section>
   );
 }

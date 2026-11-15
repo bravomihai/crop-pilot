@@ -32,6 +32,7 @@ from .pareto import NONDOMINATED, ParetoInfo, dominates
 from .ranking import Score
 
 BEST, DIVERSE, SCORE_GAP, LOW_DIVERSITY = "best", "diverse", "score_gap", "low_diversity"
+PREFERRED = "preferred"
 
 
 @dataclass(frozen=True)
