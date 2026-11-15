@@ -73,7 +73,8 @@ The website is connected to the Python recommendation engine. Computed mode uses
 public weather and soil data, regional rules, evaluation and recommendation modules.
 Recorded integration checks and their limits are in [docs/status.md](docs/status.md).
 The rules and scores still require local agronomic review; passing tests do not
-establish scientific accuracy. No yield or profit forecast is implemented.
+establish scientific accuracy. No yield or profit forecast is implemented: the money shown per plan is a
+rough estimate from county statistics, past prices and published costs, not a forecast.
 
 ## Repository
 

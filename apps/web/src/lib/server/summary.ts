@@ -64,6 +64,7 @@ export function systemPrompt() {
     "- Never rank the plans differently from the input, and never recommend something the input does not.",
     "- Mention the farmer's current rotation in the headline if the input has one.",
     "- watch_out comes from the trade-offs and warnings; ask_your_agronomist comes from the local checks.",
+    "- Money figures are rough estimates per hectare and year; always call them estimates, and never say they decide the ranking.",
     "- Keep each sentence short. No jargon: no 'score median', 'Pareto', 'evaluator'.",
     "- Write in English only. Preserve geographic proper names.",
   ].join("\n");
@@ -87,6 +88,11 @@ function planInput(plan: RotationPlan) {
     tradeoffs: clip(plan.tradeoffs, 6),
     local_checks: clip(plan.local_checks, 6),
     rule_violations: plan.violations ?? [],
+    money_estimate_lei_per_ha_year: plan.economics
+      ? Object.fromEntries(
+          Object.entries(plan.economics.per_year).map(([name, range]) => [name, range ? range.typical : null]),
+        )
+      : null,
     confidence: plan.confidence,
   };
 }

@@ -9,6 +9,7 @@ import {
   mainRisks,
   strongest,
 } from "@/lib/result-glance";
+import { marginLine } from "@/lib/money";
 import PlainWordsSummary, { PrintSheetButton } from "./ai-summary";
 
 /**
@@ -69,6 +70,16 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
               {worse.length > 0 && <>Worse on {list(worse)}. </>}
               {!better.length && !worse.length && "The same scores on every criterion. "}
               <span className="glance-note">Scores out of 100.</span>
+            </dd>
+          </div>
+        )}
+        {best.economics && (
+          <div>
+            <dt>Money (estimate)</dt>
+            <dd>
+              Left after costs, with subsidies: {marginLine(best.economics)}.
+              {result.baseline?.economics && <> Your current rotation: {marginLine(result.baseline.economics)}.</>}{" "}
+              <span className="glance-note">Not a forecast; it does not change the ranking.</span>
             </dd>
           </div>
         )}

@@ -59,8 +59,11 @@ that do not use these fields need no changes. Complete examples:
 | `plan.scores: {water, soil, climate, productivity}` | result | P3 calculates 0–1 or `null` (unknown); P4 forwards it; P1 displays it |
 | `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
+| `plan.economics` | result | P3 estimates lei per hectare and year (income, costs, CAP payments, margin; ranges, `null` = unknown); not a forecast and not used for ranking; P1 displays it |
 
-`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast. `economics`
+is a rough estimate from county yield statistics, past regional prices, published cost budgets and
+reported CAP payment rates (see `docs/economics-design.md`); it is not a forecast either.
 
 ## Future integration
 

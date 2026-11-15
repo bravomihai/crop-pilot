@@ -1172,3 +1172,22 @@
 @keyframes plain-words-pulse { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .plain-words-skeleton { animation: none; } }
 @media print { .plain-words.is-loading, .plain-words-note { display: none !important; } }
+
+/* Money per hectare and year (estimate). */
+.plan-money { margin-top: 12px; padding: 10px 12px; border: 1px solid #123c2f26; border-radius: 10px; background: #ffffff; }
+.plan-money h4 { margin: 0 0 6px !important; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.plan-money-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; color: #123c2f; background: #123c2f14; padding: 2px 6px; border-radius: 6px; }
+.plan-money table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.plan-money th { text-align: left; font-weight: 500; padding: 4px 8px 4px 0; color: var(--muted); }
+.plan-money td { text-align: right; padding: 4px 0; white-space: nowrap; }
+.plan-money td strong { display: block; color: #000000; }
+.plan-money-range { display: block; font-size: 10px; color: var(--muted); }
+.plan-money-unknown { color: var(--muted); font-style: italic; }
+.plan-money-margin th, .plan-money-margin td { border-top: 1px solid #00000014; padding-top: 6px; }
+.plan-money-margin th { color: #000000; font-weight: 600; }
+.plan-money-warning { margin: 8px 0 0; font-size: 11px; color: #7a3e00; }
+.plan-money-notes { margin: 8px 0 0; }
+.plan-money-details { margin-top: 8px; }
+.plan-money-details > summary { cursor: pointer; font-size: 11px; font-weight: 600; color: #123c2f; }
+.plan-money-details h5 { margin: 8px 0 4px; font-size: 11px; }
+.plan-money-details p { font-size: 11px; color: var(--muted); }

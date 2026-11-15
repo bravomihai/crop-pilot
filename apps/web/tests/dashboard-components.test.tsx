@@ -16,6 +16,7 @@ import ReplayChart from "../src/components/charts/replay-chart";
 import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
 import { fullExampleRequest } from "../src/lib/api";
 import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
+import { leiRange, marginLine } from "../src/lib/money";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
@@ -432,4 +433,28 @@ test("the glance helpers use the result as it is", () => {
     }),
     ["No crop history was provided; x."],
   );
+});
+
+test("plan cards show money per hectare a year as an estimate, with unknowns spelled out", () => {
+  const [plan] = fullFixture.plans;
+  const baseline = fullFixture.baseline!;
+  assert.ok(plan.economics && baseline.economics, "the full example carries economics");
+  const html = renderToStaticMarkup(createElement(PlanCard, { plan, number: 1 }));
+  assert.match(html, /Money per hectare a year/);
+  assert.match(html, /estimate/);
+  assert.match(html, /Subsidies and their conditions/);
+  // The example plan includes pea, which has no official price: totals are unknown, not 0.
+  assert.equal(plan.economics.per_year.margin, null);
+  assert.match(html, /plan-money-unknown/);
+  assert.match(html, /Pea: no official recent price series/);
+  assert.match(marginLine(plan.economics)!, /^unknown, because there are no official prices or costs for pea$/);
+  assert.match(marginLine(baseline.economics)!, /^about -?[\d,]+ lei per hectare a year \(range -?[\d,]+ – -?[\d,]+ lei\)$/);
+  assert.equal(marginLine(undefined), null);
+  assert.equal(leiRange(null), "Unknown");
+  assert.equal(leiRange({ low: 1200, typical: 1500, high: 2300 }), "1,200 – 2,300 lei");
+  const results = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: resultSchema.parse({ ...fullFixture, mode: "computed" }), busy: false, error: "" }),
+  );
+  assert.match(results, /Money \(estimate\)/);
+  assert.match(results, /Your current rotation: about/);
 });

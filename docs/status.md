@@ -347,3 +347,18 @@ Verified: Python 231 passed; web backend 97/97, UI 35/35, TypeScript; schemas un
 rotation maize → winter wheat showed the summary, collapsed details and full screen
 correctly. Known on Windows only: `scripts/env.test.mjs` expects `/` path separators
 and fails 1 of 3 checks; the uvicorn `--reload` supervisor can crash on file changes.
+
+## Money per plan (estimate) — 2026-11-15 (branch `tudor`, not pushed)
+
+Each computed plan and the current rotation carry an optional `economics` field: lei per
+hectare and year for income, costs, CAP payments and what is left, each as low / typical /
+high, with unknown values as `null`. It is shown on every plan card and in "At a glance".
+It does not change the ranking. Data and method: `docs/economics-design.md`.
+
+Verified: Python 239 passed plus the economics tests; web backend 97/97, UI 36/36,
+TypeScript; JSON Schemas regenerated (one new optional field). **Live** (local engine and
+web app, demo field in Călărași county): the current rotation maize → winter wheat showed
+about −520 lei/ha/year typical (range −3,120 to 4,530). Every recommended plan that day
+contained pea, so their income and margin showed as unknown, with subsidies only.
+Not verified: payment rates against the official Order; the yield and price figures as
+farm-level reality (they are county and regional averages).
