@@ -52,6 +52,10 @@ What keeps it honest:
   question for the agronomist, never a default value.
 - **Regional data is context.** NASA POWER and SoilGrids describe the area around the
   point, not the field itself. The app asks for a point, not a field boundary.
+- **Survival Mode compares like with like.** "Challenge my plan" picks the field's
+  worst observed drought, heat and erratic-rain years and compares every rotation on
+  the same replayed season, from P3's own results; it is history, not a forecast
+  (`docs/survival-mode.md`).
 - **The what-if is a scenario, not a forecast.** Temperature and rain sliders show how
   sensitive each plan is.
 

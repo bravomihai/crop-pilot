@@ -161,6 +161,11 @@ export const replayStepSchema = z
 export const replaySeasonSchema = z
   .object({
     season_start_year: yearSchema,
+    // The request's `available_from` moved back to this past season: the replay starts from
+    // this date. Seasons of different plans with the same date saw the same weather from
+    // the same starting point (plans can sow their first crop in different years, so
+    // `season_start_year` alone does not line them up). Optional: older producers omit it.
+    field_free_from: dateSchema.optional(),
     scores: criterionScoresSchema,
     steps: z.array(replayStepSchema).max(3).optional(),
   })
