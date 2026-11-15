@@ -235,3 +235,13 @@ Geocoding now requests English provider labels and uses language-specific cache 
 so earlier Romanian responses are not reused. Updated the provider-language regression
 check. Verified: contracts/web TypeScript, 82 backend/data checks, 51 focused Python
 checks (evaluator, English output, and contracts), and whitespace validation.
+
+## SVG extension hydration compatibility — 2026-11-15
+
+The shared dashboard Icon component now suppresses hydration attribute warnings
+on its SVG element, where Dark Reader injects inline stroke attributes before
+React hydrates. The existing root HTML exception does not cover nested icons.
+The exception is local to the icon element; its path remains normally checked.
+
+Verified: contracts/web TypeScript, all 27 existing UI checks, and whitespace
+validation. A browser reload with Dark Reader enabled was not verified.
