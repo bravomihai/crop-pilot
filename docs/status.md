@@ -329,6 +329,21 @@ Verified locally: 227 Python tests, 97 backend tests, 33 UI tests, 3 configurati
 checks, TypeScript and production build; 5 isolated deployment regression tests;
 ShellCheck, actionlint, VPS Compose isolation/manual-migration dependency, and
 NGINX syntax. Verified dedicated-key SSH, Docker access, certificate issuance
-and the existing certificate-renewal timer on the VPS. GitHub execution and
-the first live application deployment remain to be verified. Automatic
-deployment is disabled until initial provisioning is checked.
+and the existing certificate-renewal timer on the VPS. GitHub CI passed on PR #13
+and its main merge, 63afbd3. The first installation applied the initial cache
+migration explicitly, outside automatic CD, and started all five CropPilot
+services. Only the gateway is published, on 127.0.0.1:18080; the existing
+Universident database remains healthy.
+
+Verified live over HTTPS: expected commit, homepage and browser JavaScript,
+location search, invalid input rejected with 400, internal cache blocked with
+404, and computed-engine reachability. The public Fundulea example returned
+HTTP 200 in 11.3 seconds, complete with three plans of three crops each; its
+response passed the shared JSON schema. The CI SSH script also passed its
+read-only verification against the real server. This checks deployment and
+integration, not agronomic validity. No paid AI request was made; the optional
+OpenAI key remains unset on the server.
+
+Normal updates explicitly pull gateway/maintenance images before replacement,
+without pulling or replacing PostgreSQL. Automatic deployment was enabled after
+the initial installation checks; the next main merge exercises that path.

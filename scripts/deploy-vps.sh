@@ -76,6 +76,8 @@ main() {
   DEPLOYMENT_SHA=$sha
   configure_compose
   healthy postgres
+  stage='runtime-images'
+  "${compose[@]}" pull gateway cache-maintenance
   stage=build
   "${compose[@]}" build --pull migrate engine web
   stage='migration-status'
