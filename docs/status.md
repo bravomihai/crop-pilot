@@ -416,3 +416,27 @@ validation is implied.
 The CI/CD correction was independently verified by the successful automatic
 main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
 returned three computed plans of three crops each and passed the shared schema.
+
+
+## VPS engine permissions and CI triggers — 2026-11-15
+
+Main run 43702564664 passed application checks but failed the deployment health
+gate: new Python files inherited restrictive VPS checkout ACLs. Docker copied
+their root-owned permissions into the image, so the non-root engine could not
+read `fieldshift/api.py`. The service was restored by adding read/traverse
+permissions to public source inside the engine image; host secrets were unchanged.
+The recovered engine, web, gateway and maintenance services passed Compose
+health checks and the local computed-engine connectivity check.
+
+The engine Dockerfile now normalizes public source permissions before installing
+the package. Its existing CI build also verifies a non-root import with a
+restricted source file, without network access. CI runs on PRs and `main` pushes;
+feature branch pushes no longer create duplicate PR/push runs. Production health
+checks and the owner-only deployment gate remain required.
+
+
+Verified locally: the image built from a restricted source file imports the API
+as UID 1001 with networking disabled; workflow lint and six deployment guard
+tests pass. Public HTTPS serves revision 76c4c58 and reports the recovered engine
+as reachable in computed mode. The full GitHub suite and automatic deployment
+will verify the permanent change after merge.
