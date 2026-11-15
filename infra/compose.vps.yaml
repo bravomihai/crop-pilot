@@ -1,0 +1,20 @@
+# For an existing host NGINX. Merge with compose.yaml, not compose.production.yaml.
+# Compose >= 2.24.4. Production migrations are applied manually.
+services:
+  postgres:
+    ports: !reset []
+  migrate:
+    image: croppilot-migrate:production
+  engine:
+    image: croppilot-engine:production
+    ports: !reset []
+  web:
+    image: croppilot-web:production
+    ports: !reset []
+    environment:
+      DEPLOYMENT_SHA: ${DEPLOYMENT_SHA:-unknown}
+    depends_on: !override
+      postgres: { condition: service_healthy }
+      engine: { condition: service_healthy }
+  gateway:
+    ports: !override ["127.0.0.1:18080:80"]
