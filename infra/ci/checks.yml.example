@@ -1,6 +1,7 @@
 name: Backend, contracts and containers
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -83,7 +84,12 @@ jobs:
           docker compose -f compose.yaml -f infra/compose.production.yaml config --quiet
           docker compose -f compose.yaml -f infra/compose.vps.yaml config --quiet
       - run: docker build -f apps/web/Dockerfile -t croppilot-web:ci .
-      - run: docker build -f services/engine/Dockerfile -t croppilot-engine:ci .
+      - name: Build engine and verify runtime permissions
+        run: |
+          # Reproduce a restricted VPS checkout before building the image.
+          chmod o-r services/engine/fieldshift/api.py
+          docker build -f services/engine/Dockerfile -t croppilot-engine:ci .
+          docker run --rm --network none croppilot-engine:ci .venv/bin/python -c 'import os; from fieldshift.api import app; assert os.geteuid() == 1001; assert app.title == "CropPilot engine"'
 
   deploy:
     name: Deploy production
