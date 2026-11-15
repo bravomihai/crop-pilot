@@ -320,3 +320,13 @@ form; the AI summary showed "not set up" (no key configured) with the plans stil
 usable; Romanian labels display with diacritics; print rules keep only the results.
 **Not verified live:** an actual AI summary (no `ANTHROPIC_API_KEY`; covered by tests
 with a mocked client), NGINX/Caddy limits (configuration only), Docker and AWS.
+
+## SVG extension hydration compatibility — 2026-11-15
+
+The shared dashboard Icon component now suppresses hydration attribute warnings
+on its SVG element, where Dark Reader injects inline stroke attributes before
+React hydrates. The existing root HTML exception does not cover nested icons.
+The exception is local to the icon element; its path remains normally checked.
+
+Verified: contracts/web TypeScript, all 27 existing UI checks, and whitespace
+validation. A browser reload with Dark Reader enabled was not verified.
