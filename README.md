@@ -1,9 +1,9 @@
-# FieldShift: crop rotation planning with NASA data
+# CropPilot: crop rotation planning with NASA data
 
 NASA Space Apps Challenge 2026 · **Field Shift: Adapting Farms with NASA Data**
 
 Farmers in Romania choose the next crops for a field mostly from habit and last year's
-prices, while summers get hotter and dry spells longer. FieldShift helps them compare
+prices, while summers get hotter and dry spells longer. CropPilot helps them compare
 **what they do today** with **three alternative sequences of the next three main crops**,
 using the field's own recent weather from NASA and a climate what-if.
 
@@ -69,10 +69,11 @@ Sentinel-2 crop-history classifier for farmers who don't know their field's hist
 
 ## Current status
 
-The web app, the API, the contract, the NASA POWER adapter and the recommender (tested
-with a synthetic evaluator) are written. The regional rules and the evaluator are in
-progress. Until they are done, the app runs in **demo mode** with invented, clearly
-labelled plans. Details: [docs/status.md](docs/status.md).
+The website is connected to the Python recommendation engine. Computed mode uses
+public weather and soil data, regional rules, evaluation and recommendation modules.
+Recorded integration checks and their limits are in [docs/status.md](docs/status.md).
+The rules and scores still require local agronomic review; passing tests do not
+establish scientific accuracy. No yield or profit forecast is implemented.
 
 ## Repository
 
@@ -82,7 +83,7 @@ labelled plans. Details: [docs/status.md](docs/status.md).
 | `services/engine`    | Python FastAPI: `data_service`, `evaluator`, `recommender`      | P2–P4  |
 | `packages/contracts` | Zod contract, generated JSON Schemas, examples                  | all    |
 | `docs`               | Architecture, API, team split, status                           |        |
-| `infra`              | AWS deployment and reverse proxy                                | P5     |
+| `infra`              | VPS deployment and reverse proxy                                | P5     |
 
 Start with [AGENTS.md](AGENTS.md), [docs/team.md](docs/team.md) and [the API](docs/api.md).
 The contract lives in [`packages/contracts/src/index.ts`](packages/contracts/src/index.ts);
@@ -90,58 +91,55 @@ The contract lives in [`packages/contracts/src/index.ts`](packages/contracts/src
 and [`recommendation-result.full.json`](packages/contracts/examples/recommendation-result.full.json)
 show every optional field.
 
-## Run locally
+## Configuration and startup
 
-Node 22, pnpm 10.11.0, Python 3.11+, uv 0.9.5, and Docker only for the optional cache.
+Use one `.env` file at the repository root. For a new checkout, copy `.env.example`
+to `.env` and replace the password and internal token. This checkout already has
+private, generated local credentials. Do not put keys in browser code or commit `.env`.
+
+### Full app with Docker
+
+Stop any native web server already using port 3000, then run from the repository root:
+
+```sh
+docker compose config --quiet
+docker compose up -d --build --wait --wait-timeout 180
+```
+
+Open http://localhost:8080 and use a real Romanian field in the UI.
+The website already sends Calculate requests to the engine; Compose supplies the
+internal URLs and shares the token automatically. Defaults are real computation
+(`ENGINE_MODE=computed`, `ENABLE_NASA_POWER=true`, `NEXT_PUBLIC_USE_MOCK_API=false`).
+The database migration runs automatically before the web container starts.
+
+### Native development
+
+Node 22, pnpm 10.11.0, Python 3.11+ and uv 0.9.5 are required.
 
 ```sh
 corepack enable
 pnpm install --frozen-lockfile
 pnpm contracts:generate
 pnpm db:generate
-cp apps/web/.env.example apps/web/.env.local
-cp services/engine/.env.example services/engine/.env
 uv sync --project services/engine --frozen --extra dev
 ```
 
-Then, in two terminals:
+Then run `pnpm dev:engine` and `pnpm dev` in separate terminals, both from the root.
+Both commands read the root `.env`. Open http://localhost:3000. No per-service `.env`
+files are needed. For the optional PostgreSQL cache, start `docker compose up -d postgres`
+and run `pnpm db:deploy`; native commands derive `DATABASE_URL` from `POSTGRES_*`.
+Alternatively, use `CACHE_ENABLED=false` to run without a database.
 
-```sh
-# Terminal 1: engine
-cd services/engine
-.venv/bin/uvicorn fieldshift.api:app --env-file .env --reload --port 8000
-```
+### English AI summary and VPS hosting
 
-```sh
-# Terminal 2: web, from the repository root
-pnpm dev
-```
+Recommendations do not need an AI API key. To enable the optional English-only written
+summary, add `OPENAI_API_KEY` to the root `.env`. The default model is `gpt-6-luna`,
+configurable with `OPENAI_SUMMARY_MODEL`. It explains the computed plans; it does not
+choose crops. Restart native servers after changing `.env`, or recreate the Docker
+web service with `docker compose up -d web`.
 
-Open `http://localhost:3000`. The internal token must be the same in both env files.
-The example settings run the real engine (`ENGINE_MODE=computed` with
-`ENABLE_NASA_POWER=true`). Set `ENGINE_MODE=demo` for clearly labelled fictional plans without
-internet access. Before a demo, download the demo field once:
-`FIELDSHIFT_CACHE_DIR=cache .venv/bin/python -m fieldshift.warm 44.45,26.5` (from `services/engine`).
-With Docker Compose, warm the running engine container instead (its cache directory is
-inside the container, so repeat this after the engine container is recreated):
-`docker compose exec engine .venv/bin/python -m fieldshift.warm 44.45,26.5 47.65,26.25`.
-The optional AI summary needs `ANTHROPIC_API_KEY` for the web app (`apps/web/.env.local`
-locally, the root `.env` with Docker Compose); without it the page says it is not set up.
-
-**Frontend only:** set `NEXT_PUBLIC_USE_MOCK_API=true` in `apps/web/.env.local` and run
-only `pnpm dev`; the app reads the shared example.
-
-**Optional PostgreSQL cache** (public data only, never farmer input or results):
-
-```sh
-cp .env.example .env
-docker compose up -d postgres
-cp apps/web/.env.example apps/web/.env
-pnpm db:deploy
-```
-
-Then set `CACHE_ENABLED=true` for the web app. Everything in containers:
-`docker compose up --build`.
+The shared-VPS deployment at crop-pilot.nemes.engineer uses host NGINX and a single checkout. GitHub Actions setup and manual migration/recovery are documented in [infra/deploy/README.md](infra/deploy/README.md). Standalone Caddy hosting remains documented in [infra/vps.md](infra/vps.md).
+The HTTPS profile uses the same root `.env`, plus your domain and certificate email.
 
 ## Checks
 
@@ -149,6 +147,7 @@ Then set `CACHE_ENABLED=true` for the web app. Everything in containers:
 pnpm contracts:generate
 pnpm db:generate
 pnpm typecheck
+pnpm test:config
 pnpm test:backend
 # With local PostgreSQL and DATABASE_URL configured:
 pnpm test:cache
@@ -160,7 +159,7 @@ services/engine/.venv/bin/python -m pytest services/engine/tests
 [NASA POWER](https://power.larc.nasa.gov/) daily agro-meteorology ·
 [ISRIC SoilGrids](https://soilgrids.org/) · [FAO-56](https://www.fao.org/3/x0490e/x0490e00.htm)
 crop water use · [FAO EcoCrop](https://gaez.fao.org/pages/ecocrop) ·
-[FAO GAEZ v4](https://gaez.fao.org/) · Romanian crop technology guides (INCDA Fundulea).
+[FAO GAEZ v4](https://gaez.fao.org/) · Romanian crop technology guides (INCDA, the national agricultural research institute).
 Planned: SMAP, SRTM, NEX-GDDP-CMIP6, Sentinel-2.
 
 ## Working together
@@ -173,7 +172,7 @@ Install uv: https://docs.astral.sh/uv/getting-started/installation/ .
 The local entry point with request limits is `http://localhost:8080` when running
 the full Compose stack. Public cache cleanup is automatic. Integration checks and the
 HTTPS profile are documented in [infra/README.md](infra/README.md); future deployment
-configuration is in [infra/aws/README.md](infra/aws/README.md). The prepared workflow in
+configuration is in [infra/vps.md](infra/vps.md). The prepared workflow in
 `.github/workflows/checks.yml` runs after the changes are published to GitHub.
 
 

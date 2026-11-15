@@ -5,7 +5,7 @@ import {
   requestSchema,
   type RecommendationRequest,
   type RecommendationResult,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import { getRecommendations } from "./api";
 
 export function useRecommendations() {

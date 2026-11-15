@@ -4,7 +4,7 @@ import type {
   Location,
   RecommendationRequest,
   HistorySource,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import LocationMap from "./location-map";
 import RecommendationResults from "./recommendation-results";
 import Button from "./ui/button";

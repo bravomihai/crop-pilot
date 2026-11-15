@@ -10,7 +10,8 @@ P5 works in `src/app/api`, `src/lib/server`, `prisma`, and deployment configurat
 is fictional and labelled. In normal mode, `POST /api/recommendations` forwards the
 validated form to the engine and returns the result without saving it.
 
-Prisma CLI reads `.env` through `prisma.config.ts`. Next.js reads `.env.local`.
+Web startup and Prisma CLI load the single repository-root `.env` through `scripts/load-env.mjs`.
+Inherited container environment values take precedence; no per-app env file is needed.
 The schema/migration stores only public cache data. `CACHE_ENABLED=false` disables caching.
 Run pnpm commands from the repository root; see the root README and `AGENTS.md`.
 

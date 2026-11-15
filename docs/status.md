@@ -3,6 +3,19 @@
 This file includes historical verification records. Later entries describe newer
 runtime and interface states; earlier checks are not new claims of scientific validation.
 
+## Main integration into maria
+
+The main-branch integration retains drawn fields, separately analysed field parts,
+crop-first comparisons, and the rotation calendar. The map opens on Romania; the
+results also include main's at-a-glance and full-screen controls. AI summaries remain
+opt-in and disclose the OpenAI request.
+
+On 2026-11-15, the merged engine suite passed 259 tests; web UI and backend suites
+passed 42 and 102 tests, and typechecking passed. A synthetic computed request through
+localhost returned three plans and potato/pea assessments with uncertain land cover.
+Node 26 was used despite the repository's Node version range. These checks do not
+validate crop advice or current land use.
+
 ## Current integrated state
 
 - The application has a Next.js interface/backend, a Python engine, generated Zod/JSON
@@ -96,7 +109,8 @@ runtime and interface states; earlier checks are not new claims of scientific va
 - Catalog: review and validate the 15-crop regional catalog and add further crops only
   with suitable parameter evidence.
 - P1: UX/accessibility refinement, comparisons, and source-detail presentation.
-- P5: actual AWS deployment and real secret configuration at deployment; local preparation is described below.
+- P5: VPS deployment and real secrets; confirm the GitHub workflow passes. The Python
+  engine keeps computing after a cancelled request (no cooperative cancellation).
 
 ## Intentionally outside this version
 
@@ -166,7 +180,7 @@ token could not publish workflows. To activate it, move the file to
 - Production HTTPS through Caddy, direct service ports removed, and rotating logs.
   Certificate issuance/public access were not tested: no domain/deployment was selected.
 - AWS: EC2 + IAM/SSM template, access rules, encrypted disk, and SecureString loading
-  into ignored `.env.production`. Documentation: `infra/aws/README.md`.
+  into ignored `.env.production`. This historical scaffold was removed when switching to the VPS setup; see `infra/vps.md`.
   Configuration is prepared; no AWS resources or production secrets were created.
 
 ### Team dependencies and limits
@@ -386,3 +400,135 @@ The exception is local to the icon element; its path remains normally checked.
 
 Verified: contracts/web TypeScript, all 27 existing UI checks, and whitespace
 validation. A browser reload with Dark Reader enabled was not verified.
+
+## CropPilot, root configuration and VPS hosting — 2026-11-15
+
+Renamed product branding, workspace packages, service health labels, and deployment
+names to CropPilot. The Python module directory remains `fieldshift` for internal
+imports. The repository remote is now `git@github.com:bravomihai/crop-pilot.git`.
+
+Docker Compose and native web/engine/Prisma commands now share a single ignored root
+`.env`. This checkout has generated local credentials; `.env.example` contains only
+placeholders for new checkouts. Per-service environment files/templates were removed.
+Real mode is enabled (`ENGINE_MODE=computed`, `ENABLE_NASA_POWER=true`, frontend fixtures
+disabled). The website already forwards validated calculations to Python with the
+shared server-side token. AWS provisioning was removed; `infra/vps.md` documents the
+existing HTTPS Compose profile for a user-managed server. The connectivity helper is
+now read-only and does not stop services or switch the engine to demonstration mode.
+
+Replaced Anthropic with OpenAI Responses for English-only summaries. The configurable
+default is `gpt-6-luna`; the key belongs in root `OPENAI_API_KEY` and is not required
+for calculated recommendations. The UI language selector was removed, non-English
+summary requests are rejected, and existing numeric checks are retained. Incomplete,
+refused, timed-out or failed summaries leave the original calculated plans available.
+Response storage is disabled for the OpenAI request.
+
+Verified: production build, contracts/web TypeScript, 33 UI checks, 97 backend checks,
+3 configuration-loader checks, 26 focused Python checks, Python syntax, contract schema
+regeneration without changes, and local/production Compose configuration. Checked
+that web and engine receive the same generated token and production exposes only
+HTTPS ingress. UI testing, a live OpenAI call, Docker startup/migrations and VPS
+deployment are left to the user. No paid API call or deployment was performed.
+
+## Shared NGINX VPS and CI/CD — 2026-11-15
+
+Prepared a single production checkout at /home/ubuntu/crop-pilot, a dedicated
+croppilot-deploy account/key, main-only production environment, and host NGINX
+HTTPS. Removed the earlier unshipped release-directory/privileged-receiver
+approach. The VPS Compose profile publishes only 127.0.0.1:18080 and leaves
+production migrations manual. The Actions deployment requires successful CI,
+main, and both original/rerun actors to be bravomihai. It fast-forwards only to
+the exact tested main SHA, preserves local settings, refuses dirty/stale
+checkouts and pending migrations, and verifies container/HTTPS health.
+
+Verified locally: 227 Python tests, 97 backend tests, 33 UI tests, 3 configuration
+checks, TypeScript and production build; 5 isolated deployment regression tests;
+ShellCheck, actionlint, VPS Compose isolation/manual-migration dependency, and
+NGINX syntax. Verified dedicated-key SSH, Docker access, certificate issuance
+and the existing certificate-renewal timer on the VPS. GitHub CI passed on PR #13
+and its main merge, 63afbd3. The first installation applied the initial cache
+migration explicitly, outside automatic CD, and started all five CropPilot
+services. Only the gateway is published, on 127.0.0.1:18080; the existing
+Universident database remains healthy.
+
+Verified live over HTTPS: expected commit, homepage and browser JavaScript,
+location search, invalid input rejected with 400, internal cache blocked with
+404, and computed-engine reachability. The public Fundulea example returned
+HTTP 200 in 11.3 seconds, complete with three plans of three crops each; its
+response passed the shared JSON schema. The CI SSH script also passed its
+read-only verification against the real server. This checks deployment and
+integration, not agronomic validity. No paid AI request was made; the optional
+OpenAI key remains unset on the server.
+
+Normal updates explicitly pull gateway/maintenance images before replacement,
+without pulling or replacing PostgreSQL. Automatic deployment was enabled after
+the initial installation checks; the next main merge exercises that path.
+
+
+### Docker 29 image verification
+
+The first push-triggered deployment built and updated the application to main
+commit 1fc2933, but the final image check falsely rejected the unchanged engine.
+Docker's running container referenced its platform manifest/config while the
+default image lookup returned an OCI index with build attestations. Verified
+on the real VPS that the engine's platform manifest exactly matched the newly
+built engine image and that public HTTPS served the expected web commit.
+
+Deployment verification now compares platform manifests using API 1.49+.
+Six deployment regression tests include distinct legacy config/index/platform
+IDs and a negative case that still rejects a genuinely stale running image.
+The remaining main/actor, migration and health gates are unchanged.
+
+## Easier-to-read results — 2026-11-15 (branch `tudor`)
+
+The results panel now opens with an **At a glance** card built from the result itself,
+without AI. It shows:
+- the best plan and its first sowing window;
+- the score comparison with the current rotation;
+- the main risks and the checks to do before deciding;
+- one line for each other plan;
+- the missing data a farmer can act on.
+
+Plan cards show the crops, dates, scores and one sentence. Benefits, trade-offs, the
+reason for each crop and the local checks are under "Why this plan?". Assumptions,
+all missing data and sources are collapsed under "How this was calculated". "Back to
+summary" links close the long sections. The results panel has a full-screen toggle,
+and Escape exits it.
+
+Engine text fixes:
+- the ET₀ wording is fixed;
+- the duplicate score, weather and ET₀ lines are removed;
+- the replay is described in one line;
+- the winterkill notes are merged into one line;
+- the soil note says when regional SoilGrids estimates were used.
+
+Unexpected engine failures are logged by error type before the 502; exception
+messages and tracebacks are omitted because provider URLs can contain field coordinates.
+Slobozia/Fundulea were removed from tracked files: the INCDA source lost its place name
+and URL, and the examples use a neutral name.
+
+Verified: Python 231 passed; web backend 97/97, UI 35/35, TypeScript; schemas unchanged.
+**Live** (real NASA POWER, SoilGrids, SRTM from the local cache; engine via
+`pnpm dev:engine`, web via `pnpm dev`, in a browser): a computed result with the current
+rotation maize → winter wheat showed the summary, collapsed details and full screen
+correctly. Known on Windows only: `scripts/env.test.mjs` expects `/` path separators
+and fails 1 of 3 checks; the uvicorn `--reload` supervisor can crash on file changes.
+
+### Integration review with current VPS deployment
+
+Preserved the current CI/CD and deployment records while merging Tudor's
+commits. Replaced exception tracebacks with error-type-only logging because
+provider URLs can include field coordinates or credentials, and added an HTTP
+regression test proving those values do not reach logs or error responses.
+Cancelled summary responses are ignored.
+
+Verified: 232 Python tests, 97 backend tests, 35 UI tests, 3 configuration
+checks, TypeScript, unchanged generated schemas, and a production build.
+Browser checks with an explicitly local demo engine covered the At a glance
+card, collapsed details, full-screen toggle, return navigation and Escape;
+paid AI and NASA calls were disabled for that UI check. No scientific
+validation is implied.
+
+The CI/CD correction was independently verified by the successful automatic
+main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
+returned three computed plans of three crops each and passed the shared schema.

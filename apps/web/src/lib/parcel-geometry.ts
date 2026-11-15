@@ -5,7 +5,7 @@ import { featureCollection, lineString, polygon } from "@turf/helpers";
 import { intersect } from "@turf/intersect";
 import { kinks } from "@turf/kinks";
 import { simplify } from "@turf/simplify";
-import { locationSchema, type Location } from "@fieldshift/contracts";
+import { locationSchema, type Location } from "@croppilot/contracts";
 
 /** GeoJSON order: longitude first. Convert explicitly at the Leaflet boundary. */
 export type Coordinate = [longitude: number, latitude: number];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 import type { Map as LeafletMap } from "leaflet";
 import {
   addCorner,
@@ -29,6 +29,7 @@ type Commands = {
 };
 type Props = {
   view: Location;
+  zoom?: number;
   selection: FieldSelection | null;
   color: string;
   opacity: number;
@@ -66,7 +67,7 @@ export default function ParcelMap(props: Props) {
           zoomControl: false,
           preferCanvas: true,
           maxZoom: MAX_MAP_ZOOM,
-        }).setView([initial.latitude, initial.longitude], 13);
+        }).setView([initial.latitude, initial.longitude], latest.current.zoom ?? 13);
         map.current = instance;
         L.control.zoom({ position: "bottomright" }).addTo(instance);
         const imagery = L.tileLayer(
@@ -486,8 +487,8 @@ export default function ParcelMap(props: Props) {
     if (!ready) return;
     if (appliedView.current !== props.view) commands.current?.cancel();
     appliedView.current = props.view;
-    map.current?.setView([props.view.latitude, props.view.longitude], 13);
-  }, [props.view, ready]);
+    map.current?.setView([props.view.latitude, props.view.longitude], props.zoom ?? 13);
+  }, [props.view, props.zoom, ready]);
   useEffect(() => {
     renderSelection.current?.();
   }, [props.selection, props.parts, props.color, props.opacity, ready]);

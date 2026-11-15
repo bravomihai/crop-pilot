@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 import type { Map as LeafletMap } from "leaflet";
 import Icon from "./icon";
 import RegionalMapContext from "../regional-map-context";
 
 // Avoid imagery levels where the basemap can return unavailable-data tiles.
 const MAX_MAP_ZOOM = 17;
+// Street level for a chosen place; the default view shows the whole country.
+const FIELD_ZOOM = 13;
 
 type Props = {
   view: Location;
+  /** Map zoom for `view`; a found place or chosen field uses street level. */
+  zoom?: number;
   selection: Location | null;
   onSelect: (selection: Location | null) => void;
 };
@@ -33,7 +37,7 @@ export default function FieldMap(props: Props) {
     void import("leaflet").then(L => {
       if (disposed || !container.current) return;
       const location = latest.current.view;
-      const instance = L.map(container.current, { zoomControl: false, preferCanvas: true, maxZoom: MAX_MAP_ZOOM }).setView([location.latitude, location.longitude], 13);
+      const instance = L.map(container.current, { zoomControl: false, preferCanvas: true, maxZoom: MAX_MAP_ZOOM }).setView([location.latitude, location.longitude], latest.current.zoom ?? FIELD_ZOOM);
       map.current = instance;
       L.control.zoom({ position: "bottomright" }).addTo(instance);
       const imagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -91,8 +95,8 @@ export default function FieldMap(props: Props) {
   }, []);
 
   useEffect(() => {
-    if (ready) map.current?.setView([props.view.latitude, props.view.longitude], 13);
-  }, [props.view, ready]);
+    if (ready) map.current?.setView([props.view.latitude, props.view.longitude], props.zoom ?? FIELD_ZOOM);
+  }, [props.view, props.zoom, ready]);
   useEffect(() => { renderSelection.current?.(); revealPin.current?.(); }, [props.selection, ready]);
 
   function useCentre() {

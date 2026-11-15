@@ -26,7 +26,8 @@
       "stage fractions for winter barley and winter rapeseed (FAO-56 has no row; winter wheat fractions are used)",
       "Ky for barley and rapeseed (not listed in FAO-56 Table 24; 1.0 is assumed)",
       "Romanian sowing and harvest windows, crop-specific EcoCrop temperature/pH ranges, hazard thresholds, and rotation guidance for oats, grain sorghum, dry beans, sugar beet, spring barley, triticale, winter rye, and potatoes",
-      "Using winter-wheat proxies for triticale and winter rye where crop-specific FAO-56 values are unavailable"
+      "Using winter-wheat proxies for triticale and winter rye where crop-specific FAO-56 values are unavailable",
+      "cover crop suggestions for bare-soil gaps and their timing"
     ]
   },
   "data_gaps": [
@@ -550,6 +551,36 @@
       "text": "repeated summer grass crops may share pest and disease pressure; local review is needed"
     }
   },
+  "cover_crops": {
+    "min_gap_days": 75,
+    "suggestions": [
+      {
+        "id": "overwinter_legume_mix",
+        "not_next_to_legumes": true,
+        "harvest_months": [6, 7, 8],
+        "next_sowing_months": [3, 4, 5],
+        "text": "After the {previous} harvest, sow a winter cover such as common vetch with oats or rye before the end of September: it protects the soil over winter and the vetch adds nitrogen. End it three to four weeks before sowing {next}."
+      },
+      {
+        "id": "overwinter_cereal_cover",
+        "harvest_months": [6, 7, 8],
+        "next_sowing_months": [3, 4, 5],
+        "text": "After the {previous} harvest, sow a winter cover of rye or oats before the end of September: it protects the soil over winter. Avoid a vetch cover here, because next to a legume crop it would share its diseases. End it three to four weeks before sowing {next}."
+      },
+      {
+        "id": "overwinter_rye",
+        "harvest_months": [9, 10, 11],
+        "next_sowing_months": [2, 3, 4, 5],
+        "text": "After the {previous} harvest, sow winter rye quickly as a cover: it holds the soil over winter. End it three to four weeks before sowing {next}."
+      },
+      {
+        "id": "short_summer_cover",
+        "harvest_months": [6, 7],
+        "next_sowing_months": [8, 9, 10],
+        "text": "Between {previous} and {next}, a short summer cover such as mustard or phacelia keeps the soil covered, but only if the soil is moist: in a dry summer it takes water that {next} needs."
+      }
+    ]
+  },
   "local_checks": {
     "sunflower": "Check the field's broomrape (Orobanche cumana) history and choose a resistant sunflower hybrid.",
     "winter_rapeseed": "Check residual herbicides from the previous crop before sowing rapeseed, and seedbed moisture at the end of August.",
@@ -585,8 +616,7 @@
     },
     {
       "id": "ro-agronomy",
-      "title": "Romanian field-crop rotation and technology guidance (university phytotechnics textbooks, INCDA Fundulea crop guides): expert summary pending agronomist review",
-      "url": "https://www.incda-fundulea.ro/"
+      "title": "Romanian field-crop rotation and technology guidance (university phytotechnics textbooks, INCDA crop guides): expert summary pending agronomist review"
     },
     {
       "id": "crop-temperature-thresholds",

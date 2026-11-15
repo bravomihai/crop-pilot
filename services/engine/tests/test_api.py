@@ -51,3 +51,22 @@ def test_computed_orchestration_contract_with_module_stubs(client, monkeypatch, 
     assert len(result["plans"]) == count
     assert result["request_id"] == "integration-test-id"
     assert "stub data" in result["data_gaps"]
+
+
+def test_unexpected_failure_logs_no_request_urls_or_credentials(client, monkeypatch, caplog):
+    from fieldshift import api as engine_api
+
+    private_url = "https://provider.invalid/data?latitude=44.123456&token=private-service-token"
+
+    def fail(request, request_id):
+        raise RuntimeError(private_url)
+
+    monkeypatch.setattr(engine_api, "recommend", fail)
+    response = client.post("/recommendations", headers=headers(), json=example("recommendation-request"))
+    assert response.status_code == 502
+    assert "Recommendation failed (RuntimeError)" in caplog.text
+    assert "44.123456" not in caplog.text
+    assert "private-service-token" not in caplog.text
+    assert "provider.invalid" not in caplog.text
+    assert "private-service-token" not in response.text
+    assert all(record.exc_info is None for record in caplog.records if record.name == "croppilot.engine")

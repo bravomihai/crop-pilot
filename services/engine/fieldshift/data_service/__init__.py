@@ -97,7 +97,7 @@ def build_environment(request: dict) -> dict:
         )
     years = int(os.getenv("HISTORY_YEARS", "20"))
     # About 65 KB of daily POWER data per year: above ~30 years an entry exceeds the shared
-    # (web) cache's 2 MB limit and only the local disk cache (FIELDSHIFT_CACHE_DIR) keeps it.
+    # (web) cache's 2 MB limit and only the local disk cache (CROPPILOT_CACHE_DIR) keeps it.
     if not 1 <= years <= 45:
         raise ValueError("HISTORY_YEARS must be between 1 and 45")
     end = datetime.now(timezone.utc).year - 1

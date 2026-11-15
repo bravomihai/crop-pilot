@@ -16,7 +16,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | `src/components/plan-card.tsx` | One plan or the current rotation: crops, windows, scores, violations, local checks |
 | `src/components/results-what-if.tsx` | Hypothetical scenario recalculation from the results panel |
 | `src/components/results-evidence.tsx` | Past-season replay (`plan.replay`) and observed yearly climate with trends (`climate_context`) |
-| `src/components/ai-summary.tsx` | Optional AI summary (English/Romanian) and the print button; `lib/summary-payload.ts` trims what is sent |
+| `src/components/ai-summary.tsx` | Optional English-only OpenAI summary and the print button; `lib/summary-payload.ts` trims what is sent |
 | `src/components/glossary.tsx` | Plain explanations of the terms used in the results |
 | `src/components/charts/` | Score meters and comparison, rotation timeline, replay and climate charts |
 | `src/components/regional-map-context.tsx` | Optional NASA GIBS layers, POWER cell and rule-zone outlines |
@@ -39,34 +39,33 @@ From the repository root, with Node.js and Corepack available:
 
 ```powershell
 corepack pnpm install --frozen-lockfile
-corepack pnpm --filter @fieldshift/contracts generate
-corepack pnpm --filter @fieldshift/web db:generate
+corepack pnpm --filter @croppilot/contracts generate
+corepack pnpm --filter @croppilot/web db:generate
 ```
 
-If `apps/web/.env.local` does not exist, copy `apps/web/.env.example` to that
-path. Preserve existing local settings. Set this value in `.env.local`:
+Use the single repository-root `.env` (copy the root `.env.example` for a new checkout).
+Preserve existing local settings. For a real calculation, keep:
 
 ```dotenv
-NEXT_PUBLIC_USE_MOCK_API=true
+NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
-Start only the web application:
+Start the engine with `pnpm dev:engine` in another terminal, then start the web application:
 
 ```powershell
-corepack pnpm --filter @fieldshift/web dev
+corepack pnpm --filter @croppilot/web dev
 ```
 
 Open the URL printed in the terminal, normally `http://localhost:3000`. Keep the
 terminal open; saving source files updates the preview. Stop it with Ctrl+C.
-Restart it after changing `.env.local`.
+Restart it after changing the root `.env`.
 
 These direct workspace commands also work when `pnpm` is not on PATH and
 `corepack enable` cannot write to `C:\Program Files\nodejs`.
 
-Mock mode uses fictional results with a fixed calendar; form entries are not
-evaluated. It does not require Python or PostgreSQL. The map and location search
-use the internet. Never present demo output as real NASA observations or
-calculated agronomic advice.
+The real calculation path requires Python and internet access to public environmental
+data. A frontend fixture is not a calculation of the submitted field. The optional
+PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
@@ -101,11 +100,11 @@ calculated agronomic advice.
   applied, the note says every season includes it. **Your field's climate** charts
   observed yearly indicators from `climate_context` (hot days, rain, ET₀, dry spells,
   frost days) with the engine's trend; it is never scenario-adjusted.
-- **AI summary** (optional, computed results only): rewords the calculated result in
-  English or Romanian. It needs `ANTHROPIC_API_KEY` on the server; without it the page
-  says the summary is not set up and everything else works. The page sends a trimmed
-  result (no replay, monthly or yearly climate rows, no coordinates reach the model);
-  numbers not found in the result make the server reject the summary.
+- **AI summary** (optional, computed results only): on request, rewords the calculated
+  result in English. It needs `OPENAI_API_KEY`; without it the page reports that the
+  summary is unavailable and everything else works. The model receives the field name
+  and a trimmed result, but not coordinates or source IDs. Numbers not found in the
+  result make the server reject the summary.
 - **Print for your agronomist** prints only the results (plans, current rotation,
   scores, calendar, charts, local checks, sources, assumptions, missing data and the
   disclaimer); the map, form, what-if and buttons are left out, and the AI summary is
@@ -117,8 +116,8 @@ calculated agronomic advice.
 
 ```powershell
 corepack pnpm --recursive typecheck
-corepack pnpm --filter @fieldshift/web test:ui
-corepack pnpm --filter @fieldshift/web test:backend
+corepack pnpm --filter @croppilot/web test:ui
+corepack pnpm --filter @croppilot/web test:backend
 git diff --check
 ```
 
@@ -164,8 +163,8 @@ are isolated from the base map and form.
 
 ```powershell
 corepack pnpm --recursive typecheck
-corepack pnpm --filter @fieldshift/web test:ui
-corepack pnpm --filter @fieldshift/web test:backend
+corepack pnpm --filter @croppilot/web test:ui
+corepack pnpm --filter @croppilot/web test:backend
 git diff --check
 ```
 

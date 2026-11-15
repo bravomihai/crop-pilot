@@ -4,7 +4,7 @@ import {
   resultSchema,
   validateResultSemantics,
   type RecommendationResult,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import { ApiError } from "./http";
 import { engineConfig, upstreamJson } from "./upstream";
 

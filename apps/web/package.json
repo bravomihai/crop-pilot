@@ -1,23 +1,22 @@
 {
-  "name": "@fieldshift/web",
+  "name": "@croppilot/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
+    "dev": "node --import ../../scripts/load-env.mjs node_modules/next/dist/bin/next dev",
+    "build": "prisma generate && node --import ../../scripts/load-env.mjs node_modules/next/dist/bin/next build",
+    "start": "node --import ../../scripts/load-env.mjs node_modules/next/dist/bin/next start",
     "typecheck": "tsc --noEmit",
     "test:ui": "tsx --test tests/dashboard.test.ts tests/dashboard-components.test.tsx",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "test:backend": "node --conditions=react-server --import tsx --test tests/*.test.ts",
-    "test:cache": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx tests/cache.integration.ts"
+    "test:cache": "node --conditions=react-server --import ../../scripts/load-env.mjs --import tsx tests/cache.integration.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "1.8.0",
-    "@fieldshift/contracts": "workspace:*",
+    "@croppilot/contracts": "workspace:*",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "@turf/area": "^7.4.0",
@@ -29,6 +28,7 @@
     "@turf/simplify": "^7.4.0",
     "leaflet": "1.9.4",
     "next": "16.4.6",
+    "openai": "7.57.0",
     "pg": "8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

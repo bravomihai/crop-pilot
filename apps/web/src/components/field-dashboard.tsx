@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { HistorySource, Location, RecommendationRequest } from "@fieldshift/contracts";
+import type { HistorySource, Location, RecommendationRequest } from "@croppilot/contracts";
 import { useRecommendations } from "@/lib/use-recommendations";
 import { usePartRecommendations } from "@/lib/use-part-recommendations";
 import { RULE_CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
@@ -45,7 +45,8 @@ const TEMPERATURE_STEPS = Array.from({ length: 17 }, (_, i) => -3 + i * 0.5);
 const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
 
 export default function FieldDashboard() {
-  const [view, setView] = useState<Location>({ name: "Bărăgan", latitude: 44.567, longitude: 27.35 });
+  const [view, setView] = useState<Location>({ name: "Romania", latitude: 45.9, longitude: 24.97 });
+  const [mapZoom, setMapZoom] = useState(7);
   const [selection, setSelection] = useState<FieldSelection | null>(null);
   const [fieldParts, setFieldParts] = useState<FieldPart[]>([]);
   const [fieldCrops, setFieldCrops] = useState<string[]>([]);
@@ -65,6 +66,7 @@ export default function FieldDashboard() {
   const [temperature, setTemperature] = useState(0);
   const [rainfall, setRainfall] = useState(0);
   const [today, setToday] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const { result, lastRequest, busy: singleBusy, error, calculate, recalculate, cancel: cancelSingle, clear: clearSingle } = useRecommendations();
   const partResults = usePartRecommendations();
   const busy = singleBusy || partResults.busy;
@@ -79,7 +81,10 @@ export default function FieldDashboard() {
     setAvailableFrom(isoToday);
     // Shared links center the map; the farmer still traces the field boundary.
     const field = fieldFromQuery(window.location.search);
-    if (field) setView(field);
+    if (field) {
+      setView(field);
+      setMapZoom(13);
+    }
   }, []);
   // A what-if recalculation changes the scenario of the shown result; keep the form in step,
   // so "Edit details" then "Calculate" does not silently return to the old scenario.
@@ -113,6 +118,7 @@ export default function FieldDashboard() {
     setFieldParts([]);
     setFieldCrops([]);
     setView(location);
+    setMapZoom(13);
     setPanel("details");
   }
   async function analyse(event: FormEvent<HTMLFormElement>) {
@@ -161,6 +167,7 @@ export default function FieldDashboard() {
       <a className="skip-link" href="#field-details" onClick={() => setPanel("details")}>Skip to field details</a>
       <ParcelMap
         view={view}
+        zoom={mapZoom}
         selection={selection}
         color="#123c2f"
         opacity={0.2}
@@ -179,14 +186,14 @@ export default function FieldDashboard() {
       />
 
       <header className="map-header">
-        <a className="map-brand" href="#main" aria-label="FieldShift home">
+        <a className="map-brand" href="#main" aria-label="CropPilot home">
           <span className="map-brand-symbol"><Icon name="leaf" size={23} /></span>
-          <span>FieldShift<small>Crop planning</small></span>
+          <span>CropPilot<small>Crop planning</small></span>
         </a>
         <LocationSearch onSelect={chooseLocation} />
         <div className="map-header-end">
           <span className="prototype-pill"><i />Prototype</span>
-          <button className="map-icon-button" type="button" aria-label="About FieldShift" onClick={() => info.current?.showModal()}><Icon name="info" /></button>
+          <button className="map-icon-button" type="button" aria-label="About CropPilot" onClick={() => info.current?.showModal()}><Icon name="info" /></button>
         </div>
       </header>
 
@@ -262,8 +269,21 @@ export default function FieldDashboard() {
       {panel === null && <button className="reopen-planner" type="button" onClick={() => { setPanel("details"); requestAnimationFrame(() => detailsHeading.current?.focus()); }}><Icon name="field" size={18} />{selection ? "Field details" : "Plan your field"}</button>}
       {(result || error || partResults.parts.length > 0 || busy) && panel !== "results" && <button type="button" className="reopen-results" onClick={() => setPanel("results")}><Icon name="leaf" size={17} />{busy ? "Calculating…" : error ? "View calculation" : "View plans"}</button>}
 
-      <section className="map-results-panel" hidden={panel !== "results"} aria-labelledby="plans-heading">
-        <header className="results-panel-header"><div><span className="planner-eyebrow">THE NEXT CHAPTER</span><h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2></div><button type="button" className="map-back-button" onClick={() => setPanel("details")}>Edit details<Icon name="close" size={17} /></button></header>
+      <section
+        className={fullscreen && panel === "results" ? "map-results-panel is-fullscreen" : "map-results-panel"}
+        hidden={panel !== "results"}
+        aria-labelledby="plans-heading"
+        onKeyDown={(event) => { if (event.key === "Escape" && fullscreen) { event.stopPropagation(); setFullscreen(false); } }}
+      >
+        <header className="results-panel-header">
+          <div><span className="planner-eyebrow">THE NEXT CHAPTER</span><h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2></div>
+          <div className="results-panel-actions">
+            <button type="button" className="fullscreen-toggle" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
+              <Icon name={fullscreen ? "shrink" : "expand"} size={16} />{fullscreen ? "Exit full screen" : "Full screen"}
+            </button>
+            <button type="button" className="map-back-button" onClick={() => { setFullscreen(false); setPanel("details"); }}>Edit details<Icon name="close" size={17} /></button>
+          </div>
+        </header>
         <div className="map-results-scroll">
           {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
           {partResults.parts.length ? (
@@ -288,9 +308,9 @@ export default function FieldDashboard() {
         </div>
       </section>
 
-      <span className="map-signature">FIELDSHIFT <i /> SPACE APPS 2026</span>
+      <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
       <dialog className="map-about" ref={info} aria-labelledby="about-title">
-        <div className="planner-heading"><h2 id="about-title">FieldShift</h2><button type="button" className="quiet-icon" aria-label="Close about FieldShift" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
+        <div className="planner-heading"><h2 id="about-title">CropPilot</h2><button type="button" className="quiet-icon" aria-label="Close about CropPilot" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
         <p>Crop planning prototype. No account; the field boundary is sent to Microsoft Planetary Computer for satellite screening.</p>
         <p>Map: Esri / OpenStreetMap. NASA layers show regional context, not field measurements.</p>
         <p>Demo results are fictional. Review computed plans with a local agronomist.</p>

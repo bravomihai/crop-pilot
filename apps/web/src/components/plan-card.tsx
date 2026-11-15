@@ -1,5 +1,6 @@
-import type { RotationPlan } from "@fieldshift/contracts";
+import type { RotationPlan } from "@croppilot/contracts";
 import ScoreMeters from "./charts/score-meters";
+import { firstSentence } from "@/lib/result-glance";
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -24,7 +25,28 @@ export default function PlanCard({
       </p>
       <h3>{baseline ? "Your current rotation" : plan.label}</h3>
       {baseline && <p>{plan.label}</p>}
-      <p>{plan.explanation}</p>
+      <ol className="sequence">
+        {plan.steps.map((step) => (
+          <li key={step.order}>
+            <span className="crop-order">Crop {step.order}</span>
+            <strong>{step.crop_name}</strong>
+            <span>
+              Sowing: {date(step.sowing_window.start)} –{" "}
+              {date(step.sowing_window.end)}
+            </span>
+            <span>
+              Harvest: {date(step.harvest_window.start)} –{" "}
+              {date(step.harvest_window.end)}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <ScoreMeters scores={plan.scores} baseline={baseline} />
+      <p className="plan-summary">{firstSentence(plan.explanation)}</p>
+      <p className="confidence">
+        Confidence level:{" "}
+        {{ low: "low", medium: "medium", high: "high" }[plan.confidence]}
+      </p>
       {baseline &&
         plan.violations !== undefined &&
         (plan.violations.length > 0 ? (
@@ -41,54 +63,47 @@ export default function PlanCard({
             No rule violations were reported.
           </p>
         ))}
-      <ScoreMeters scores={plan.scores} baseline={baseline} />
-      <ol className="sequence">
-        {plan.steps.map((step) => (
-          <li key={step.order}>
-            <span className="crop-order">Crop {step.order}</span>
-            <strong>{step.crop_name}</strong>
-            <span>
-              Sowing: {date(step.sowing_window.start)} –{" "}
-              {date(step.sowing_window.end)}
-            </span>
-            <span>
-              Harvest: {date(step.harvest_window.start)} –{" "}
-              {date(step.harvest_window.end)}
-            </span>
-            <small>{step.reason}</small>
-          </li>
-        ))}
-      </ol>
-      <h4>Benefits</h4>
-      <ul>
-        {plan.benefits.map((text, i) => (
-          <li key={i}>{text}</li>
-        ))}
-      </ul>
-      <h4>Trade-offs and checks</h4>
-      <ul>
-        {plan.tradeoffs.map((text, i) => (
-          <li key={i}>{text}</li>
-        ))}
-      </ul>
-      <p className="confidence">
-        Confidence level:{" "}
-        {{ low: "low", medium: "medium", high: "high" }[plan.confidence]}
-      </p>
-      {plan.local_checks !== undefined && (
-        <details className="local-checks">
-          <summary>Check locally before you decide</summary>
-          {plan.local_checks.length ? (
-            <ul>
-              {plan.local_checks.map((text, index) => (
-                <li key={index}>{text}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>No additional local checks were supplied.</p>
-          )}
-        </details>
-      )}
+      <details className="plan-why">
+        <summary>
+          {baseline ? "How your rotation scores" : "Why this plan?"} Benefits,
+          risks and checks
+        </summary>
+        <p>{plan.explanation}</p>
+        <h4>Benefits</h4>
+        <ul>
+          {plan.benefits.map((text, i) => (
+            <li key={i}>{text}</li>
+          ))}
+        </ul>
+        <h4>Trade-offs and risks</h4>
+        <ul>
+          {plan.tradeoffs.map((text, i) => (
+            <li key={i}>{text}</li>
+          ))}
+        </ul>
+        <h4>Why each crop</h4>
+        <ul>
+          {plan.steps.map((step) => (
+            <li key={step.order}>
+              <strong>{step.crop_name}:</strong> {step.reason}
+            </li>
+          ))}
+        </ul>
+        {plan.local_checks !== undefined && (
+          <div className="local-checks">
+            <h4>Check locally before you decide</h4>
+            {plan.local_checks.length ? (
+              <ul>
+                {plan.local_checks.map((text, index) => (
+                  <li key={index}>{text}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No additional local checks were supplied.</p>
+            )}
+          </div>
+        )}
+      </details>
     </article>
   );
 }

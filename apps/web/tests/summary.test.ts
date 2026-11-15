@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { resultSchema } from "@fieldshift/contracts";
+import { resultSchema } from "@croppilot/contracts";
 import {
   OUTPUT_JSON_SCHEMA,
   summarize,
@@ -18,19 +18,21 @@ const full = resultSchema.parse(
   ),
 );
 
-function fakeClient(reply: unknown, stop_reason = "end_turn") {
+function fakeClient(reply: unknown, status = "completed", refusal = false) {
   const calls: unknown[] = [];
   return {
     calls,
-    beta: {
-      messages: {
-        create: async (params: unknown) => {
-          calls.push(params);
-          return { stop_reason, content: [{ type: "text", text: typeof reply === "string" ? reply : JSON.stringify(reply) }] };
-        },
+    responses: {
+      create: async (params: unknown) => {
+        calls.push(params);
+        return {
+          status,
+          output: refusal ? [{ type: "message", content: [{ type: "refusal", refusal: "Declined" }] }] : [],
+          output_text: typeof reply === "string" ? reply : JSON.stringify(reply),
+        };
       },
     },
-  } as never as { calls: unknown[]; beta: never };
+  } as never as { calls: unknown[]; responses: never };
 }
 
 const grounded = {
@@ -63,48 +65,48 @@ test("numbers not in the result are caught", () => {
 
 test("a grounded reply is returned and the request uses the documented options", async () => {
   const client = fakeClient(grounded);
-  const out = await summarize(full, "ro", client as never);
+  const out = await summarize(full, client as never);
   assert.equal(out.plans[0].id, "plan-1");
   const params = client.calls[0] as Record<string, unknown>;
-  assert.equal(params.model, "claude-opus-5-5");
-  assert.equal(params.fallbacks, "default");
-  assert.deepEqual(params.betas, ["server-side-fallback-2026-07-01"]);
-  assert.deepEqual(params.output_config, { effort: "low", format: { type: "json_schema", schema: OUTPUT_JSON_SCHEMA } });
-  assert.match(String(params.system), /Romanian/);
+  assert.equal(params.model, process.env.OPENAI_SUMMARY_MODEL || "gpt-6-luna");
+  assert.equal(params.store, false);
+  assert.deepEqual(params.text, { format: { type: "json_schema", name: "rotation_summary", strict: true, schema: OUTPUT_JSON_SCHEMA } });
+  assert.match(String(params.instructions), /English only/);
+
 });
 
 test("invented numbers, refusals and unreadable replies never reach the farmer", async () => {
   await assert.rejects(
-    summarize(full, "en", fakeClient({ ...grounded, headline: "Expect 7.5 t/ha." }) as never),
+    summarize(full, fakeClient({ ...grounded, headline: "Expect 7.5 t/ha." }) as never),
     (error: { code?: string }) => error.code === "summary_unverified",
   );
-  await assert.rejects(summarize(full, "en", fakeClient(grounded, "refusal") as never), (error: { code?: string }) => error.code === "summary_declined");
-  await assert.rejects(summarize(full, "en", fakeClient("not json") as never), (error: { code?: string }) => error.code === "summary_invalid");
+  await assert.rejects(summarize(full, fakeClient(grounded, "completed", true) as never), (error: { code?: string }) => error.code === "summary_declined");
+  await assert.rejects(summarize(full, fakeClient("not json") as never), (error: { code?: string }) => error.code === "summary_invalid");
 });
 
 test("unknown plan ids from the model are dropped", async () => {
-  const out = await summarize(full, "en", fakeClient({ ...grounded, plans: [...grounded.plans, { ...grounded.plans[0], id: "made-up" }] }) as never);
+  const out = await summarize(full, fakeClient({ ...grounded, plans: [...grounded.plans, { ...grounded.plans[0], id: "made-up" }] }) as never);
   assert.deepEqual(out.plans.map((plan) => plan.id), ["plan-1"]);
 });
 
 test("the route says when the AI summary is not set up", async () => {
-  const saved = process.env.ANTHROPIC_API_KEY;
-  delete process.env.ANTHROPIC_API_KEY;
+  const saved = process.env.OPENAI_API_KEY;
+  delete process.env.OPENAI_API_KEY;
   try {
     assert.equal(summaryConfigured(), false);
     const response = await POST(new Request("http://localhost/api/summary", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }));
     assert.equal(response.status, 503);
     assert.equal((await response.json()).code, "summary_not_configured");
   } finally {
-    if (saved !== undefined) process.env.ANTHROPIC_API_KEY = saved;
+    if (saved !== undefined) process.env.OPENAI_API_KEY = saved;
   }
 });
 
 test("the prompt forbids new facts and keeps English by default", () => {
-  const prompt = systemPrompt("en");
+  const prompt = systemPrompt();
   assert.match(prompt, /Use only facts that are in the input/);
   assert.match(prompt, /Every number you write must appear in the input/);
-  assert.match(prompt, /Write in English/);
+  assert.match(prompt, /Write in English only/);
 });
 
 test("the page sends a trimmed result that summarises the same and fits the gateway limit", async () => {
@@ -130,4 +132,25 @@ test("the page sends a trimmed result that summarises the same and fits the gate
   assert.ok(JSON.stringify({ result: payload, language: "ro" }).length < 256 * 1024);
   assert.ok(payload.plans.every((plan) => plan.replay === undefined));
   assert.equal(payload.monthly_climate.length, 0);
+});
+
+test("incomplete replies and provider failures keep the calculated plans usable", async () => {
+  await assert.rejects(summarize(full, fakeClient(grounded, "incomplete") as never), (error: { code?: string }) => error.code === "summary_incomplete");
+  const client = { responses: { create: async () => { throw new Error("Private provider failure details"); } } };
+  await assert.rejects(summarize(full, client as never), (error: { code?: string; message?: string }) => error.code === "summary_unavailable" && !error.message?.includes("Private provider"));
+});
+
+test("the API rejects non-English summary requests before contacting a provider", async () => {
+  const key = process.env.OPENAI_API_KEY;
+  const enabled = process.env.AI_SUMMARY_ENABLED;
+  process.env.OPENAI_API_KEY = "test-only-key";
+  process.env.AI_SUMMARY_ENABLED = "true";
+  try {
+    const response = await POST(new Request("http://localhost/api/summary", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ result: { ...full, mode: "computed" }, language: "ro" }) }));
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).code, "unsupported_language");
+  } finally {
+    if (key === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = key;
+    if (enabled === undefined) delete process.env.AI_SUMMARY_ENABLED; else process.env.AI_SUMMARY_ENABLED = enabled;
+  }
 });

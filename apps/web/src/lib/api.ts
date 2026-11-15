@@ -3,8 +3,8 @@ import {
   resultSchema,
   type RecommendationRequest,
   type RecommendationResult,
-} from "@fieldshift/contracts";
-import demoResult from "@fieldshift/contracts/demo-result";
+} from "@croppilot/contracts";
+import demoResult from "@croppilot/contracts/demo-result";
 import fullResult from "../../../../packages/contracts/examples/recommendation-result.full.json";
 import fullRequest from "../../../../packages/contracts/examples/recommendation-request.full.json";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { RecommendationRequest, RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationRequest, RecommendationResult } from "@croppilot/contracts";
 import { getRecommendations } from "./api";
 
 type PartResult = {
