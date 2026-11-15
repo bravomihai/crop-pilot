@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { locationSchema, type Location } from "@fieldshift/contracts";
+import { locationSchema, type Location } from "@croppilot/contracts";
 import Icon from "./icon";
 
 export default function LocationSearch({

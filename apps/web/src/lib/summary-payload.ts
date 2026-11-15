@@ -1,4 +1,4 @@
-import type { RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationResult } from "@croppilot/contracts";
 
 /**
  * The part of the result the summary uses (see summaryInput on the server). Past-season

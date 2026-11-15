@@ -1,7 +1,7 @@
 import type {
   RecommendationResult,
   RecommendationRequest,
-} from "@fieldshift/contracts";
+} from "@croppilot/contracts";
 import PlanCard from "./plan-card";
 import Notice from "./ui/notice";
 import ScoreComparison from "./charts/score-comparison";

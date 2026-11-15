@@ -1,11 +1,11 @@
 import "server-only";
 import { z } from "zod";
-import { CONTRACT_VERSION } from "@fieldshift/contracts";
+import { CONTRACT_VERSION } from "@croppilot/contracts";
 import { ApiError } from "./http";
 import { engineConfig, upstreamJson } from "./upstream";
 
 const healthSchema = z.object({
-  service: z.literal("fieldshift-engine"),
+  service: z.literal("croppilot-engine"),
   contract_version: z.literal(CONTRACT_VERSION),
   mode: z.enum(["demo", "computed"]),
 });

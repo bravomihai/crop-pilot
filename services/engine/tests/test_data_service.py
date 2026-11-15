@@ -421,13 +421,13 @@ def test_build_environment_normalizes_data_and_preserves_monthly_summary(monkeyp
 def test_local_cache_serves_repeat_requests_without_network(tmp_path, monkeypatch):
     from fieldshift.data_service import cache
 
-    monkeypatch.setenv("FIELDSHIFT_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("CROPPILOT_CACHE_DIR", str(tmp_path))
     monkeypatch.delenv("CACHE_BACKEND_URL", raising=False)
     key = cache.key_for({"provider": "test", "lat": 1})
     assert cache.read(key) is None
     cache.write(key, {"value": 42})
     assert cache.read(key) == {"value": 42}
-    monkeypatch.delenv("FIELDSHIFT_CACHE_DIR")
+    monkeypatch.delenv("CROPPILOT_CACHE_DIR")
     assert cache.read(key) is None  # no directory configured: cache is off
 
 
@@ -441,7 +441,7 @@ def test_soilgrids_uses_a_short_timeout(monkeypatch):
         raise httpx.ReadTimeout("slow")
 
     monkeypatch.setattr(soil_service.httpx, "get", slow)
-    monkeypatch.delenv("FIELDSHIFT_CACHE_DIR", raising=False)
+    monkeypatch.delenv("CROPPILOT_CACHE_DIR", raising=False)
     values, _, gaps = soil_service.fetch_soil(44.45, 26.5)
     assert values is None and seen and seen[0] <= 10
     assert "unavailable" in gaps[0]

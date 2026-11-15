@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 import {
   advertisedDate,
   contextMonths,
