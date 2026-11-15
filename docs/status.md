@@ -489,6 +489,15 @@ regenerated. **Live**: the current rotation shows about +330 lei/ha/year typical
 values entered for pea (not real prices), all three plans got a full estimate and the
 crop-order line showed both gains and losses.
 
+Money data for the 8 crops on Maria's branch (oats, grain sorghum, dry beans, sugar beet, spring
+barley, triticale, winter rye, potato), 2026-11-15, branch `tudor`: INS county yields (spring
+barley derived from AGR108A/AGR109A), Eurostat national yields where counties have none
+(triticale), INS prices where published, stand-in ICEADR budgets of the closest crop for the six
+crops without a budget, coupled support for dry beans and sugar beet in the high estimate only,
+and a date-aware price rule. Sorghum and rye have no official price. Verified with Maria's
+15-crop rules and engine on the demo field (all 15 crops priced or explained); engine money
+tests 16/16, web backend 118/118, UI 43/43, TypeScript.
+
 ## Survival Mode with the money estimate — 2026-11-15 (branch `feature/survival-mode`)
 
 Merged Tudor's money estimate (`1444c8d`, `dd75d7d`, `0a9d45a`) into Survival Mode. Results

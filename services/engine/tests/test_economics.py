@@ -155,3 +155,46 @@ def test_commercial_farm_yields_are_used_when_available_and_the_range_is_weather
     assert abs(wheat["income"]["high"] - wheat["yield_t_per_ha"]["high"] * price) <= 10
     factor = DATA["cost_index"]["factor"]
     assert abs(wheat["costs"]["typical"] - DATA["costs_lei_per_ha"]["winter_wheat"]["rainfed"] * factor) <= 10
+
+
+def test_the_eight_new_crops_have_data_or_say_why_not():
+    # Oats, spring barley, triticale: proxy budgets, county or national yields, INS prices.
+    cereals = plan_economics(plan(("oats", "Oats"), ("triticale", "Triticale"), ("spring_barley", "Spring barley")),
+                             REQUEST, "calarasi", DATA)
+    oats, triticale, spring = cereals["crops"]
+    assert oats["cost_basis"] == "proxy" and triticale["cost_basis"] == "proxy" and spring["cost_basis"] == "proxy"
+    assert triticale["yield_basis"] == "national"
+    assert all(c["yield_t_per_ha"] and c["price_lei_per_t"] for c in cereals["crops"])
+    assert cereals["per_year"]["margin"] is not None
+    assert any("winter barley budget stands in" in n for n in cereals["notes"])
+    # Sorghum and rye: no official price, so the totals are unknown and the plan asks for one.
+    no_price = plan_economics(plan(("sorghum", "Grain sorghum"), ("winter_rye", "Winter rye"), ("maize", "Maize")),
+                              REQUEST, "calarasi", DATA)
+    assert no_price["per_year"]["margin"] is None
+    assert no_price["crops"][0]["price_lei_per_t"] is None and no_price["crops"][1]["price_lei_per_t"] is None
+    assert no_price["crops"][0]["costs"] is not None  # the maize budget stands in
+
+
+def test_old_prices_are_used_only_with_their_year():
+    beet = plan_economics(plan(("sugar_beet", "Sugar beet"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                          REQUEST, "calarasi", DATA)
+    assert beet["crops"][0]["price_lei_per_t"] is not None
+    assert any(n.startswith("Sugar beet: the latest official price is from 20") for n in beet["notes"])
+    assert any(p["id"] == "PD-16" and p["included"] == "if_eligible" for p in beet["payments"])
+
+
+def test_dry_beans_leave_nitrogen_and_get_contract_support_only_in_the_high_case():
+    beans = plan_economics(plan(("dry_beans", "Dry beans"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                           REQUEST, "calarasi", DATA)
+    assert beans["crops"][1]["nitrogen_saving"] is not None
+    pd11 = next(p for p in beans["payments"] if p["id"] == "PD-11")
+    assert pd11["included"] == "if_eligible"
+    subsidies = beans["per_year"]["subsidies"]
+    assert subsidies["high"] - subsidies["typical"] > pd11["lei_per_ha_year"] - 20  # PD-11 is only in the high case
+
+
+def test_a_cost_budget_far_above_the_yields_used_is_flagged():
+    potato = plan_economics(plan(("potato", "Potato"), ("winter_wheat", "Winter wheat"), ("maize", "Maize")),
+                            REQUEST, "calarasi", DATA)
+    if potato["crops"][0]["yield_basis"] != "commercial_farms":
+        assert any(n.startswith("Potato: the yields used") for n in potato["notes"])

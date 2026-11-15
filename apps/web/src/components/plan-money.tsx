@@ -11,7 +11,11 @@ const ROWS = [
 ] as const;
 
 const RATING = { good: "a good previous crop", ok: "an acceptable previous crop", poor: "a poor previous crop", forbidden: "a previous crop to avoid" };
-const BASIS = { commercial_farms: "commercial farms in the county", all_farms: "all farms in the county" };
+const BASIS = {
+  commercial_farms: "commercial farms in the county",
+  all_farms: "all farms in the county",
+  national: "national average",
+};
 
 /** Rough money estimate per hectare and year for one plan. Not a forecast. */
 export default function PlanMoney({ economics }: { economics?: PlanEconomics }) {
@@ -97,6 +101,7 @@ export default function PlanMoney({ economics }: { economics?: PlanEconomics }) 
               {crop.income ? lei(crop.income.typical) : "income unknown"}; costs{" "}
               {crop.costs ? lei(crop.costs.typical) : "unknown"}
               {crop.cost_basis === "farmer" && " (your cost)"}
+              {crop.cost_basis === "proxy" && " (stand-in budget of a similar crop)"}
               {crop.nitrogen_saving && <>, including {lei(crop.nitrogen_saving.typical)} less nitrogen fertiliser thanks to the legume before it</>}
               {crop.crop_order_effect != null && crop.crop_order_effect !== 0 && (
                 <>; crop order {signedLei(crop.crop_order_effect)}</>

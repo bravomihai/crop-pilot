@@ -250,12 +250,13 @@ export const economicsSchema = z
             // Rating of the previous crop for this crop in the regional rules.
             previous_rating: z.enum(["good", "ok", "poor", "forbidden"]).nullable().optional(),
             yield_t_per_ha: valueRangeSchema.nullable(),
-            yield_basis: z.enum(["commercial_farms", "all_farms"]).nullable().optional(),
+            yield_basis: z.enum(["commercial_farms", "all_farms", "national"]).nullable().optional(),
             price_lei_per_t: valueRangeSchema.nullable(),
             price_basis: z.enum(["regional", "national", "farmer"]).nullable().optional(),
             income: moneyRangeSchema.nullable(),
             costs: moneyRangeSchema.nullable(),
-            cost_basis: z.enum(["iceadr", "farmer"]).nullable().optional(),
+            // "proxy": no budget exists for this crop; the closest crop's budget stands in.
+            cost_basis: z.enum(["iceadr", "proxy", "farmer"]).nullable().optional(),
             // Fertiliser saved because a legume came before, lei per hectare.
             nitrogen_saving: moneyRangeSchema.nullable().optional(),
             // Typical lei per hectare gained (or lost) from the previous crop, for this season.

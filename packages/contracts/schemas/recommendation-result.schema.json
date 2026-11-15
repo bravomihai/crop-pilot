@@ -608,7 +608,8 @@
                           "type": "string",
                           "enum": [
                             "commercial_farms",
-                            "all_farms"
+                            "all_farms",
+                            "national"
                           ]
                         },
                         {
@@ -718,6 +719,7 @@
                           "type": "string",
                           "enum": [
                             "iceadr",
+                            "proxy",
                             "farmer"
                           ]
                         },
@@ -1407,7 +1409,8 @@
                         "type": "string",
                         "enum": [
                           "commercial_farms",
-                          "all_farms"
+                          "all_farms",
+                          "national"
                         ]
                       },
                       {
@@ -1517,6 +1520,7 @@
                         "type": "string",
                         "enum": [
                           "iceadr",
+                          "proxy",
                           "farmer"
                         ]
                       },

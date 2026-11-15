@@ -349,6 +349,7 @@
           "apia-coupled-2025",
           "apia-ecoscheme-2026",
           "ins-agr108a-109a",
+          "eurostat-crop-yields",
           "eurostat-input-prices",
           "nitrogen-credit",
           "ecb-eur-ron",
@@ -715,6 +716,7 @@
         "apia-coupled-2025",
         "apia-ecoscheme-2026",
         "ins-agr108a-109a",
+        "eurostat-crop-yields",
         "eurostat-input-prices",
         "nitrogen-credit",
         "ecb-eur-ron",
@@ -757,7 +759,7 @@
     },
     {
       "id": "apia-coupled-2025",
-      "title": "Coupled support rates for soybean, 2025 claim year (as reported; check the Order)",
+      "title": "Coupled support rates for soybean, legumes for processing and sugar beet, 2025 claim year (as reported; check the Order)",
       "url": "https://www.bzi.ro/s-a-stabilit-cuantumul-pe-hectar-pentru-sprijinul-cuplat-vegetal-fermierii-asteapta-banii-de-anul-trecut-5517994"
     },
     {
@@ -790,6 +792,11 @@
       "id": "nitrogen-credit",
       "title": "Nitrogen left by pea and soybean for the next crop: Romanian fertilisation practice (30-50 kg N/ha) and Soon (2005), about 20 kg N/ha for wheat after pea",
       "url": "https://www.bzi.ro/ce-influenteaza-necesarul-de-azot-la-porumb-si-cum-se-stabileste-fertilizarea-culturii-5571958"
+    },
+    {
+      "id": "eurostat-crop-yields",
+      "title": "Eurostat apro_cpsh1: crop yields in Romania (national, EU standard humidity), used where county data is missing or thin",
+      "url": "https://ec.europa.eu/eurostat/databrowser/view/apro_cpsh1/default/table"
     }
   ],
   "disclaimer": "Invented example values. Not a recommendation.",
