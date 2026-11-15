@@ -48,7 +48,7 @@ export default function FieldDashboard() {
   const [rainfall, setRainfall] = useState(0);
   const [today, setToday] = useState("");
   const [fullscreen, setFullscreen] = useState(false);
-  const { result, lastRequest, busy, error, calculate, recalculate, cancel, clear } = useRecommendations();
+  const { result, lastRequest, busy, error, calculate, recalculate, recalculateMoney, cancel, clear } = useRecommendations();
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const detailsHeading = useRef<HTMLHeadingElement>(null);
 
@@ -193,7 +193,7 @@ export default function FieldDashboard() {
         </header>
         <div className="map-results-scroll">
           {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
-          <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onCancel={cancel} />
+          <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onRecalculateMoney={recalculateMoney} onCancel={cancel} />
         </div>
       </section>
 

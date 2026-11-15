@@ -1,6 +1,7 @@
 import type { RotationPlan } from "@croppilot/contracts";
 import ScoreMeters from "./charts/score-meters";
 import { firstSentence } from "@/lib/result-glance";
+import PlanMoney from "./plan-money";
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -47,6 +48,7 @@ export default function PlanCard({
         Confidence level:{" "}
         {{ low: "low", medium: "medium", high: "high" }[plan.confidence]}
       </p>
+      <PlanMoney economics={plan.economics} />
       {baseline &&
         plan.violations !== undefined &&
         (plan.violations.length > 0 ? (

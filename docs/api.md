@@ -60,8 +60,12 @@ that do not use these fields need no changes. Complete examples:
 | `plan.local_checks: string[]` | result | P3/P4 describe local checks; P1 displays them |
 | `plan.violations: string[]` | result | Baseline only: rules broken by the current rotation |
 | `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
+| `money_inputs: {prices_lei_per_t, costs_lei_per_ha}` | request | P1 collects the farmer's own price and cost per crop for the money estimate; not stored |
+| `plan.economics` | result | P3 estimates lei per hectare and year (income, costs, CAP payments, margin; ranges, `null` = unknown); not a forecast and not used for ranking; P1 displays it |
 
-`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast. `economics`
+is a rough estimate from county yield statistics, past regional prices, published cost budgets and
+reported CAP payment rates (see `docs/economics-design.md`); it is not a forecast either.
 
 ## Future integration
 

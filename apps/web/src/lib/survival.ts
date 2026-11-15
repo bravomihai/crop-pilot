@@ -492,6 +492,13 @@ export function buildChallenge(
       notes.push(`${outcome.contender.label}: confidence is low (regional rules are provisional or data is missing).`);
   if (scored.length < 2)
     notes.push("Fewer than two rotations have a score for this season, so there is no head-to-head comparison.");
+  // Keep the season's 0–100 scores apart from the plan-level money estimate (plan.economics).
+  if (outcomes.some((o) => o.contender.plan.economics))
+    notes.push(
+      `These are 0–100 scores for one past season, not money. The money estimate under each plan is a separate ` +
+        `average in lei per hectare and year from county statistics, prices and published costs; it is not ` +
+        `recalculated for ${chosen.year.year} and does not show what this season would have earned.`,
+    );
 
   const ev = evidence(id, chosen.year, record, candidates.length);
   return {
