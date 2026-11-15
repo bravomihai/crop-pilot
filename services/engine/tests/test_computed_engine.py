@@ -5,6 +5,7 @@ from fieldshift.contracts import example, validate
 from fieldshift.evaluator.rules import load_provisional_romania_rules
 from fieldshift.geography import (
     UnsupportedLocationError,
+    field_sample_points,
     validate_field_boundary,
     validate_location,
 )
@@ -28,8 +29,14 @@ def test_provisional_romania_rules_shift_cool_zone_calendar():
     assert rules["region"]["id"] == "ro-romania-provisional-cool"
     assert pea["sowing"]["start"] == "04-01"
     assert pea["harvest"]["start"] == "07-15"
+    assert {
+        "oats", "sorghum", "dry_beans", "sugar_beet",
+        "spring_barley", "triticale", "winter_rye", "potato",
+    } <= {
+        crop["id"] for crop in rules["crops"]
+    }
     assert "ro-thermal-bands" in {source["id"] for source in rules["sources"]}
-    assert rules["data_gaps"]
+    assert any("provisional" in gap and "agronomist" in gap for gap in rules["data_gaps"])
 
 
 def test_romania_location_and_field_boundary_validation():
@@ -65,6 +72,30 @@ def test_romania_location_and_field_boundary_validation():
                 ],
             }
         )
+
+
+def test_field_sample_points_are_deterministic_and_inside_the_boundary():
+    boundary = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [26.4, 44.4],
+                [26.5, 44.4],
+                [26.5, 44.5],
+                [26.4, 44.5],
+                [26.4, 44.4],
+            ]
+        ],
+    }
+    location = {"latitude": 44.45, "longitude": 26.45}
+
+    samples = field_sample_points(boundary, location)
+
+    assert len(samples) == 3
+    assert samples[0] == location
+    assert samples == field_sample_points(boundary, location)
+    for sample in samples:
+        validate_field_boundary(boundary, sample)
 
 
 def test_computed_result_keeps_monthly_climate_and_field_data_gap(monkeypatch):
@@ -113,6 +144,45 @@ def test_computed_result_keeps_monthly_climate_and_field_data_gap(monkeypatch):
     assert "Soil data unavailable." in result["data_gaps"]
     assert "Provisional regional rules." in result["data_gaps"]
     assert any("representative point" in gap for gap in result["data_gaps"])
+
+
+def test_incompatible_land_cover_returns_no_plans_without_fetching_weather(monkeypatch):
+    request = example("recommendation-request")
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(
+        pipeline, "assess_land_cover",
+        lambda boundary: ({"status": "incompatible", "message": "Tree cover in 2021."},
+                          [{"id": "worldcover", "title": "WorldCover 2021"}]),
+    )
+
+    def unexpected(request):
+        pytest.fail("Weather and plans should not be fetched for incompatible land")
+
+    monkeypatch.setattr(pipeline, "build_environment", unexpected)
+    result = pipeline.recommend(request, "forest-test")
+    assert result["status"] == "insufficient_data"
+    assert result["plans"] == []
+    assert result["request_id"] == "forest-test"
+    assert result["land_cover"]["status"] == "incompatible"
+    assert validate("recommendation-result", result) == []
+
+
+def test_uncertain_land_cover_keeps_plans_and_warning(monkeypatch):
+    request = example("recommendation-request")
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(
+        pipeline, "assess_land_cover",
+        lambda boundary: ({"status": "uncertain", "message": "Verify the field."}, []),
+    )
+    monkeypatch.setattr(pipeline, "build_environment", lambda request: {"sources": []})
+    monkeypatch.setattr(pipeline, "load_rules", lambda location: {"crops": ["crop"]})
+    monkeypatch.setattr(
+        pipeline, "computed_result",
+        lambda *args: {"plans": ["existing plan"], "assumptions": []},
+    )
+    result = pipeline.recommend(request, "uncertain-test")
+    assert result["plans"] == ["existing plan"]
+    assert result["land_cover"]["status"] == "uncertain"
 
 
 def test_selected_crop_shortlist_filters_new_candidates(monkeypatch):

@@ -64,59 +64,30 @@ def slope_percent(elevations: list[list[float]], latitude: float) -> float | Non
     return round(math.hypot(dz_dx, dz_dy) * 100, 2)
 
 
-def _unavailable(reason: str) -> tuple[None, list[dict], list[str]]:
-    return None, [], [
-        f"SRTM slope unavailable ({reason}); erosion risk is not included in the soil score."
-    ]
-
-
-def fetch_slope(
-    latitude: float, longitude: float
-) -> tuple[float | None, list[dict], list[str]]:
-    """Return (slope percent, sources, data gaps) for a 3x3 SRTM neighborhood."""
-    if not -60 <= latitude <= 60 or not -180 <= longitude <= 180:
-        return _unavailable("the point is outside SRTM coverage")
-
-    points = _neighborhood(latitude, longitude)
-    locations = "|".join(f"{lat:.6f},{lon:.6f}" for lat, lon in points)
-    key = cache.key_for(
+def _cache_key(latitude: float, longitude: float) -> str:
+    return cache.key_for(
         {
             "provider": "srtm30m-opentopodata-v1",
             "lat": round(latitude, 6),
             "lon": round(longitude, 6),
         }
     )
-    payload = cache.read(key)
-    if payload is None:
-        try:
-            response = httpx.get(
-                URL,
-                params={"locations": locations, "interpolation": "bilinear"},
-                timeout=30,
-            )
-            response.raise_for_status()
-            payload = response.json()
-        except (httpx.HTTPError, ValueError) as error:
-            return _unavailable(f"the provider request failed ({type(error).__name__})")
-        if not isinstance(payload, dict):
-            return _unavailable("the provider returned an invalid response")
-        if payload.get("status") == "OK" and isinstance(payload.get("results"), list):
-            cache.write(key, payload)
 
+
+def _payload_slope(payload: dict, latitude: float) -> tuple[float | None, str | None]:
     if (
         not isinstance(payload, dict)
         or payload.get("status") != "OK"
         or not isinstance(payload.get("results"), list)
-        or len(payload["results"]) != len(points)
+        or len(payload["results"]) != 9
     ):
-        return _unavailable("the provider returned an incomplete elevation neighborhood")
-
+        return None, "the provider returned an incomplete elevation neighborhood"
     results = payload["results"]
     if any(
         not isinstance(result, dict) or result.get("dataset") != "srtm30m"
         for result in results
     ):
-        return _unavailable("the provider did not return the requested SRTM30m dataset")
+        return None, "the provider did not return the requested SRTM30m dataset"
     values = [result.get("elevation") for result in results]
     if any(
         not isinstance(value, (int, float))
@@ -124,10 +95,100 @@ def fetch_slope(
         or not math.isfinite(value)
         for value in values
     ):
-        return _unavailable("the provider returned missing elevation samples")
-
+        return None, "the provider returned missing elevation samples"
     grid = [values[index : index + 3] for index in range(0, 9, 3)]
     slope = slope_percent(grid, latitude)
     if slope is None:
-        return _unavailable("the elevation neighborhood could not be processed")
-    return slope, [SOURCE.copy()], []
+        return None, "the elevation neighborhood could not be processed"
+    return slope, None
+
+
+def fetch_slopes(
+    locations: list[tuple[float, float]],
+) -> tuple[list[float | None], list[dict], list[str]]:
+    """Fetch slope estimates for multiple points in one provider request."""
+    slopes: list[float | None] = [None] * len(locations)
+    gaps: list[str] = []
+    pending = []
+    for index, (latitude, longitude) in enumerate(locations):
+        if not -60 <= latitude <= 60 or not -180 <= longitude <= 180:
+            gaps.append(
+                f"SRTM slope unavailable at sample {index + 1} "
+                "(the point is outside SRTM coverage); erosion risk is not "
+                "included in the soil score."
+            )
+            continue
+        key = _cache_key(latitude, longitude)
+        cached = cache.read(key)
+        if cached is not None:
+            slope, _ = _payload_slope(cached, latitude)
+            if slope is not None:
+                slopes[index] = slope
+                continue
+        pending.append((index, latitude, longitude, key))
+
+    if pending:
+        neighborhoods = [
+            _neighborhood(latitude, longitude)
+            for _, latitude, longitude, _ in pending
+        ]
+        locations_query = "|".join(
+            f"{latitude:.6f},{longitude:.6f}"
+            for neighborhood in neighborhoods
+            for latitude, longitude in neighborhood
+        )
+        try:
+            response = httpx.get(
+                URL,
+                params={"locations": locations_query, "interpolation": "bilinear"},
+                timeout=30,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (httpx.HTTPError, ValueError) as error:
+            payload = None
+            request_error = f"the provider request failed ({type(error).__name__})"
+        else:
+            request_error = None
+
+        results = payload.get("results") if isinstance(payload, dict) else None
+        if (
+            not isinstance(payload, dict)
+            or payload.get("status") != "OK"
+            or not isinstance(results, list)
+            or len(results) != 9 * len(pending)
+        ):
+            request_error = request_error or (
+                "the provider returned an incomplete elevation response"
+            )
+            for index, _, _, _ in pending:
+                gaps.append(
+                    f"SRTM slope unavailable at sample {index + 1} ({request_error}); "
+                    "erosion risk is not included in the soil score."
+                )
+        else:
+            for offset, (index, latitude, _, key) in enumerate(pending):
+                result_payload = {
+                    "status": "OK",
+                    "results": results[offset * 9 : (offset + 1) * 9],
+                }
+                slope, error = _payload_slope(result_payload, latitude)
+                if error:
+                    gaps.append(
+                        f"SRTM slope unavailable at sample {index + 1} ({error}); "
+                        "erosion risk is not included in the soil score."
+                    )
+                    continue
+                slopes[index] = slope
+                cache.write(key, result_payload)
+
+    sources = [SOURCE.copy()] if any(slope is not None for slope in slopes) else []
+    return slopes, sources, gaps
+
+
+def fetch_slope(
+    latitude: float, longitude: float
+) -> tuple[float | None, list[dict], list[str]]:
+    """Return (slope percent, sources, data gaps) for a 3x3 SRTM neighborhood."""
+    slopes, sources, gaps = fetch_slopes([(latitude, longitude)])
+    return slopes[0], sources, gaps

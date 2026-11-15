@@ -28,6 +28,7 @@ import copy
 import json
 import os
 import re
+from datetime import date
 from functools import lru_cache
 from unittest import mock
 from pathlib import Path
@@ -50,7 +51,11 @@ BARAGAN = {"name": "Bărăgan test point", "latitude": 44.56, "longitude": 27.36
 # (still reached in production when the provisional profile has no usable temperatures);
 # the HTTP tests go through `pipeline.recommend`, which adds the provisional rules.
 OUTSIDE = {"name": "Outside covered zones", "latitude": 47.2, "longitude": 23.0}
-CROP_IDS = ("winter_wheat", "winter_barley", "winter_rapeseed", "maize", "sunflower", "soybean", "pea")
+CROP_IDS = tuple(crop["id"] for crop in load_rules(BARAGAN)["crops"])
+
+
+def excluded_except(*crop_ids: str) -> list[str]:
+    return [crop_id for crop_id in CROP_IDS if crop_id not in crop_ids]
 
 
 @lru_cache(maxsize=1)
@@ -83,8 +88,25 @@ def p2_built_environment(request: dict) -> dict:
     }
     with (
         mock.patch.object(data_service, "fetch_power", lambda *args: power),
-        mock.patch.object(data_service, "fetch_soil", lambda *args: (None, [], ["SoilGrids not queried (offline test)."])),
-        mock.patch.object(data_service, "fetch_slope", lambda *args: (None, [], ["SRTM slope not queried (offline test)."])),
+        mock.patch.object(
+            data_service,
+            "fetch_soil",
+            lambda *args: (None, [], ["SoilGrids not queried (offline test)."]),
+        ),
+        mock.patch.object(
+            data_service,
+            "fetch_slope",
+            lambda *args: (None, [], ["SRTM slope not queried (offline test)."]),
+        ),
+        mock.patch.object(
+            data_service,
+            "fetch_slopes",
+            lambda points: (
+                [None] * len(points),
+                [],
+                ["SRTM slope not queried (offline test)."],
+            ),
+        ),
         mock.patch.dict(os.environ, {"ENABLE_NASA_POWER": "true"}),
     ):
         return data_service.build_environment(request)
@@ -247,7 +269,7 @@ def test_calculator_priorities_reach_p4_unchanged():
     "request_",
     [
         dashboard_request(),
-        dashboard_request(constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]}),
+        dashboard_request(constraints={"irrigated": False, "excluded_crops": excluded_except("maize", "winter_rapeseed")}),
         dashboard_request(location=dict(OUTSIDE)),
         dashboard_request(current_rotation=["sunflower"]),
     ],
@@ -263,7 +285,12 @@ def test_no_raw_crop_ids_or_doubled_punctuation_in_user_text(request_):
 
 
 def test_limited_result_shape_and_excluded_baseline_crop_named():
-    request = dashboard_request(constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]})
+    request = dashboard_request(
+        constraints={
+            "irrigated": False,
+            "excluded_crops": excluded_except("maize", "winter_rapeseed"),
+        }
+    )
     result = cached_run(request)
     assert result["status"] == "limited" and 1 <= len(result["plans"]) <= 2
     assert next_route_errors(request, result, "web-audit") == []
@@ -278,7 +305,10 @@ def test_current_rotation_comparison_never_shows_equal_numbers_as_different():
         available_from="2026-10-01",
         history=[{"crop_id": "maize", "harvest_year": 2026, "source": "typed"}],
         priorities={"water": 3, "soil": 3, "climate": 3},
-        constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]},
+        constraints={
+            "irrigated": False,
+            "excluded_crops": excluded_except("maize", "winter_rapeseed"),
+        },
     )
     for request in (dashboard_request(), calculator_full_request(), rounding_case):
         result = cached_run(request)
@@ -319,6 +349,7 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
     # PR #7 fixed the audit finding: dew point and elevation now reach the data, so every
     # day uses FAO-56 Penman-Monteith (no sea-level or Hargreaves fallback).
     assert env["static"]["elevation_m"] == environment()["static"]["elevation_m"]
+    assert "slope_pct" not in env["static"]
     assert env["quality"]["et0_methods"]["hargreaves"] == 0
     assert env["quality"]["missing"]["dewpoint"] == 0
     result = run(request, env)
@@ -327,10 +358,56 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
     assert result["monthly_climate"] and "climate_context" in result
     assert not any("Elevation is missing" in g for g in result["data_gaps"])
     assert any("SoilGrids not queried" in g for g in result["data_gaps"]), "P2 gaps reach the farmer"
-    # Same evidence as the fixture path, so the same plans AND the same P3 scores.
     reference = cached_run(request)
-    shown = lambda r: [(tuple(s["crop_id"] for s in p["steps"]), p["scores"]) for p in r["plans"] + [r["baseline"]]]
+    shown = lambda r: [
+        (tuple(step["crop_id"] for step in plan["steps"]), plan["scores"])
+        for plan in r["plans"] + [r["baseline"]]
+    ]
     assert shown(result) == shown(reference)
+
+def test_selected_crop_assessment_and_rotation_use_the_same_real_engine(monkeypatch):
+    monkeypatch.setenv("ENGINE_MODE", "computed")
+    monkeypatch.setattr(pipeline, "build_environment", lambda request: environment())
+    monkeypatch.setattr(
+        pipeline,
+        "assess_land_cover",
+        lambda boundary: ({"status": "uncertain", "message": "Check land cover locally."}, []),
+    )
+    request = dashboard_request(
+        available_from=date.today().isoformat(),
+        preferred_crop="potato",
+        assessment_crops=["potato"],
+    )
+    result = pipeline.recommend(request, "chosen-crop")
+    assert next_route_errors(request, result, "chosen-crop") == []
+    assert result["crop_assessment"]["selected"][0]["crop_id"] == "potato"
+    assert result["crop_assessment"]["selected"][0]["status"] == "uncertain"
+    assert any(step["crop_id"] == "potato" for plan in result["plans"] for step in plan["steps"])
+    original = pipeline.recommend(
+        {key: value for key, value in request.items() if key not in {"preferred_crop", "assessment_crops"}},
+        "without-crop",
+    )
+    assert result["plans"][0] == original["plans"][0]
+
+    with_money = {
+        **request,
+        "money_inputs": {"prices_lei_per_t": {"potato": 1500}},
+    }
+    recalculated = pipeline.recommend(with_money, "chosen-crop-money")
+    assert next_route_errors(with_money, recalculated, "chosen-crop-money") == []
+    assert recalculated["crop_assessment"]["selected"][0]["crop_id"] == "potato"
+    chosen_plan = next(
+        plan for plan in recalculated["plans"]
+        if any(step["crop_id"] == "potato" for step in plan["steps"])
+    )
+    potato_money = next(crop for crop in chosen_plan["economics"]["crops"] if crop["crop_id"] == "potato")
+    assert potato_money["price_basis"] == "farmer"
+    assert potato_money["price_lei_per_t"]["typical"] == 1500
+    assert [
+        (plan["steps"], plan["scores"]) for plan in recalculated["plans"]
+    ] == [
+        (plan["steps"], plan["scores"]) for plan in result["plans"]
+    ]
 
 
 # --- Merge with PR #7: duplicate messages in the result --------------------------------------
@@ -338,7 +415,7 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
 
 def test_empty_result_is_explained_once():
     request = dashboard_request(
-        constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "winter_rapeseed", "maize", "soybean"]}
+        constraints={"irrigated": False, "excluded_crops": list(CROP_IDS)}
     )
     result = cached_run(request)
     assert result["status"] == "insufficient_data"
@@ -354,7 +431,10 @@ def test_crop_unknown_to_p3_is_listed_once():
 
 def test_warnings_name_the_step_when_a_crop_repeats():
     result = cached_run(dashboard_request(
-        constraints={"irrigated": False, "excluded_crops": ["winter_wheat", "winter_barley", "sunflower", "soybean", "pea"]}
+        constraints={
+            "irrigated": False,
+            "excluded_crops": excluded_except("maize", "winter_rapeseed"),
+        }
     ))
     for plan in result["plans"]:
         crops = [s["crop_id"] for s in plan["steps"]]

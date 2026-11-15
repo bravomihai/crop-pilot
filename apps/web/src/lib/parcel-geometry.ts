@@ -1,6 +1,8 @@
 import { area } from "@turf/area";
 import { centerOfMass } from "@turf/center-of-mass";
-import { lineString, polygon } from "@turf/helpers";
+import { difference } from "@turf/difference";
+import { featureCollection, lineString, polygon } from "@turf/helpers";
+import { intersect } from "@turf/intersect";
 import { kinks } from "@turf/kinks";
 import { simplify } from "@turf/simplify";
 import { locationSchema, type Location } from "@croppilot/contracts";
@@ -14,7 +16,99 @@ export type FieldSelection = {
   areaHectares: number | null;
 };
 
+export const MAX_BOUNDARY_POINTS = 100;
+export const MAX_FIELD_PARTS = 5;
+
+export function validateFieldPart(
+  field: FieldSelection,
+  part: FieldSelection,
+  existing: FieldSelection[],
+): void {
+  if (!field.boundary || !part.boundary)
+    throw new Error("Draw the field and the part as closed outlines.");
+  if (existing.length >= MAX_FIELD_PARTS)
+    throw new Error(`A field can contain at most ${MAX_FIELD_PARTS} parts.`);
+  const shape = polygon([part.boundary]);
+  const outside = difference(featureCollection([shape, polygon([field.boundary])]));
+  if (outside && area(outside) > 0.1)
+    throw new Error("Draw the entire part inside the field boundary.");
+  for (const other of existing) {
+    if (!other.boundary) continue;
+    const overlap = intersect(featureCollection([shape, polygon([other.boundary])]));
+    if (overlap && area(overlap) > 0.1)
+      throw new Error("Field parts cannot overlap. Draw a separate part.");
+  }
+}
+
 const equal = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
+
+function containsPoint(point: Coordinate, ring: Coordinate[]): boolean {
+  const [longitude, latitude] = point;
+  let inside = false;
+  for (
+    let index = 0, previous = ring.length - 1;
+    index < ring.length;
+    previous = index, index += 1
+  ) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[previous];
+    const cross = (longitude - x1) * (y2 - y1) - (latitude - y1) * (x2 - x1);
+    if (
+      Math.abs(cross) < 1e-10 &&
+      longitude >= Math.min(x1, x2) &&
+      longitude <= Math.max(x1, x2) &&
+      latitude >= Math.min(y1, y2) &&
+      latitude <= Math.max(y1, y2)
+    )
+      return true;
+    if ((y1 > latitude) !== (y2 > latitude)) {
+      const crossingLongitude =
+        x1 + ((latitude - y1) * (x2 - x1)) / (y2 - y1);
+      if (longitude < crossingLongitude) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function representativePoint(points: Coordinate[]): Coordinate {
+  const candidate = centerOfMass(polygon([[...points, points[0]]])).geometry
+    .coordinates as Coordinate;
+  if (containsPoint(candidate, points)) return candidate;
+
+  // A concave parcel's center of mass can fall outside its boundary.
+  const signedArea = points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return sum + point[0] * next[1] - next[0] * point[1];
+  }, 0);
+  const span = Math.max(
+    Math.max(...points.map(([longitude]) => longitude)) -
+      Math.min(...points.map(([longitude]) => longitude)),
+    Math.max(...points.map(([, latitude]) => latitude)) -
+      Math.min(...points.map(([, latitude]) => latitude)),
+  );
+  const offsets = [
+    Math.max(span * 1e-6, 1e-9),
+    Math.max(span * 1e-7, 1e-10),
+    Math.max(span * 1e-8, 1e-11),
+  ];
+  for (let index = 0; index < points.length; index += 1) {
+    const first = points[index];
+    const second = points[(index + 1) % points.length];
+    const dx = second[0] - first[0];
+    const dy = second[1] - first[1];
+    const length = Math.hypot(dx, dy);
+    if (length === 0) continue;
+    const inward = signedArea > 0 ? [-dy, dx] : [dy, -dx];
+    for (const offset of offsets) {
+      const inside: Coordinate = [
+        (first[0] + second[0]) / 2 + (inward[0] / length) * offset,
+        (first[1] + second[1]) / 2 + (inward[1] / length) * offset,
+      ];
+      if (containsPoint(inside, points)) return inside;
+    }
+  }
+  throw new Error("Could not find a representative point inside the field.");
+}
 
 export function tracePoints(segments: DrawSegment[]): Coordinate[] {
   return segments
@@ -62,9 +156,9 @@ export function createParcel(
     vertices.pop();
   if (vertices.length < 3)
     throw new Error("Add at least three different points before finishing.");
-  if (vertices.length > 5000)
+  if (vertices.length > MAX_BOUNDARY_POINTS)
     throw new Error(
-      "This outline is too detailed. Undo a stroke or redraw a smaller boundary.",
+      `A field boundary can contain at most ${MAX_BOUNDARY_POINTS} points.`,
     );
   for (const [longitude, latitude] of vertices)
     locationSchema.parse({ latitude, longitude });
@@ -83,7 +177,7 @@ export function createParcel(
   const squareMetres = area(shape);
   if (!Number.isFinite(squareMetres) || squareMetres < 1)
     throw new Error("The outline has no usable area. Draw a wider boundary.");
-  const [longitude, latitude] = centerOfMass(shape).geometry.coordinates;
+  const [longitude, latitude] = representativePoint(vertices);
   return {
     boundary,
     areaHectares: squareMetres / 10_000,

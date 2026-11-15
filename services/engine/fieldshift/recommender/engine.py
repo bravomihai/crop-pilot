@@ -42,7 +42,7 @@ from .scenarios import (
     reference_request,
     scenario_of,
 )
-from .selection import select_diverse
+from .selection import PREFERRED, Selection, select_diverse
 from .validation import history_issues, ordered_history, validate_calendar
 
 CALENDAR_INVALID = "calendar_invalid"
@@ -434,6 +434,20 @@ def recommend(
         diagnostics["reference_counts"] = _counts({s: c for s, c in reference.items() if s in candidates})
 
     selections = select_diverse(ranked, scores, profiles, pareto, weights, config)
+    preferred_crop = request.get("preferred_crop")
+    if preferred_crop and not any(preferred_crop in selection.sequence for selection in selections):
+        matching = next((sequence for sequence in ranked if preferred_crop in sequence), None)
+        if matching is not None:
+            preferred = Selection(matching, ranked.index(matching) + 1, PREFERRED)
+            if len(selections) == PLAN_COUNT:
+                selections[-1] = preferred
+            else:
+                selections.append(preferred)
+        else:
+            data_gaps.append(
+                f"No eligible rotation containing {preferred_crop.replace('_', ' ')} was found "
+                "among the evaluated sequences; other rotations may not have been evaluated."
+            )
     region = rules.get("region") if isinstance(rules.get("region"), dict) else {}
     ctx = PlanContext(
         weights=weights,

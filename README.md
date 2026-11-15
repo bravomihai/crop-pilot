@@ -2,6 +2,8 @@
 
 NASA Space Apps Challenge 2026 · **Field Shift: Adapting Farms with NASA Data**
 
+**Try the project:** [CropPilot — crop planning](https://crop-pilot.nemes.engineer/)
+
 Farmers in Romania choose the next crops for a field mostly from habit and last year's
 prices, while summers get hotter and dry spells longer. CropPilot helps them compare
 **what they do today** with **three alternative sequences of the next three main crops**,

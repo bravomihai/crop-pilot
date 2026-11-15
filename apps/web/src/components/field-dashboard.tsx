@@ -24,6 +24,18 @@ type Focus = "balanced" | "water" | "soil" | "climate" | "productivity";
 
 type Panel = "details" | "results" | null;
 
+export function PreferredCropInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label htmlFor="preferred-crop">
+      Crop to check (optional)
+      <select id="preferred-crop" value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">Recommend the best rotations</option>
+        {RULE_CROPS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+      </select>
+    </label>
+  );
+}
+
 // Same ranges and steps as the what-if controls on the results panel.
 const TEMPERATURE_STEPS = Array.from({ length: 17 }, (_, i) => -3 + i * 0.5);
 const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
@@ -36,6 +48,7 @@ export default function FieldDashboard() {
   const [panel, setPanel] = useState<Panel>("details");
   const [availableFrom, setAvailableFrom] = useState("");
   const [previousCrop, setPreviousCrop] = useState("");
+  const [preferredCrop, setPreferredCrop] = useState("");
   const [texture, setTexture] = useState<NonNullable<RecommendationRequest["soil"]>["texture"]>("unknown");
   const [irrigated, setIrrigated] = useState(false);
   const [focus, setFocus] = useState<Focus>("balanced");
@@ -90,7 +103,7 @@ export default function FieldDashboard() {
   }
   async function analyse(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selection) return;
+    if (!selection || (preferredCrop && excludedCrops.includes(preferredCrop))) return;
     const priorities = { water: 3, soil: 3, climate: 3, productivity: 3 };
     if (focus !== "balanced") priorities[focus] = 5;
     const input: RecommendationRequest = {
@@ -99,6 +112,7 @@ export default function FieldDashboard() {
       available_from: availableFrom,
       crop_count: 3,
       history: previousCrop ? [{ crop_id: previousCrop, source: historySource, ...(harvestYear ? { harvest_year: Number(harvestYear) } : {}) }] : [],
+      ...(preferredCrop ? { preferred_crop: preferredCrop, assessment_crops: [preferredCrop] } : {}),
       ...(currentRotation.length ? { current_rotation: currentRotation } : {}),
       soil: { texture, source: ph || texture !== "unknown" ? "farmer_estimate" : "unknown", ...(ph ? { ph: Number(ph) } : {}) },
       priorities,
@@ -139,6 +153,10 @@ export default function FieldDashboard() {
             </div>
             <form className="map-plan-form" onSubmit={analyse} onChange={clear}>
               <div className="planner-fields">
+                <PreferredCropInput value={preferredCrop} onChange={setPreferredCrop} />
+                {preferredCrop && excludedCrops.includes(preferredCrop) && (
+                  <p className="field-hint" role="status">Your chosen crop is also in crops to avoid. Remove it from that list or choose another crop.</p>
+                )}
                 <label htmlFor="available-from">Available from<input id="available-from" type="date" required min={today || undefined} aria-describedby="available-from-hint" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} /></label>
                 {afterAutumnSowing(availableFrom) && <p className="field-hint" id="available-from-hint">Autumn sowing usually ends in early November, so plans will start with spring crops. If the field is free earlier, pick that date.</p>}
                 <label htmlFor="previous-crop">Previous crop<select id="previous-crop" value={previousCrop} onChange={e => setPreviousCrop(e.target.value)}><option value="">Not sure / no previous crop</option>{RULE_CROPS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
@@ -164,7 +182,7 @@ export default function FieldDashboard() {
                   </div>
                 </details>
               </div>
-              <footer className="planner-action"><button className="calculate-button" type="submit" disabled={busy || !availableFrom}>{busy ? "Calculating…" : "Calculate"}<Icon name="arrow" size={18} /></button></footer>
+              <footer className="planner-action"><button className="calculate-button" type="submit" disabled={busy || !availableFrom || !!(preferredCrop && excludedCrops.includes(preferredCrop))}>{busy ? "Calculating…" : "Calculate"}<Icon name="arrow" size={18} /></button></footer>
             </form>
           </>
         )}
@@ -191,13 +209,11 @@ export default function FieldDashboard() {
             <button type="button" className="map-back-button" onClick={() => { setFullscreen(false); setPanel("details"); }}>Edit details<Icon name="close" size={17} /></button>
           </div>
         </header>
-        <div className="map-results-scroll">
+        <div className="map-results-scroll" tabIndex={0} role="region" aria-label="Crop plan results">
           {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
           <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onRecalculateMoney={recalculateMoney} onCancel={cancel} />
         </div>
       </section>
-
-      <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
     </main>
   );
 }

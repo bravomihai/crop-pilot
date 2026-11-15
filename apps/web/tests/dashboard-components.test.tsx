@@ -4,8 +4,9 @@ import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { resultSchema } from "@croppilot/contracts";
-import FieldDashboard from "../src/components/field-dashboard";
+import FieldDashboard, { PreferredCropInput } from "../src/components/field-dashboard";
 import FieldMap from "../src/components/dashboard/field-map";
+import ParcelMap from "../src/components/dashboard/parcel-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
 import RecommendationResults from "../src/components/recommendation-results";
 import PriorityPanel from "../src/components/dashboard/priority-panel";
@@ -17,6 +18,7 @@ import ClimateTrendChart from "../src/components/charts/climate-trend-chart";
 import { RevealPanel, SurvivalPanel } from "../src/components/survival-mode";
 import { buildChallenge, revealChoice } from "../src/lib/survival";
 import { fullExampleRequest } from "../src/lib/api";
+import { RULE_CROPS } from "../src/lib/crop-options";
 import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
 import { leiRange, marginLine, signedLei } from "../src/lib/money";
 import { moneyCrops } from "../src/components/money-inputs";
@@ -25,7 +27,7 @@ import {
   rankDemoCrops,
 } from "../src/lib/demo-priorities";
 
-test("main page starts with location search and a point map without dashboard clutter", () => {
+test("main page starts with location search and point selection without dashboard clutter", () => {
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
@@ -45,7 +47,7 @@ test("main page starts with location search and a point map without dashboard cl
     assert.ok(ids.includes(match[1]), match[1]);
 });
 
-test("field map offers point relocation and clear controls without polygon drawing", () => {
+test("main field map offers point selection without boundary drawing", () => {
   const html = renderToStaticMarkup(createElement(FieldMap, {
     view: { latitude: 44.56, longitude: 27.35 },
     selection: { latitude: 44.56, longitude: 27.35 },
@@ -53,7 +55,30 @@ test("field map offers point relocation and clear controls without polygon drawi
   }));
   assert.match(html, /Click anywhere to move your pin/);
   assert.match(html, /Clear field location/);
-  assert.doesNotMatch(html, /Draw|Finish outline|hectares|polygon/);
+  assert.doesNotMatch(html, /Draw|Finish outline/);
+});
+
+test("crop selector offers every supported crop and an optional default", () => {
+  const html = renderToStaticMarkup(createElement(PreferredCropInput, { value: "", onChange: () => {} }));
+  assert.match(html, /Recommend the best rotations/);
+  for (const [id, name] of RULE_CROPS) {
+    assert.ok(html.includes(`value="${id}"`), id);
+    assert.ok(html.includes(name), name);
+  }
+});
+
+test("the separate parcel map offers boundary drawing controls", () => {
+  const html = renderToStaticMarkup(createElement(ParcelMap, {
+    view: { latitude: 44.56, longitude: 27.35 },
+    selection: null,
+    color: "#123c2f",
+    opacity: 0.2,
+    onSelect: () => {},
+    onDrawingChange: () => {},
+  }));
+  assert.match(html, /Draw field/);
+  assert.match(html, /Draw the field boundary using corner clicks/);
+  assert.doesNotMatch(html, /Use map centre|Selected map centre/);
 });
 
 test("compatibility cards show three interactive alternatives with explicit demo qualifications", () => {
@@ -190,6 +215,120 @@ test("rotation result cards do not manufacture missing alternatives", () => {
     assert.equal((html.match(/class="crop-order"/g) || []).length, count * 3);
     assert.match(html, /fictional results/);
   }
+});
+
+test("land-cover warnings appear before plans and explain incompatible fields", () => {
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("../../../packages/contracts/examples/recommendation-result.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const render = (status: "uncertain" | "incompatible") =>
+    renderToStaticMarkup(
+      createElement(RecommendationResults, {
+        result: resultSchema.parse({
+          ...fixture,
+          mode: "computed",
+          status: status === "incompatible" ? "insufficient_data" : "complete",
+          plans: status === "incompatible" ? [] : fixture.plans,
+          land_cover: { status, message: "Verify satellite land cover." },
+        }),
+        busy: false,
+        error: "",
+      }),
+    );
+  const uncertain = render("uncertain");
+  assert.match(uncertain, /Land-cover information/);
+  assert.match(uncertain, /notice--info/);
+  assert.doesNotMatch(uncertain, /notice--warning/);
+  assert.ok(uncertain.indexOf("Verify satellite land cover.") < uncertain.indexOf('class="plan"'));
+  const incompatible = render("incompatible");
+  assert.match(incompatible, /Field may not be suitable for planting/);
+  assert.match(incompatible, /notice--warning/);
+  assert.doesNotMatch(incompatible, /Insufficient data/);
+  assert.doesNotMatch(incompatible, /class="plan"/);
+});
+
+test("chosen crop assessment and rotation chart explain uncertainty and the selected plan", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+    "utf8",
+  ));
+  const result = resultSchema.parse({
+    ...fixture,
+    mode: "computed",
+    crop_assessment: {
+      selected: [{ crop_id: "winter_wheat", crop_name: "Winter wheat", status: "uncertain", score: 0.6, message: "Check soil pH." }],
+      alternatives: [{ crop_id: "pea", crop_name: "Pea", score: 0.7 }],
+      disclaimer: "Estimates only.",
+    },
+  });
+  const html = renderToStaticMarkup(createElement(RecommendationResults, {
+    result, busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat", assessment_crops: ["winter_wheat"] },
+  }));
+  assert.match(html, /Needs checking/);
+  assert.match(html, /Check soil pH/);
+  assert.match(html, /Estimated growing potential: 60 \/ 100/);
+  assert.match(html, /Your chosen crop appears in Plan 1/);
+  assert.match(html, /Other crops to consider: Pea/);
+  assert.match(html, /Rotation calendar/);
+  assert.match(html, /Outlined bars mark your chosen crop/);
+  assert.match(html, /class="timeline-crop is-preferred"/);
+  assert.match(html, /Money per hectare a year/);
+
+  const missing = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, plans: [] }, busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(missing, /No eligible rotation with this crop was found/);
+  const unsuitable = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, crop_assessment: { ...result.crop_assessment!, selected: [
+      { ...result.crop_assessment!.selected[0], status: "not_recommended", message: "Soil pH is outside the provisional range." },
+    ] } },
+    busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(unsuitable, /Not recommended as the next crop/);
+  assert.match(unsuitable, /Soil pH is outside the provisional range/);
+  const demo = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: { ...result, mode: "demo", crop_assessment: undefined },
+    busy: false, error: "",
+    request: { ...fullExampleRequest, preferred_crop: "winter_wheat" },
+  }));
+  assert.match(demo, /Demo plans are fictional and do not assess/);
+});
+
+test("main results place the summary before the calendar and explain missing plans", () => {
+  const fixture = JSON.parse(readFileSync(
+    new URL("../../../packages/contracts/examples/recommendation-result.full.json", import.meta.url),
+    "utf8",
+  ));
+  const html = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: resultSchema.parse({ ...fixture, mode: "computed" }),
+    busy: false,
+    error: "",
+  }));
+  assert.ok(html.indexOf("AT A GLANCE") < html.indexOf("Rotation calendar"));
+  assert.ok(html.indexOf("Rotation calendar") < html.indexOf('class="plan"'));
+  assert.ok(html.indexOf('class="plan"') < html.indexOf("How each plan would have done"));
+  assert.equal((html.match(/id="timeline-title"/g) ?? []).length, 1);
+  const firstSowing = new Date(`${fixture.plans[0].steps[0].sowing_window.start}T00:00:00Z`);
+  firstSowing.setUTCDate(firstSowing.getUTCDate() - 120);
+  const withAvailability = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: resultSchema.parse({ ...fixture, mode: "computed" }),
+    busy: false,
+    error: "",
+    request: { ...fullExampleRequest, available_from: firstSowing.toISOString().slice(0, 10) },
+  }));
+  assert.match(withAvailability, /Field empty before the first crop/);
+  const empty = renderToStaticMarkup(createElement(RecommendationResults, {
+    result: resultSchema.parse({ ...fixture, mode: "computed", status: "insufficient_data", plans: [], baseline: undefined }),
+    busy: false,
+    error: "",
+  }));
+  assert.match(empty, /The available data cannot support any plans/);
 });
 
 test("five English priority sliders render with neutral defaults, labels, values, and a reset control", () => {
@@ -497,10 +636,11 @@ test("the reveal states the result, trade-offs and the disclaimer from engine da
   assert.match(html, /<span class="sr-only">Key takeaway: <\/span>/);
 });
 
-test("the plain-words explanation loads by itself, without a button or language selector", () => {
+test("the plain-words explanation requires an explicit request and discloses the provider", () => {
   const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
   const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
-  assert.doesNotMatch(html, /Summarise in plain words|ai-summary-button/);
+  assert.match(html, /Summarise in plain words/);
+  assert.match(html, /including the field name, to OpenAI/);
   assert.doesNotMatch(html, /ai-summary-language|Rezumat|Română/);
 });
 

@@ -32,6 +32,7 @@ export default function RecommendationResults({
   onRecalculateMoney?: (inputs: RecommendationRequest["money_inputs"]) => void;
   onCancel?: () => void;
 }) {
+  const cropAssessment = result?.crop_assessment;
   return (
     <section className="results" id="results" aria-labelledby="results-title">
       <div className="section-heading">
@@ -93,7 +94,16 @@ export default function RecommendationResults({
               agronomic recommendations calculated for your field.
             </Notice>
           )}
-          {result.status !== "complete" && (
+          {result.land_cover && (
+            <Notice
+              title={result.land_cover.status === "incompatible" ? "Field may not be suitable for planting" : "Land-cover information"}
+              tone={result.land_cover.status === "incompatible" ? "warning" : "info"}
+              announce
+            >
+              {result.land_cover.message}
+            </Notice>
+          )}
+          {result.status !== "complete" && result.land_cover?.status !== "incompatible" && (
             <Notice
               title={
                 result.status === "limited"
@@ -107,6 +117,34 @@ export default function RecommendationResults({
                 : "The available data cannot support any plans. Review the missing information before trying again."}
             </Notice>
           )}
+          {request?.preferred_crop && result.mode === "demo" && (
+            <Notice title="Selected crop not assessed">
+              Demo plans are fictional and do not assess or generate a rotation for the selected crop.
+            </Notice>
+          )}
+          {result.mode === "computed" && cropAssessment && cropAssessment.selected.map((crop) => {
+            const matchingPlans = result.plans
+              .map((plan, index) => plan.steps.some((step) => step.crop_id === crop.crop_id) ? index + 1 : null)
+              .filter((index) => index !== null);
+            return (
+              <section key={crop.crop_id} className="chosen-crop" aria-labelledby={`crop-assessment-${crop.crop_id}`}>
+                <p className="eyebrow">YOUR CHOSEN CROP</p>
+                <h3 id={`crop-assessment-${crop.crop_id}`}>{crop.crop_name}</h3>
+                <strong>{crop.status === "not_recommended" ? "Not recommended as the next crop" : crop.status === "uncertain" ? "Needs checking" : "Assessment available"}</strong>
+                <p>{crop.message}</p>
+                {crop.score !== null && <p>Estimated growing potential: {Math.round(crop.score * 100)} / 100</p>}
+                {request?.preferred_crop === crop.crop_id && (
+                  <p>{matchingPlans.length
+                    ? `Your chosen crop appears in ${matchingPlans.map((number) => `Plan ${number}`).join(", ")} below. It may be planted later in the rotation.`
+                    : "No eligible rotation with this crop was found among the evaluated sequences."}</p>
+                )}
+                {cropAssessment.alternatives.length > 0 && (
+                  <p>Other crops to consider: {cropAssessment.alternatives.map((alternative) => alternative.crop_name).join(", ")}.</p>
+                )}
+                <small>{cropAssessment.disclaimer}</small>
+              </section>
+            );
+          })}
           {!result.baseline && Boolean(request?.current_rotation?.length) && (
               <p className="baseline-hint">
                 Your current rotation could not be evaluated for comparison. See “How
@@ -122,6 +160,7 @@ export default function RecommendationResults({
               plans={result.plans}
               baseline={result.baseline}
               availableFrom={request?.available_from}
+              preferredCrop={request?.preferred_crop}
             />
             {result.baseline && (
               <div className="baseline-container">

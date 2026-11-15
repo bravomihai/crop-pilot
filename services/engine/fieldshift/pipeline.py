@@ -4,12 +4,14 @@ import os
 from datetime import date, datetime, timezone
 
 from .data_service import build_environment
+from .data_service.land_cover import assess_land_cover
 from .demo import recommend_demo
 from .evaluator import climate_context, evaluate, load_rules
 from .evaluator.economics import add_economics
 from .evaluator.rules import load_provisional_romania_rules
 from .geography import validate_field_boundary, validate_location
 from .recommender import recommend_rotations
+from .recommender.crop_assessment import assess_crops
 from .recommender.validation import validate_result_semantics
 
 DISCLAIMER = (
@@ -17,8 +19,9 @@ DISCLAIMER = (
     "and the assumptions locally before applying any plan."
 )
 FIELD_DATA_GAP = (
-    "The field boundary is included in the request, but climate and soil data "
-    "are sampled at its representative point rather than aggregated across the field."
+    "NASA POWER weather remains regional grid-cell data sampled at the representative point. "
+    "Soil and SRTM slope are sparse arithmetic means from up to three distributed field points, "
+    "not full-area raster statistics."
 )
 
 
@@ -52,11 +55,34 @@ def _recommend_mode(request: dict, request_id: str) -> dict:
     validate_location(request["location"])
     if request.get("field_boundary"):
         validate_field_boundary(request["field_boundary"], request["location"])
+    land_cover, land_cover_sources = assess_land_cover(request.get("field_boundary"))
+    if land_cover["status"] == "incompatible":
+        return {
+            "schema_version": "1.0",
+            "request_id": request_id,
+            "mode": "computed",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "status": "insufficient_data",
+            "location": request["location"],
+            "plans": [],
+            "monthly_climate": [],
+            "land_cover": land_cover,
+            "assumptions": [],
+            "data_gaps": [land_cover["message"]],
+            "sources": land_cover_sources,
+            "disclaimer": DISCLAIMER,
+        }
     environment = build_environment(request)
+    environment["sources"].extend(land_cover_sources)
+    environment["land_cover"] = land_cover
     rules = load_rules(request["location"])
     if not rules.get("crops"):
         rules = load_provisional_romania_rules(request["location"], environment)
-    return computed_result(request, request_id, environment, rules, evaluate)
+    result = computed_result(request, request_id, environment, rules, evaluate)
+    result["land_cover"] = land_cover
+    if "assessment_crops" in request:
+        result["crop_assessment"] = assess_crops(request, environment, rules, evaluate)
+    return result
 
 
 def computed_result(

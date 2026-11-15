@@ -32,7 +32,7 @@ from .evaluation import INFEASIBLE, Evaluation
 from .pareto import DOMINATED, NONDOMINATED, ParetoInfo
 from .ranking import Score
 from .scenarios import COMPUTED, UNSUPPORTED, CandidateRobustness
-from .selection import BEST, DIVERSE, LOW_DIVERSITY, SCORE_GAP, Selection
+from .selection import BEST, DIVERSE, LOW_DIVERSITY, PREFERRED, SCORE_GAP, Selection
 
 LOW, MEDIUM, HIGH = "low", "medium", "high"
 CONFIDENCE_TEXT = {LOW: "Low", MEDIUM: "Medium", HIGH: "High"}
@@ -203,6 +203,8 @@ def _score_text(score: Score) -> str:
 def _label(number: int, selection: Selection, ctx: PlanContext) -> str:
     if selection.tier == BEST:
         return f"Plan {number} · Best overall match"
+    if selection.tier == PREFERRED:
+        return f"Plan {number} · Includes your chosen crop"
     if selection.tier == DIVERSE:
         if selection.strength:
             return f"Plan {number} · Different crops, strongest on {_lower(selection.strength)}"
@@ -290,7 +292,8 @@ def build_texts(
     elif pareto.status == DOMINATED and not selection.dominated_by_selected:
         tradeoffs.append(
             f"{len(pareto.dominated_by)} other option(s) are at least as good on every priority; "
-            "this one is shown to offer different crops."
+            + ("this one is shown because it contains your chosen crop." if selection.tier == PREFERRED
+               else "this one is shown to offer different crops.")
         )
     for seq in selection.dominated_by_selected:
         tradeoffs.append(
@@ -364,6 +367,7 @@ def build_explanation(
         DIVERSE: "A different crop sequence that scores close to plan 1.",
         SCORE_GAP: "A different crop sequence; it scores noticeably lower than plan 1.",
         LOW_DIVERSITY: "Shown because no other clearly different crop sequences fit the rules.",
+        PREFERRED: "Chosen because it contains your selected crop and passed the available rotation checks.",
     }[selection.tier]
     parts = [
         why,

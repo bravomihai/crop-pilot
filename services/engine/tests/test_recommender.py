@@ -120,6 +120,29 @@ def test_excluded_crops_are_never_generated_or_evaluated():
     assert all(not {"gamma", "alpha"} & set(r) for r, _ in evaluator.calls)
     assert all(not {"gamma", "alpha"} & set(s) for s in sequences(outcome.plans))
 
+def test_preferred_crop_keeps_the_best_plan_and_includes_an_eligible_rotation():
+    request = make_request()
+    normal = recommend(request, ENV, fake_rules(), FakeEvaluator())
+    assert all("epsilon" not in sequence for sequence in sequences(normal.plans))
+    request["preferred_crop"] = "epsilon"
+    preferred = recommend(request, ENV, fake_rules(), FakeEvaluator())
+    assert preferred.plans[0] == normal.plans[0]
+    assert len(preferred.plans) == 3
+    assert any("epsilon" in sequence for sequence in sequences(preferred.plans))
+    for plan in preferred.plans:
+        assert not plan.get("violations")
+    assert "chosen crop" in preferred.plans[-1]["label"]
+    assert "selected crop" in preferred.plans[-1]["explanation"]
+
+
+def test_unavailable_or_excluded_preferred_crop_does_not_invent_a_plan():
+    for crop, excluded in [("not_supported", []), ("epsilon", ["epsilon"])]:
+        request = make_request(preferred_crop=crop)
+        request["constraints"]["excluded_crops"] = excluded
+        outcome = recommend(request, ENV, fake_rules(), FakeEvaluator())
+        assert all(crop not in sequence for sequence in sequences(outcome.plans))
+        assert any("No eligible rotation containing" in gap for gap in outcome.data_gaps)
+
 
 # 5./6. Feasibility filtering and empty sets -------------------------------------------
 

@@ -11,11 +11,13 @@ export default function RotationTimeline({
   plans,
   baseline,
   availableFrom,
+  preferredCrop,
 }: {
   plans: RotationPlan[];
   baseline?: RotationPlan;
   /** The request's availability date: the empty period before each first crop is shown. */
   availableFrom?: string;
+  preferredCrop?: string;
 }) {
   const rows = [
     ...(baseline ? [{ plan: baseline, baseline: true }] : []),
@@ -33,6 +35,7 @@ export default function RotationTimeline({
         Shared monthly axis · light segment: sowing window · labelled bar:
         growing period through harvest · hatched gap: bare soil, including the
         wait before the first crop · dashed row: current rotation.
+        {preferredCrop && " Outlined bars mark your chosen crop."}
       </p>
       <div
         className="timeline-scroll"
@@ -96,7 +99,7 @@ export default function RotationTimeline({
                   const end = utcDate(step.harvest_window.end) + DAY;
                   return (
                     <div
-                      className="timeline-crop"
+                      className={step.crop_id === preferredCrop && !baseline ? "timeline-crop is-preferred" : "timeline-crop"}
                       key={step.order}
                       style={{
                         left: `${axis.percent(start)}%`,
@@ -112,6 +115,7 @@ export default function RotationTimeline({
                       />
                       <strong>
                         {step.order}. {step.crop_name}
+                        {step.crop_id === preferredCrop && !baseline && <span className="sr-only"> (your chosen crop)</span>}
                       </strong>
                     </div>
                   );
