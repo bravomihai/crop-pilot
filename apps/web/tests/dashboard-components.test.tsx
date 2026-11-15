@@ -28,14 +28,15 @@ test("main page starts with location search and a point map without dashboard cl
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
     "CropPilot",
-    "Prototype",
     "Pick your field.",
     "Search for a place or click the map.",
     "Use map centre",
-    "stays in this tab",
+    "No account. Nothing saved.",
   ])
     assert.ok(textContent.includes(text), text);
   assert.doesNotMatch(html, /NASA LIVE DATA|Calibrated with|tel:|Draw field|Draw a field|COMING SOON|KPI|href="\/calculator"|dashboard-sidebar/);
+  assert.doesNotMatch(html, /prototype-pill|About CropPilot|map-about/);
+  assert.doesNotMatch(html, /Colour theme/);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(ids.length, new Set(ids).size);
   for (const match of html.matchAll(/href="#([^"]+)"/g))
@@ -94,7 +95,8 @@ test("missing baseline after a given rotation is explained, not requested again"
   const given = render(["maize", "winter_wheat"]);
   assert.doesNotMatch(given, /Add your current rotation/);
   assert.match(given, /could not be evaluated for comparison/);
-  assert.match(render(undefined), /Add your current rotation/);
+  assert.doesNotMatch(render(undefined), /Add your current rotation|baseline-hint/);
+  assert.doesNotMatch(render(undefined), /count-badge|Back to summary/);
 });
 
 test("the past-season replay says when a hypothetical scenario was applied", () => {
@@ -299,7 +301,7 @@ test("full optional result has a separate baseline, shared timeline, unknown pro
   );
   assert.equal((html.match(/class="plan"/g) || []).length, 1);
   assert.match(html, /class="plan baseline-plan"/);
-  assert.match(html, /1 \/ 3 plans/);
+  assert.doesNotMatch(html, /count-badge/);
   assert.match(html, /Compare criterion scores/);
   assert.match(html, /Bare soil, consider a cover crop/);
   assert.match(html, /Productivity: Unknown/);
@@ -511,7 +513,7 @@ test("results open with an At a glance summary and keep technical notes collapse
   assert.match(html, /Best match:/);
   assert.match(html, /Compared with your current rotation/);
   assert.match(html, /Before you decide/);
-  assert.match(html, /href="#results-summary"/);
+  assert.doesNotMatch(html, /Back to summary|href="#results-summary"/);
   assert.match(html, /Print for your agronomist/);
   assert.match(html, /<details class="how-calculated"><summary>How this was calculated/);
   assert.match(html, /<details class="plan-why"><summary>Why this plan\?/);
