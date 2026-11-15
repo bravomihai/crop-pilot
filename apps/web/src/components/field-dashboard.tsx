@@ -20,7 +20,9 @@ const TEMPERATURE_STEPS = Array.from({ length: 17 }, (_, i) => -3 + i * 0.5);
 const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
 
 export default function FieldDashboard() {
-  const [view, setView] = useState<Location>({ name: "Bărăgan", latitude: 44.567, longitude: 27.35 });
+  // Opens on the whole of Romania; a search result or a shared link zooms to the place.
+  const [view, setView] = useState<Location>({ name: "Romania", latitude: 45.9, longitude: 24.97 });
+  const [mapZoom, setMapZoom] = useState(7);
   const [selection, setSelection] = useState<Location | null>(null);
   const [panel, setPanel] = useState<Panel>("details");
   const [availableFrom, setAvailableFrom] = useState("");
@@ -36,6 +38,7 @@ export default function FieldDashboard() {
   const [temperature, setTemperature] = useState(0);
   const [rainfall, setRainfall] = useState(0);
   const [today, setToday] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const { result, lastRequest, busy, error, calculate, recalculate, cancel, clear } = useRecommendations();
   const info = useRef<HTMLDialogElement>(null);
   const resultsHeading = useRef<HTMLHeadingElement>(null);
@@ -46,11 +49,12 @@ export default function FieldDashboard() {
     const isoToday = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     setToday(isoToday);
     setAvailableFrom(isoToday);
-    // A shared or demo link can open with a field already chosen: /?lat=44.45&lon=26.5&name=Fundulea
+    // A shared or demo link can open with a field already chosen: /?lat=44.45&lon=26.5&name=Example%20field
     const field = fieldFromQuery(window.location.search);
     if (field) {
       setSelection(field);
       setView(field);
+      setMapZoom(13);
     }
   }, []);
   // A what-if recalculation changes the scenario of the shown result; keep the form in step,
@@ -73,6 +77,7 @@ export default function FieldDashboard() {
     clear();
     setSelection(location);
     setView(location);
+    setMapZoom(13);
     setPanel("details");
   }
   async function analyse(event: FormEvent<HTMLFormElement>) {
@@ -99,7 +104,7 @@ export default function FieldDashboard() {
   return (
     <main className={`map-experience ${panel ? "is-panel-open" : ""}`} id="main">
       <a className="skip-link" href="#field-details" onClick={() => setPanel("details")}>Skip to field details</a>
-      <FieldMap view={view} selection={selection} onSelect={selectField} />
+      <FieldMap view={view} zoom={mapZoom} selection={selection} onSelect={selectField} />
 
       <header className="map-header">
         <a className="map-brand" href="#main" aria-label="CropPilot home">
@@ -167,8 +172,21 @@ export default function FieldDashboard() {
       {panel === null && <button className="reopen-planner" type="button" onClick={() => { setPanel("details"); requestAnimationFrame(() => detailsHeading.current?.focus()); }}><Icon name="field" size={18} />{selection ? "Field details" : "Plan your field"}</button>}
       {(result || error || busy) && panel !== "results" && <button type="button" className="reopen-results" onClick={() => setPanel("results")}><Icon name="leaf" size={17} />{busy ? "Calculating…" : error ? "View calculation" : "View plans"}</button>}
 
-      <section className="map-results-panel" hidden={panel !== "results"} aria-labelledby="plans-heading">
-        <header className="results-panel-header"><div><span className="planner-eyebrow">THE NEXT CHAPTER</span><h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2></div><button type="button" className="map-back-button" onClick={() => setPanel("details")}>Edit details<Icon name="close" size={17} /></button></header>
+      <section
+        className={fullscreen && panel === "results" ? "map-results-panel is-fullscreen" : "map-results-panel"}
+        hidden={panel !== "results"}
+        aria-labelledby="plans-heading"
+        onKeyDown={(event) => { if (event.key === "Escape" && fullscreen) { event.stopPropagation(); setFullscreen(false); } }}
+      >
+        <header className="results-panel-header">
+          <div><span className="planner-eyebrow">THE NEXT CHAPTER</span><h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2></div>
+          <div className="results-panel-actions">
+            <button type="button" className="fullscreen-toggle" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
+              <Icon name={fullscreen ? "shrink" : "expand"} size={16} />{fullscreen ? "Exit full screen" : "Full screen"}
+            </button>
+            <button type="button" className="map-back-button" onClick={() => { setFullscreen(false); setPanel("details"); }}>Edit details<Icon name="close" size={17} /></button>
+          </div>
+        </header>
         <div className="map-results-scroll">
           {busy && <button className="cancel-calculation" type="button" onClick={cancel}>Cancel calculation</button>}
           <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onCancel={cancel} />

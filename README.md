@@ -159,7 +159,7 @@ services/engine/.venv/bin/python -m pytest services/engine/tests
 [NASA POWER](https://power.larc.nasa.gov/) daily agro-meteorology ·
 [ISRIC SoilGrids](https://soilgrids.org/) · [FAO-56](https://www.fao.org/3/x0490e/x0490e00.htm)
 crop water use · [FAO EcoCrop](https://gaez.fao.org/pages/ecocrop) ·
-[FAO GAEZ v4](https://gaez.fao.org/) · Romanian crop technology guides (INCDA Fundulea).
+[FAO GAEZ v4](https://gaez.fao.org/) · Romanian crop technology guides (INCDA, the national agricultural research institute).
 Planned: SMAP, SRTM, NEX-GDDP-CMIP6, Sentinel-2.
 
 ## Working together
