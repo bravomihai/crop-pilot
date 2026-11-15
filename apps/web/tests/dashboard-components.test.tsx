@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { resultSchema } from "@fieldshift/contracts";
+import { resultSchema } from "@croppilot/contracts";
 import FieldDashboard from "../src/components/field-dashboard";
 import FieldMap from "../src/components/dashboard/field-map";
 import CompatibilityCard from "../src/components/dashboard/compatibility-card";
@@ -24,7 +24,7 @@ test("main page starts with location search and a point map without dashboard cl
   const html = renderToStaticMarkup(createElement(FieldDashboard));
   const textContent = html.replace(/<[^>]+>/g, "");
   for (const text of [
-    "FieldShift",
+    "CropPilot",
     "Prototype",
     "Pick your field.",
     "Search for a place or click the map.",
@@ -376,4 +376,11 @@ test("results explain the terms the challenge names, in plain words", async () =
     assert.match(html, new RegExp(term));
   assert.ok(GLOSSARY.length >= 8 && CROP_ROLES.length >= 4);
   assert.ok(CROP_ROLES.some((entry) => /Legumes/.test(entry.role)));
+});
+
+test("calculated results offer an English-only summary without a language selector", () => {
+  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
+  assert.match(html, /Summarise in plain words/);
+  assert.doesNotMatch(html, /ai-summary-language|Rezumat|Română/);
 });

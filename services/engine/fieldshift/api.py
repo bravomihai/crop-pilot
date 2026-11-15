@@ -9,7 +9,7 @@ from .geography import UnsupportedLocationError
 from .pipeline import recommend
 
 app = FastAPI(
-    title="FieldShift engine",
+    title="CropPilot engine",
     docs_url="/docs" if os.getenv("ENABLE_ENGINE_DOCS") == "true" else None,
     redoc_url=None,
 )
@@ -26,7 +26,7 @@ def authorize(authorization: str | None = Header(default=None)):
 @app.get("/health")
 def health():
     return {
-        "service": "fieldshift-engine",
+        "service": "croppilot-engine",
         "contract_version": "1.0",
         "mode": os.getenv("ENGINE_MODE", "demo"),
     }

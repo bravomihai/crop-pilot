@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../../scripts/load-env.mjs";
 import { defineConfig } from "prisma/config";
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -6,6 +6,6 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DATABASE_URL ??
-      "postgresql://fieldshift:fieldshift@localhost:5432/fieldshift",
+      "postgresql://croppilot:croppilot@localhost:5432/croppilot",
   },
 });

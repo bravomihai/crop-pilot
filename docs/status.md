@@ -39,7 +39,7 @@ runtime and interface states; earlier checks are not new claims of scientific va
   test-only setting instead.
 - P3: agronomist review of the southern rules and the provisional thermal-band shifts;
   high-altitude and wetland sites are only disclosed, not excluded.
-- P5: AWS deployment and real secrets; confirm the GitHub workflow passes. The Python
+- P5: VPS deployment and real secrets; confirm the GitHub workflow passes. The Python
   engine keeps computing after a cancelled request (no cooperative cancellation).
 
 ## Intentionally outside this version
@@ -112,7 +112,7 @@ token could not publish workflows. To activate it, move the file to
 - Production HTTPS through Caddy, direct service ports removed, and rotating logs.
   Certificate issuance/public access were not tested: no domain/deployment was selected.
 - AWS: EC2 + IAM/SSM template, access rules, encrypted disk, and SecureString loading
-  into ignored `.env.production`. Documentation: `infra/aws/README.md`.
+  into ignored `.env.production`. This historical scaffold was removed when switching to the VPS setup; see `infra/vps.md`.
   Configuration is prepared; no AWS resources or production secrets were created.
 
 ### Team dependencies and limits
@@ -284,3 +284,32 @@ The exception is local to the icon element; its path remains normally checked.
 
 Verified: contracts/web TypeScript, all 27 existing UI checks, and whitespace
 validation. A browser reload with Dark Reader enabled was not verified.
+
+## CropPilot, root configuration and VPS hosting — 2026-11-15
+
+Renamed product branding, workspace packages, service health labels, and deployment
+names to CropPilot. The Python module directory remains `fieldshift` for internal
+imports. The repository remote is now `git@github.com:bravomihai/crop-pilot.git`.
+
+Docker Compose and native web/engine/Prisma commands now share a single ignored root
+`.env`. This checkout has generated local credentials; `.env.example` contains only
+placeholders for new checkouts. Per-service environment files/templates were removed.
+Real mode is enabled (`ENGINE_MODE=computed`, `ENABLE_NASA_POWER=true`, frontend fixtures
+disabled). The website already forwards validated calculations to Python with the
+shared server-side token. AWS provisioning was removed; `infra/vps.md` documents the
+existing HTTPS Compose profile for a user-managed server. The connectivity helper is
+now read-only and does not stop services or switch the engine to demonstration mode.
+
+Replaced Anthropic with OpenAI Responses for English-only summaries. The configurable
+default is `gpt-6-luna`; the key belongs in root `OPENAI_API_KEY` and is not required
+for calculated recommendations. The UI language selector was removed, non-English
+summary requests are rejected, and existing numeric checks are retained. Incomplete,
+refused, timed-out or failed summaries leave the original calculated plans available.
+Response storage is disabled for the OpenAI request.
+
+Verified: production build, contracts/web TypeScript, 33 UI checks, 97 backend checks,
+3 configuration-loader checks, 26 focused Python checks, Python syntax, contract schema
+regeneration without changes, and local/production Compose configuration. Checked
+that web and engine receive the same generated token and production exposes only
+HTTPS ingress. UI testing, a live OpenAI call, Docker startup/migrations and VPS
+deployment are left to the user. No paid API call or deployment was performed.

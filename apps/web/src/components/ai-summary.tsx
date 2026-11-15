@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationResult } from "@croppilot/contracts";
 import { summaryPayload } from "@/lib/summary-payload";
 
 type PlanSummary = {
@@ -12,31 +12,7 @@ type PlanSummary = {
 };
 type Summary = { headline: string; plans: PlanSummary[] };
 
-const TEXT = {
-  en: {
-    button: "Summarise in plain words",
-    busy: "Writing the summary…",
-    label: "AI summary of the calculated results",
-    note: "Written by AI from the results below, without adding facts; every number is checked against the results. The detailed plans stay the reference.",
-    why: "Why",
-    watch: "Watch out for",
-    ask: "Ask your agronomist",
-    current: "Your current rotation",
-  },
-  ro: {
-    button: "Rezumat pe înțelesul tuturor",
-    busy: "Se scrie rezumatul…",
-    label: "Rezumat AI al rezultatelor calculate",
-    note: "Scris de AI pe baza rezultatelor de mai jos, fără informații noi; fiecare număr este verificat. Planurile detaliate rămân referința.",
-    why: "De ce",
-    watch: "Atenție la",
-    ask: "Întrebați agronomul",
-    current: "Rotația actuală",
-  },
-} as const;
-
 export default function AiSummary({ result }: { result: RecommendationResult }) {
-  const [language, setLanguage] = useState<"en" | "ro">("en");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -47,10 +23,9 @@ export default function AiSummary({ result }: { result: RecommendationResult }) 
     return () => request.current?.abort();
   }, [result]);
   if (result.mode !== "computed" || !result.plans.length) return null;
-  const t = TEXT[language];
   const names = new Map([
     ...result.plans.map((plan) => [plan.id, plan.label] as const),
-    ...(result.baseline ? [[result.baseline.id, t.current] as const] : []),
+    ...(result.baseline ? [[result.baseline.id, "Your current rotation"] as const] : []),
   ]);
 
   async function run() {
@@ -63,7 +38,7 @@ export default function AiSummary({ result }: { result: RecommendationResult }) 
       const response = await fetch("/api/summary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result: summaryPayload(result), language }),
+        body: JSON.stringify({ result: summaryPayload(result) }),
         signal: controller.signal,
       });
       const body = await response.json().catch(() => ({}));
@@ -80,38 +55,31 @@ export default function AiSummary({ result }: { result: RecommendationResult }) 
   return (
     <section className="ai-summary" aria-labelledby="ai-summary-heading" aria-busy={busy}>
       <div className="evidence-heading">
-        <h3 id="ai-summary-heading">{t.label}</h3>
+        <h3 id="ai-summary-heading">AI summary of the calculated results</h3>
         <div className="ai-summary-controls">
-          <label htmlFor="ai-summary-language">
-            <span className="sr-only">Language</span>
-            <select id="ai-summary-language" value={language} onChange={(event) => { request.current?.abort(); setBusy(false); setLanguage(event.target.value as "en" | "ro"); setSummary(null); setError(""); }}>
-              <option value="en">English</option>
-              <option value="ro">Română</option>
-            </select>
-          </label>
           <button type="button" className="ai-summary-button" onClick={run} disabled={busy}>
-            {busy ? t.busy : t.button}
+            {busy ? "Writing the summary…" : "Summarise in plain words"}
           </button>
         </div>
       </div>
       {error && <p className="ai-summary-error" role="status">{error}</p>}
       {summary && (
-        <div className="ai-summary-body" lang={language}>
+        <div className="ai-summary-body" lang="en">
           <p className="ai-summary-headline">{summary.headline}</p>
           {summary.plans.map((plan) => (
             <article key={plan.id}>
               <h4>{names.get(plan.id) ?? plan.id}</h4>
               <p>{plan.in_short}</p>
-              <p><strong>{t.why}:</strong> {plan.why}</p>
+              <p><strong>Why:</strong> {plan.why}</p>
               {plan.watch_out.length > 0 && (
-                <p><strong>{t.watch}:</strong> {plan.watch_out.join(" ")}</p>
+                <p><strong>Watch out for:</strong> {plan.watch_out.join(" ")}</p>
               )}
               {plan.ask_your_agronomist.length > 0 && (
-                <p><strong>{t.ask}:</strong> {plan.ask_your_agronomist.join(" ")}</p>
+                <p><strong>Ask your agronomist:</strong> {plan.ask_your_agronomist.join(" ")}</p>
               )}
             </article>
           ))}
-          <p className="evidence-note">{t.note}</p>
+          <p className="evidence-note">Written by AI from the calculated results. Numbers are checked against those results; the detailed plans remain the reference.</p>
         </div>
       )}
     </section>

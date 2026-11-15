@@ -1,4 +1,4 @@
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 
 // Copied from services/engine/fieldshift/evaluator/rules/ro_south.json (region.boxes).
 // Keep this display-only copy in sync with the rules owner; do not import engine files.

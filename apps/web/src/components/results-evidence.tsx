@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { RecommendationRequest, RecommendationResult } from "@fieldshift/contracts";
+import type { RecommendationRequest, RecommendationResult } from "@croppilot/contracts";
 import ReplayChart from "./charts/replay-chart";
 import ClimateTrendChart from "./charts/climate-trend-chart";
 import {

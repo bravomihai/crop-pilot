@@ -37,8 +37,9 @@ jobs:
       - run: git diff --exit-code -- packages/contracts/schemas
       - run: pnpm db:generate
       - run: pnpm typecheck
+      - run: pnpm test:config
       - run: pnpm test:backend
-      - run: pnpm --filter @fieldshift/web test:ui
+      - run: pnpm --filter @croppilot/web test:ui
       - run: pnpm db:deploy
       - run: pnpm test:cache
       - run: pnpm build
@@ -50,20 +51,19 @@ jobs:
           version: "0.9.5"
       - run: uv sync --project services/engine --frozen --extra dev
       - run: services/engine/.venv/bin/python -m pytest services/engine/tests
-      - run: uvx --from cfn-lint==1.60.1 cfn-lint infra/aws/host.yaml
-      - run: python -m py_compile infra/aws/configure.py infra/cache-maintenance.py infra/check-local.py
+      - run: python -m py_compile infra/cache-maintenance.py infra/check-local.py
       - name: Validate ingress configuration
         run: |
           docker run --rm --add-host web:127.0.0.1 -v "$PWD/infra/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.28-alpine nginx -t
-          docker run --rm -e DOMAIN=fieldshift.example.com -e ACME_EMAIL=operations@example.com -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -e DOMAIN=croppilot.example.com -e ACME_EMAIL=operations@example.com -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Validate Compose without real secrets
         env:
           POSTGRES_PASSWORD: ci-only-password
           INTERNAL_API_TOKEN: ci-only-token-at-least-32-characters
-          DOMAIN: fieldshift.example.com
+          DOMAIN: croppilot.example.com
           ACME_EMAIL: operations@example.com
         run: |
           docker compose config --quiet
           docker compose -f compose.yaml -f infra/compose.production.yaml config --quiet
-      - run: docker build -f apps/web/Dockerfile -t fieldshift-web:ci .
-      - run: docker build -f services/engine/Dockerfile -t fieldshift-engine:ci .
+      - run: docker build -f apps/web/Dockerfile -t croppilot-web:ci .
+      - run: docker build -f services/engine/Dockerfile -t croppilot-engine:ci .

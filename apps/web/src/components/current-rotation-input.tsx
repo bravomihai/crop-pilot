@@ -1,4 +1,4 @@
-import type { RecommendationRequest } from "@fieldshift/contracts";
+import type { RecommendationRequest } from "@croppilot/contracts";
 import { RULE_CROPS } from "@/lib/crop-options";
 
 export default function CurrentRotationInput({

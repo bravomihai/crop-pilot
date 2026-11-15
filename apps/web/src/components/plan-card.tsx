@@ -1,4 +1,4 @@
-import type { RotationPlan } from "@fieldshift/contracts";
+import type { RotationPlan } from "@croppilot/contracts";
 import ScoreMeters from "./charts/score-meters";
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {

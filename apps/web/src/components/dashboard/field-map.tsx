@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Location } from "@fieldshift/contracts";
+import type { Location } from "@croppilot/contracts";
 import type { Map as LeafletMap } from "leaflet";
 import Icon from "./icon";
 import RegionalMapContext from "../regional-map-context";
