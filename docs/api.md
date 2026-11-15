@@ -62,6 +62,7 @@ that do not use these fields need no changes. Complete examples:
 | `land_cover: {status, message}` | computed result | Satellite screening: `cropland`, `incompatible`, or `uncertain`; display the message prominently |
 | `assessment_crops: crop_id[0–15]` | request | Optional individual crops to screen; an empty list requests alternative crop screening without choosing a crop |
 | `crop_assessment: {selected, alternatives, disclaimer}` | computed result | Individual crop assessments and up to three alternatives; separate from successive rotation plans |
+| `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
 
 `productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
 

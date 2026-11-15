@@ -152,6 +152,12 @@ def _replay(raw, rotation: tuple[str, ...], errors: list[str]) -> tuple[dict, ..
                         raise ValueError(f"score {name} outside [0, 1]")
                     scores[name] = None if value is None else float(value)
             season = {"season_start_year": year, "scores": scores}
+            free = entry.get("field_free_from")
+            if free is not None:
+                if not isinstance(free, str):
+                    raise ValueError("field_free_from must be an ISO date")
+                date.fromisoformat(free)  # ValueError when malformed
+                season["field_free_from"] = free
             steps = entry.get("steps")
             if steps is not None:
                 if not isinstance(steps, list) or len(steps) > len(rotation):

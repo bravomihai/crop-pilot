@@ -80,6 +80,7 @@
       "replay": [
         {
           "season_start_year": 2010,
+          "field_free_from": "2010-10-01",
           "scores": {
             "water": 0.81,
             "climate": 0.55,
@@ -123,6 +124,7 @@
         },
         {
           "season_start_year": 2011,
+          "field_free_from": "2011-10-01",
           "scores": {
             "water": 0.74,
             "climate": 0.5,
@@ -166,6 +168,7 @@
         },
         {
           "season_start_year": 2012,
+          "field_free_from": "2012-10-01",
           "scores": {
             "water": 0.62,
             "climate": 0.41,
@@ -301,6 +304,7 @@
     "replay": [
       {
         "season_start_year": 2010,
+        "field_free_from": "2010-10-01",
         "scores": {
           "water": 0.66,
           "climate": 0.52,
@@ -344,6 +348,7 @@
       },
       {
         "season_start_year": 2011,
+        "field_free_from": "2011-10-01",
         "scores": {
           "water": 0.58,
           "climate": 0.47,
@@ -387,6 +392,7 @@
       },
       {
         "season_start_year": 2012,
+        "field_free_from": "2012-10-01",
         "scores": {
           "water": 0.44,
           "climate": 0.38,

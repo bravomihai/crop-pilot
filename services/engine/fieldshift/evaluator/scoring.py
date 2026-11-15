@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from .schedule import Step
 from .weather import Weather
 
@@ -101,7 +103,14 @@ def ph_suitability(ph: float | None, crop: dict) -> float | None:
     return ramp(ph, crop["ecocrop"]["ph_abs"], crop["ecocrop"]["ph_opt"])
 
 
-def soil_index(steps: list[Step], classes: list[str | None], crops: dict, rules: dict, slope_pct: float | None) -> dict:
+def soil_index(
+    steps: list[Step],
+    classes: list[str | None],
+    crops: dict,
+    rules: dict,
+    slope_pct: float | None,
+    field_free: date | None = None,
+) -> dict:
     """Rule-based soil index (0–1) from succession, diversity, cover and residue.
 
     An expert index, not a measurement: the weights live in the rules file and are listed
@@ -118,8 +127,13 @@ def soil_index(steps: list[Step], classes: list[str | None], crops: dict, rules:
     legume = any(crops[c]["legume"] for c in ids)
     diversity = 0.6 * family_score + 0.4 * (1.0 if legume else 0.0)
 
-    total_days = (steps[-1].harvest_date - steps[0].sow_date).days
-    bare_days = sum((b.sow_date - a.harvest_date).days for a, b in zip(steps, steps[1:]))
+    # The field is bare from the day it becomes free (`available_from`) until the first
+    # sowing, not only between crops: a plan that waits most of a year for its first crop
+    # must not look as well covered as one that starts at once.
+    start = field_free if field_free is not None and field_free < steps[0].sow_date else steps[0].sow_date
+    initial_bare_days = (steps[0].sow_date - start).days
+    total_days = (steps[-1].harvest_date - start).days
+    bare_days = initial_bare_days + sum((b.sow_date - a.harvest_date).days for a, b in zip(steps, steps[1:]))
     cover = 1.0 - bare_days / total_days if total_days > 0 else 0.0
 
     residue = sum(crops[c]["residue"] for c in ids) / len(ids)
@@ -137,6 +151,7 @@ def soil_index(steps: list[Step], classes: list[str | None], crops: dict, rules:
         "score": score,
         "components": {k: (None if v is None else round(v, 3)) for k, v in parts.items()},
         "bare_days": bare_days,
+        "initial_bare_days": initial_bare_days,
         "total_days": total_days,
         "legume": legume,
         "families": sorted(families),

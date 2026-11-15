@@ -16,6 +16,14 @@ localhost returned three plans and potato/pea assessments with uncertain land co
 Node 26 was used despite the repository's Node version range. These checks do not
 validate crop advice or current land use.
 
+On the later 2026-11-15 main integration, 262 Python tests, 47 web UI tests, 123 web
+backend tests, typechecking, and contract generation passed. The UI fixture checks
+include historical challenge comparisons and the initial wait before sowing. The
+offline engine integration test stubs both point and boundary terrain requests.
+Local web and engine health endpoints responded; the running engine was not restarted
+or tested with the newly merged code. Node 26 remains outside the supported range.
+These checks do not validate agronomic recommendations.
+
 ## Current integrated state
 
 - The application has a Next.js interface/backend, a Python engine, generated Zod/JSON
@@ -391,6 +399,54 @@ usable; Romanian labels display with diacritics; print rules keep only the resul
 **Not verified live:** an actual AI summary (no `ANTHROPIC_API_KEY`; covered by tests
 with a mocked client), NGINX/Caddy limits (configuration only), Docker and AWS.
 
+## Bare soil before the first crop and printed inputs — 2026-11-15
+
+- P3's soil score now counts the time from the field availability date to the first
+  sowing as bare soil (`scoring.soil_index`, `initial_bare_days`); before, only gaps
+  between crops counted, so a plan waiting about ten months for its first crop looked as
+  well covered as one starting at once. The soil summary mentions a wait of two months or
+  more, and the cover-crop check covers it. Weights and thresholds are unchanged and still
+  await agronomist review; P3 (Tudor) should confirm the change.
+- The rotation calendar shows that wait as a hatched bare-soil gap.
+- The printed sheet starts with "What was entered": field point, availability date,
+  previous crop, current rotation, soil, irrigation, priorities, avoided crops, scenario
+  and calculation reference. It is hidden on screen.
+- The P4 report no longer says computed mode is unavailable over HTTP.
+
+## Survival Mode — 2026-11-15
+
+"Challenge my plan" in the results opens Survival Mode (`docs/survival-mode.md`): the
+worst drought, heat and erratic-rain years are picked from observed `climate_context`,
+and every rotation is compared on the same replayed season, using P3's existing replay
+scores and per-crop evidence. No new agronomic calculation; no AI model involved.
+
+- **Contract:** optional `plan.replay[].field_free_from` (historical start date of each
+  replay), written by P3 (`evaluator/core.py`), checked and forwarded by P4
+  (`recommender/evaluation.py`), schema regenerated, full example updated. Older results
+  stay valid; the frontend then derives the alignment and says so.
+- **Automated checks (all passing):** Python 230 passed (2 new in
+  `test_replay_climate.py`); web `test:backend` 115/115 (19 new in
+  `tests/survival.test.ts`: season selection, same-start comparison, determinism and
+  ties, unknown scores, no baseline, one plan, missing data, different replay periods,
+  score differences, uncertainty notes, scenario vs observed, demo, moved request date);
+  `test:ui` 37/37 (4 new: button, accessible panel, unavailable challenge, reveal);
+  TypeScript; contract generation reproduces the committed schema; production build.
+- **Live check (computed mode, NASA POWER):** engine and Next.js started locally;
+  Fundulea (Călărași), previous crop maize, current rotation maize → winter wheat,
+  loamy, rain-fed. Status `complete`, 3 plans plus the current rotation, climate record
+  2006–2025, 16 seasons shared by every rotation. In the browser: drought **2022**
+  (ET₀ 1117 − rain 425 = 692 mm deficit; water scores current 66, Plan 1 68, Plan 2 64,
+  Plan 3 50), heat **2012** (60 days above 32 °C; record maximum 2024 disclosed as not
+  replayable for every rotation), erratic rain **2016** (19-day dry spell, 6 heavy-rain
+  days). Each value was compared with the raw API response in the page. Decision flow
+  tested with mouse and keyboard (Plan 3: −16 points; Plan 1: +2 points). With **+2 °C**
+  the same observed years and evidence remained, the scores changed to the scenario
+  values (drought: 58 / 64 / 65 / 61) and the panel labelled them scenario-adjusted.
+  Mobile (375 px): one-column cards, no horizontal overflow.
+- **Not verified:** screen-reader software (markup checked by tests: labelled radio
+  group, `aria-pressed`, bar text alternatives, live region); other Romanian locations;
+  Docker/AWS deployment.
+
 ## SVG extension hydration compatibility — 2026-11-15
 
 The shared dashboard Icon component now suppresses hydration attribute warnings
@@ -532,3 +588,40 @@ validation is implied.
 The CI/CD correction was independently verified by the successful automatic
 main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
 returned three computed plans of three crops each and passed the shared schema.
+
+
+## VPS engine permissions and CI triggers — 2026-11-15
+
+Main run 43702564664 passed application checks but failed the deployment health
+gate: new Python files inherited restrictive VPS checkout ACLs. Docker copied
+their root-owned permissions into the image, so the non-root engine could not
+read `fieldshift/api.py`. The service was restored by adding read/traverse
+permissions to public source inside the engine image; host secrets were unchanged.
+The recovered engine, web, gateway and maintenance services passed Compose
+health checks and the local computed-engine connectivity check.
+
+The engine Dockerfile now normalizes public source permissions before installing
+the package. Its existing CI build also verifies a non-root import with a
+restricted source file, without network access. CI runs on PRs and `main` pushes;
+feature branch pushes no longer create duplicate PR/push runs. Production health
+checks and the owner-only deployment gate remain required.
+
+
+Verified locally: the image built from a restricted source file imports the API
+as UID 1001 with networking disabled; workflow lint and six deployment guard
+tests pass. Public HTTPS serves revision 76c4c58 and reports the recovered engine
+as reachable in computed mode. The full GitHub suite and automatic deployment
+will verify the permanent change after merge.
+
+
+### Survival Mode integration with current production
+
+Integrated PR #17 on the maintainer branch without altering the contributor's
+branch. Its historical replay field, interface and tests merge cleanly with
+the current main. Retained the image permission fix, PR/main-only CI triggers,
+privacy-safe engine logs and owner-only deployment restrictions.
+
+Verified locally: 118 backend tests, 40 UI tests, 3 configuration checks,
+TypeScript and regenerated schemas matching the committed contract. Full Python,
+database, build and container checks run in GitHub before merge. No agronomic
+validation is implied.

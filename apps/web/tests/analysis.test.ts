@@ -50,6 +50,24 @@ test("baseline and alternatives share the same full calendar axis and long gaps 
   assert.ok(bareGaps(full.plans[0]).some((gap) => gap.long));
   assert.equal(timelineData([]), null);
 });
+test("the wait before the first crop is a bare-soil gap and starts the axis", () => {
+  const plan = full.plans[0];
+  const firstSowing = plan.steps[0].sowing_window.start;
+  // Field free about ten months earlier than the first sowing.
+  const freeFrom = new Date(Date.parse(`${firstSowing}T00:00:00Z`) - 300 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const gaps = bareGaps(plan, freeFrom);
+  const initial = gaps.find((gap) => gap.initial);
+  assert.ok(initial, "an initial gap is reported");
+  assert.equal(new Date(initial.start).toISOString().slice(0, 10), freeFrom);
+  assert.equal(new Date(initial.end).toISOString().slice(0, 10), firstSowing);
+  assert.equal(initial.long, true);
+  assert.equal(bareGaps(plan).some((gap) => gap.initial), false, "without a date, no initial gap");
+  assert.equal(bareGaps(plan, firstSowing).some((gap) => gap.initial), false, "sown on the free day: no gap");
+  const axis = timelineData([plan], freeFrom)!;
+  assert.equal(new Date(axis.start).toISOString().slice(0, 7), freeFrom.slice(0, 7));
+});
 test("simple trend ignores unknown years instead of treating them as zero", () => {
   const trend = linearTrend([
     { year: 2020, value: 10 },

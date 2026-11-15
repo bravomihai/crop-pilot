@@ -39,7 +39,10 @@ The existing main rules require PRs and restrict merges to the repository admin.
 
 ## What Actions does
 
-1. Run existing contract, web, Python, database, ingress and Docker build checks.
+1. Run contract, web, Python, database, ingress and Docker checks on PRs and
+   pushes to `main`. Feature branch pushes use the PR run without a duplicate
+   push run. Verify the built engine imports as its non-root runtime user, even
+   when the build context has restrictive host permissions.
 2. Connect only after CI succeeds, using the production environment and strict
    SSH host verification. PR jobs receive no deployment credentials.
 3. Acquire `.git/croppilot-deploy.lock`; require a clean main checkout and ignored

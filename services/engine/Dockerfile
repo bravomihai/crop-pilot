@@ -7,7 +7,10 @@ COPY packages/contracts/examples /app/packages/contracts/examples
 COPY services/engine /app/services/engine
 ENV CROPPILOT_CONTRACTS=/app/packages/contracts UV_LINK_MODE=copy
 WORKDIR /app/services/engine
-RUN uv sync --frozen --no-dev --no-editable && useradd --system --uid 1001 engine
+# Host checkout ACLs must not make public source unreadable to the runtime user.
+RUN chmod -R a+rX /app/services/engine /app/packages/contracts \
+    && uv sync --frozen --no-dev --no-editable \
+    && useradd --system --uid 1001 engine
 USER engine
 EXPOSE 8000
 CMD [".venv/bin/uvicorn", "fieldshift.api:app", "--host", "0.0.0.0", "--port", "8000"]

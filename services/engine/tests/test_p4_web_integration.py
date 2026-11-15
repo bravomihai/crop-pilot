@@ -94,6 +94,11 @@ def p2_built_environment(request: dict) -> dict:
         ),
         mock.patch.object(
             data_service,
+            "fetch_slope",
+            lambda *args: (None, [], ["SRTM slope not queried (offline test)."]),
+        ),
+        mock.patch.object(
+            data_service,
             "fetch_slopes",
             lambda points: (
                 [None] * len(points),
@@ -343,6 +348,7 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
     # PR #7 fixed the audit finding: dew point and elevation now reach the data, so every
     # day uses FAO-56 Penman-Monteith (no sea-level or Hargreaves fallback).
     assert env["static"]["elevation_m"] == environment()["static"]["elevation_m"]
+    assert "slope_pct" not in env["static"]
     assert env["quality"]["et0_methods"]["hargreaves"] == 0
     assert env["quality"]["missing"]["dewpoint"] == 0
     result = run(request, env)
@@ -351,17 +357,9 @@ def test_p2_build_environment_output_is_accepted_without_et0_bias():
     assert result["monthly_climate"] and "climate_context" in result
     assert not any("Elevation is missing" in g for g in result["data_gaps"])
     assert any("SoilGrids not queried" in g for g in result["data_gaps"]), "P2 gaps reach the farmer"
-    # Missing optional slope data can change the soil score; other evidence is unchanged.
     reference = cached_run(request)
     shown = lambda r: [
-        (
-            tuple(step["crop_id"] for step in plan["steps"]),
-            {
-                criterion: score
-                for criterion, score in plan["scores"].items()
-                if criterion != "soil"
-            },
-        )
+        (tuple(step["crop_id"] for step in plan["steps"]), plan["scores"])
         for plan in r["plans"] + [r["baseline"]]
     ]
     assert shown(result) == shown(reference)
