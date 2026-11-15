@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { RecommendationResult } from "@croppilot/contracts";
 import { summaryPayload } from "@/lib/summary-payload";
 
@@ -11,78 +11,100 @@ type PlanSummary = {
   ask_your_agronomist: string[];
 };
 type Summary = { headline: string; plans: PlanSummary[] };
+type State =
+  | { status: "idle" | "loading" | "unavailable" }
+  | { status: "ready"; summary: Summary };
 
-export default function AiSummary({ result }: { result: RecommendationResult }) {
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const request = useRef<AbortController | null>(null);
+/**
+ * Asks the server for a plain-words explanation of a calculated result as soon as it is
+ * shown. When the server has no AI set up, or the explanation fails its checks, the page
+ * simply keeps the calculated texts: nothing is shown in its place.
+ */
+function usePlainWords(result: RecommendationResult): State {
+  const [state, setState] = useState<State>({ status: "idle" });
+  const eligible = result.mode === "computed" && result.plans.length > 0;
   useEffect(() => {
-    setSummary(null);
-    setError("");
-    return () => request.current?.abort();
-  }, [result]);
-  if (result.mode !== "computed" || !result.plans.length) return null;
-  const names = new Map([
-    ...result.plans.map((plan) => [plan.id, plan.label] as const),
-    ...(result.baseline ? [[result.baseline.id, "Your current rotation"] as const] : []),
-  ]);
-
-  async function run() {
-    request.current?.abort();
-    const controller = new AbortController();
-    request.current = controller;
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch("/api/summary", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ result: summaryPayload(result) }),
-        signal: controller.signal,
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error || "The summary is not available right now.");
-      setSummary(body as Summary);
-    } catch (caught) {
-      if (!controller.signal.aborted)
-        setError(caught instanceof Error ? caught.message : "The summary is not available right now.");
-    } finally {
-      if (request.current === controller) setBusy(false);
+    if (!eligible) {
+      setState({ status: "idle" });
+      return;
     }
-  }
+    const controller = new AbortController();
+    setState({ status: "loading" });
+    fetch("/api/summary", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ result: summaryPayload(result) }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error();
+        setState({ status: "ready", summary: (await response.json()) as Summary });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setState({ status: "unavailable" });
+      });
+    return () => controller.abort();
+  }, [result, eligible]);
+  return state;
+}
 
-  return (
-    <section className="ai-summary" aria-labelledby="ai-summary-heading" aria-busy={busy}>
-      <div className="evidence-heading">
-        <h3 id="ai-summary-heading">AI summary of the calculated results</h3>
-        <div className="ai-summary-controls">
-          <button type="button" className="ai-summary-button" onClick={run} disabled={busy}>
-            {busy ? "Writing the summary…" : "Summarise in plain words"}
-          </button>
-        </div>
+/** The explanation in plain words, inside the "At a glance" card. */
+export default function PlainWordsSummary({ result }: { result: RecommendationResult }) {
+  const state = usePlainWords(result);
+  if (state.status === "loading")
+    return (
+      <div className="plain-words is-loading" role="status">
+        <span className="plain-words-skeleton" aria-hidden="true" />
+        <span className="plain-words-skeleton short" aria-hidden="true" />
+        <span className="sr-only">Writing an explanation of these results…</span>
       </div>
-      {error && <p className="ai-summary-error" role="status">{error}</p>}
-      {summary && (
-        <div className="ai-summary-body" lang="en">
-          <p className="ai-summary-headline">{summary.headline}</p>
-          {summary.plans.map((plan) => (
-            <article key={plan.id}>
-              <h4>{names.get(plan.id) ?? plan.id}</h4>
-              <p>{plan.in_short}</p>
-              <p><strong>Why:</strong> {plan.why}</p>
-              {plan.watch_out.length > 0 && (
-                <p><strong>Watch out for:</strong> {plan.watch_out.join(" ")}</p>
-              )}
-              {plan.ask_your_agronomist.length > 0 && (
-                <p><strong>Ask your agronomist:</strong> {plan.ask_your_agronomist.join(" ")}</p>
-              )}
-            </article>
+    );
+  if (state.status !== "ready") return null;
+  const { summary } = state;
+  const names = new Map<string, string>([
+    ...result.plans.map((plan, index) => [plan.id, `Plan ${index + 1}`] as [string, string]),
+    ...(result.baseline ? [[result.baseline.id, "Your current rotation"] as [string, string]] : []),
+  ]);
+  const plans = summary.plans.filter((plan) => names.has(plan.id));
+  const extra = plans.some((plan) => plan.watch_out.length || plan.ask_your_agronomist.length);
+  return (
+    <div className="plain-words" lang="en">
+      <p className="plain-words-headline">{summary.headline}</p>
+      {plans.length > 0 && (
+        <ul className="plain-words-plans">
+          {plans.map((plan) => (
+            <li key={plan.id}>
+              <strong>{names.get(plan.id)}:</strong> {plan.in_short} {plan.why}
+            </li>
           ))}
-          <p className="evidence-note">Written by AI from the calculated results. Numbers are checked against those results; the detailed plans remain the reference.</p>
-        </div>
+        </ul>
       )}
-    </section>
+      {extra && (
+        <details className="plain-words-more">
+          <summary>Risks and questions for your agronomist, explained</summary>
+          {plans.map((plan) =>
+            plan.watch_out.length || plan.ask_your_agronomist.length ? (
+              <div key={plan.id}>
+                <h4>{names.get(plan.id)}</h4>
+                {plan.watch_out.length > 0 && (
+                  <p>
+                    <strong>Watch out for:</strong> {plan.watch_out.join(" ")}
+                  </p>
+                )}
+                {plan.ask_your_agronomist.length > 0 && (
+                  <p>
+                    <strong>Ask your agronomist:</strong> {plan.ask_your_agronomist.join(" ")}
+                  </p>
+                )}
+              </div>
+            ) : null,
+          )}
+        </details>
+      )}
+      <p className="plain-words-note">
+        Written by AI from the calculated results; every number is checked against them.
+      </p>
+    </div>
   );
 }
 

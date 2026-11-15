@@ -9,7 +9,7 @@ import RotationTimeline from "./charts/rotation-timeline";
 import ResultsWhatIf from "./results-what-if";
 import { ClimateCard, PlanReplay } from "./results-evidence";
 import Glossary from "./glossary";
-import AiSummary, { PrintSheetButton } from "./ai-summary";
+import { PrintSheetButton } from "./ai-summary";
 import ResultsAtAGlance, { BackToSummary } from "./results-at-a-glance";
 
 export default function RecommendationResults({
@@ -117,8 +117,7 @@ export default function RecommendationResults({
               </p>
             ))}
           <ResultsAtAGlance result={result} />
-          <AiSummary result={result} />
-          <section className="plan-details" id="plan-details" aria-labelledby="plan-details-title">
+          <section className="plan-details" id="plan-details" tabIndex={-1} aria-labelledby="plan-details-title">
             <h3 id="plan-details-title" className="details-title">The plans in detail</h3>
             <ScoreComparison plans={result.plans} baseline={result.baseline} />
             <RotationTimeline plans={result.plans} baseline={result.baseline} />

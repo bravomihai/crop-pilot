@@ -379,10 +379,10 @@ test("results explain the terms the challenge names, in plain words", async () =
   assert.ok(CROP_ROLES.some((entry) => /Legumes/.test(entry.role)));
 });
 
-test("calculated results offer an English-only summary without a language selector", () => {
+test("the plain-words explanation loads by itself, without a button or language selector", () => {
   const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
   const html = renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" }));
-  assert.match(html, /Summarise in plain words/);
+  assert.doesNotMatch(html, /Summarise in plain words|ai-summary-button/);
   assert.doesNotMatch(html, /ai-summary-language|Rezumat|Română/);
 });
 

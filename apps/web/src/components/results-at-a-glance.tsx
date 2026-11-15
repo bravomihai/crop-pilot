@@ -1,3 +1,5 @@
+"use client";
+import type { MouseEvent } from "react";
 import type { RecommendationResult } from "@croppilot/contracts";
 import {
   compareWithCurrent,
@@ -7,14 +9,32 @@ import {
   mainRisks,
   strongest,
 } from "@/lib/result-glance";
-import { PrintSheetButton } from "./ai-summary";
+import PlainWordsSummary, { PrintSheetButton } from "./ai-summary";
+
+/**
+ * Scrolls only the results list to a section. A plain anchor jump also scrolls the
+ * panel around the list, which pushed the panel header (full screen, edit) out of view.
+ */
+function jumpTo(event: MouseEvent<HTMLAnchorElement>, id: string) {
+  const target = document.getElementById(id);
+  const list = target?.closest<HTMLElement>(".map-results-scroll");
+  if (!target || !list) return;
+  event.preventDefault();
+  const top = target.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop - 12;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  list.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+  target.focus({ preventScroll: true });
+}
 
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(
     new Date(`${value}T12:00:00`),
   );
 
-/** The result in a few lines, at the top of the results. Built from the result, not by AI. */
+/**
+ * The result in a few lines, at the top of the results. The facts below come straight from
+ * the result; a plain-words explanation is added above them when the server can write one.
+ */
 export default function ResultsAtAGlance({ result }: { result: RecommendationResult }) {
   const [best, ...others] = result.plans;
   if (!best) return null;
@@ -39,6 +59,7 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
           {date(first.sowing_window.end)}.
         </p>
       )}
+      <PlainWordsSummary result={result} />
       <dl className="glance-facts">
         {result.baseline && comparison.length > 0 && (
           <div>
@@ -107,7 +128,7 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
         )}
       </dl>
       <div className="glance-actions">
-        <a className="glance-link" href="#plan-details">
+        <a className="glance-link" href="#plan-details" onClick={(event) => jumpTo(event, "plan-details")}>
           See the plans in detail
         </a>
         {result.mode === "computed" && <PrintSheetButton />}
@@ -119,7 +140,7 @@ export default function ResultsAtAGlance({ result }: { result: RecommendationRes
 /** Returns to the summary at the top of the results. */
 export function BackToSummary() {
   return (
-    <a className="back-to-summary" href="#results-summary">
+    <a className="back-to-summary" href="#results-summary" onClick={(event) => jumpTo(event, "results-summary")}>
       ↑ Back to summary
     </a>
   );

@@ -1151,3 +1151,24 @@
 @media print {
   .glance-actions, .back-to-summary, .results-end, .fullscreen-toggle { display: none !important; }
 }
+
+/* The panel itself never scrolls; only its results list does. */
+.map-results-panel { overflow: clip; }
+.plan-details:focus { outline: none; }
+
+/* Plain-words explanation inside "At a glance". */
+.plain-words { margin: 4px 0 14px; padding: 12px 14px; border-radius: 10px; background: #123c2f0d; }
+.plain-words-headline { margin: 0 0 8px; font-size: 14px !important; font-weight: 600; line-height: 1.5; }
+.plain-words-plans { margin: 0; padding-left: 16px; display: grid; gap: 6px; }
+.plain-words-plans li { line-height: 1.55; }
+.plain-words-more { margin-top: 8px; }
+.plain-words-more > summary { cursor: pointer; font-size: 12px; font-weight: 600; color: #123c2f; }
+.plain-words-more h4 { margin: 10px 0 4px; font-size: 12px; }
+.plain-words-more p { margin: 0 0 4px; }
+.plain-words-note { margin: 8px 0 0; font-size: 11px !important; color: var(--muted); }
+.plain-words.is-loading { display: grid; gap: 8px; }
+.plain-words-skeleton { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, #123c2f14, #123c2f2a, #123c2f14); background-size: 200% 100%; animation: plain-words-pulse 1.4s ease-in-out infinite; }
+.plain-words-skeleton.short { width: 60%; }
+@keyframes plain-words-pulse { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .plain-words-skeleton { animation: none; } }
+@media print { .plain-words.is-loading, .plain-words-note { display: none !important; } }
