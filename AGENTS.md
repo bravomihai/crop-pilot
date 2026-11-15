@@ -81,7 +81,9 @@ values and metadata. P3/P4 implementation and fixture-based checks are documente
 
 Do not present implemented code or passing fixtures as scientifically validated
 agronomy. Regional rules and model assumptions require local expert review. No
-yield or profit forecast is implemented. `computed` must fail explicitly when required
+yield or profit forecast is implemented. The per-plan money estimate (`plan.economics`) is
+built from county statistics, past prices and published costs: keep it labelled as an
+estimate, show unknown values as unknown, and never let it change the ranking. `computed` must fail explicitly when required
 modules or data are unavailable; never fall back automatically to demo results.
 The POWER adapter alone does not validate the whole engine. Verify external-service
 integration separately. A fixture passing the schema does not prove a working flow.

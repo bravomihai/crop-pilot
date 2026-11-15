@@ -397,6 +397,451 @@
               ],
               "additionalProperties": false
             }
+          },
+          "economics": {
+            "type": "object",
+            "properties": {
+              "currency": {
+                "type": "string",
+                "const": "RON"
+              },
+              "covered_years": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "county": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "per_year": {
+                "type": "object",
+                "properties": {
+                  "income": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "costs": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "subsidies": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "margin": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "crop_order_effect": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "income",
+                  "costs",
+                  "subsidies",
+                  "margin"
+                ],
+                "additionalProperties": false
+              },
+              "crops": {
+                "maxItems": 3,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "crop_id": {
+                      "type": "string"
+                    },
+                    "crop_name": {
+                      "type": "string"
+                    },
+                    "previous_crop": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "previous_rating": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "good",
+                            "ok",
+                            "poor",
+                            "forbidden"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "yield_t_per_ha": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "yield_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "commercial_farms",
+                            "all_farms"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "price_lei_per_t": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "price_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "regional",
+                            "national",
+                            "farmer"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "income": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "costs": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "cost_basis": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "iceadr",
+                            "farmer"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "nitrogen_saving": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "low": {
+                              "type": "number"
+                            },
+                            "typical": {
+                              "type": "number"
+                            },
+                            "high": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "low",
+                            "typical",
+                            "high"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "crop_order_effect": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "crop_id",
+                    "crop_name",
+                    "yield_t_per_ha",
+                    "price_lei_per_t",
+                    "income",
+                    "costs"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "payments": {
+                "maxItems": 12,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "lei_per_ha_year": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "included": {
+                      "type": "string",
+                      "enum": [
+                        "always",
+                        "if_eligible",
+                        "not_included"
+                      ]
+                    },
+                    "condition": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "lei_per_ha_year",
+                    "included",
+                    "condition"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "source_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "currency",
+              "covered_years",
+              "county",
+              "per_year",
+              "crops",
+              "payments",
+              "warnings",
+              "notes",
+              "source_ids"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -751,6 +1196,451 @@
             ],
             "additionalProperties": false
           }
+        },
+        "economics": {
+          "type": "object",
+          "properties": {
+            "currency": {
+              "type": "string",
+              "const": "RON"
+            },
+            "covered_years": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "county": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "per_year": {
+              "type": "object",
+              "properties": {
+                "income": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "low": {
+                          "type": "number"
+                        },
+                        "typical": {
+                          "type": "number"
+                        },
+                        "high": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "low",
+                        "typical",
+                        "high"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "costs": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "low": {
+                          "type": "number"
+                        },
+                        "typical": {
+                          "type": "number"
+                        },
+                        "high": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "low",
+                        "typical",
+                        "high"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "subsidies": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "low": {
+                          "type": "number"
+                        },
+                        "typical": {
+                          "type": "number"
+                        },
+                        "high": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "low",
+                        "typical",
+                        "high"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "margin": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "low": {
+                          "type": "number"
+                        },
+                        "typical": {
+                          "type": "number"
+                        },
+                        "high": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "low",
+                        "typical",
+                        "high"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "crop_order_effect": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "income",
+                "costs",
+                "subsidies",
+                "margin"
+              ],
+              "additionalProperties": false
+            },
+            "crops": {
+              "maxItems": 3,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "crop_id": {
+                    "type": "string"
+                  },
+                  "crop_name": {
+                    "type": "string"
+                  },
+                  "previous_crop": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "previous_rating": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "good",
+                          "ok",
+                          "poor",
+                          "forbidden"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "yield_t_per_ha": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "yield_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "commercial_farms",
+                          "all_farms"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "price_lei_per_t": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "price_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "regional",
+                          "national",
+                          "farmer"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "income": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "costs": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cost_basis": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "iceadr",
+                          "farmer"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nitrogen_saving": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "low": {
+                            "type": "number"
+                          },
+                          "typical": {
+                            "type": "number"
+                          },
+                          "high": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "low",
+                          "typical",
+                          "high"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "crop_order_effect": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "crop_id",
+                  "crop_name",
+                  "yield_t_per_ha",
+                  "price_lei_per_t",
+                  "income",
+                  "costs"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "payments": {
+              "maxItems": 12,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "lei_per_ha_year": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "included": {
+                    "type": "string",
+                    "enum": [
+                      "always",
+                      "if_eligible",
+                      "not_included"
+                    ]
+                  },
+                  "condition": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "lei_per_ha_year",
+                  "included",
+                  "condition"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "source_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "currency",
+            "covered_years",
+            "county",
+            "per_year",
+            "crops",
+            "payments",
+            "warnings",
+            "notes",
+            "source_ids"
+          ],
+          "additionalProperties": false
         }
       },
       "required": [

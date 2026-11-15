@@ -64,8 +64,12 @@ that do not use these fields need no changes. Complete examples:
 | `preferred_crop: crop_id` | request | Optional crop to include in a rotation where an eligible sampled sequence exists; the top-ranked plan remains unchanged |
 | `crop_assessment: {selected, alternatives, disclaimer}` | computed result | Individual crop assessments and up to three alternatives; separate from successive rotation plans |
 | `plan.replay[].field_free_from: date` | result | Added 2026-11-15. P3 writes the historical date each replay started from (`available_from` moved back whole years); P4 forwards it; P1's Survival Mode compares rotations only on seasons with the same date (see `docs/survival-mode.md`) |
+| `money_inputs: {prices_lei_per_t, costs_lei_per_ha}` | request | P1 collects the farmer's own price and cost per crop for the money estimate; not stored |
+| `plan.economics` | result | P3 estimates lei per hectare and year (income, costs, CAP payments, margin; ranges, `null` = unknown); not a forecast and not used for ranking; P1 displays it |
 
-`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast.
+`productivity` is relative potential (EcoCrop, FAO GAEZ), not a yield or profit forecast. `economics`
+is a rough estimate from county yield statistics, past regional prices, published cost budgets and
+reported CAP payment rates (see `docs/economics-design.md`); it is not a forecast either.
 
 The web form sends a selected crop in both `preferred_crop` and `assessment_crops`.
 Among the three alternatives, the recommender keeps the best-ranked plan and, if

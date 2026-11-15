@@ -138,6 +138,36 @@
         "pattern": "^[a-z][a-z0-9_]*$"
       }
     },
+    "money_inputs": {
+      "type": "object",
+      "properties": {
+        "prices_lei_per_t": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100000
+          }
+        },
+        "costs_lei_per_ha": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100000
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "soil": {
       "type": "object",
       "properties": {

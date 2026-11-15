@@ -20,6 +20,8 @@ import { buildChallenge, revealChoice } from "../src/lib/survival";
 import { fullExampleRequest } from "../src/lib/api";
 import { RULE_CROPS } from "../src/lib/crop-options";
 import { compareWithCurrent, firstSentence, keyChecks, keyGaps, mainRisks } from "../src/lib/result-glance";
+import { leiRange, marginLine, signedLei } from "../src/lib/money";
+import { moneyCrops } from "../src/components/money-inputs";
 import {
   DEFAULT_FARMING_PRIORITIES,
   rankDemoCrops,
@@ -272,6 +274,7 @@ test("chosen crop assessment and rotation chart explain uncertainty and the sele
   assert.match(html, /Rotation calendar/);
   assert.match(html, /Outlined bars mark your chosen crop/);
   assert.match(html, /class="timeline-crop is-preferred"/);
+  assert.match(html, /Money per hectare a year/);
 
   const missing = renderToStaticMarkup(createElement(RecommendationResults, {
     result: { ...result, plans: [] }, busy: false, error: "",
@@ -685,4 +688,116 @@ test("the glance helpers use the result as it is", () => {
     }),
     ["No crop history was provided; x."],
   );
+});
+
+test("plan cards show money per hectare a year as an estimate, with unknowns spelled out", () => {
+  const [plan] = fullFixture.plans;
+  const baseline = fullFixture.baseline!;
+  assert.ok(plan.economics && baseline.economics, "the full example carries economics");
+  const html = renderToStaticMarkup(createElement(PlanCard, { plan, number: 1 }));
+  assert.match(html, /Money per hectare a year/);
+  assert.match(html, /estimate/);
+  assert.match(html, /Subsidies and their conditions/);
+  // The example plan includes pea, which has no official price: totals are unknown, not 0.
+  assert.equal(plan.economics.per_year.margin, null);
+  assert.match(html, /plan-money-unknown/);
+  assert.match(html, /Pea: no official recent price series/);
+  assert.match(marginLine(plan.economics)!, /^unknown, because there are no official prices or costs for pea$/);
+  assert.match(marginLine(baseline.economics)!, /^about -?[\d,]+ lei per hectare a year \(range -?[\d,]+ – -?[\d,]+ lei\)$/);
+  assert.equal(marginLine(undefined), null);
+  assert.equal(leiRange(null), "Unknown");
+  assert.equal(leiRange({ low: 1200, typical: 1500, high: 2300 }), "1,200 – 2,300 lei");
+  const results = renderToStaticMarkup(
+    createElement(RecommendationResults, { result: resultSchema.parse({ ...fullFixture, mode: "computed" }), busy: false, error: "" }),
+  );
+  assert.match(results, /Money \(estimate\)/);
+  assert.match(results, /Your current rotation: about/);
+});
+
+test("crops without official figures get a price and cost form; crop order is spelled out", () => {
+  const result = resultSchema.parse({ ...fullFixture, mode: "computed" });
+  const crops = moneyCrops(result);
+  assert.equal(crops[0].id, "pea");
+  assert.ok(crops[0].missing && crops[0].price === undefined);
+  assert.ok(crops.slice(1).every((crop) => !crop.missing));
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, {
+      result,
+      busy: false,
+      error: "",
+      request: fullExampleRequest,
+      onRecalculate: () => {},
+      onRecalculateMoney: () => {},
+    }),
+  );
+  assert.match(html, /id="money-inputs"/);
+  assert.match(html, /There are no official recent figures for pea/);
+  assert.match(html, /Price you get \(lei\/t\)/);
+  assert.match(html, /Add your prices/);
+  // Without a handler (for example the static calculator) the form is not shown.
+  assert.doesNotMatch(
+    renderToStaticMarkup(createElement(RecommendationResults, { result, busy: false, error: "" })),
+    /id="money-inputs"/,
+  );
+  const baseline = renderToStaticMarkup(createElement(PlanCard, { plan: result.baseline!, baseline: true }));
+  assert.match(baseline, /a good previous crop|an acceptable previous crop|a poor previous crop/);
+  assert.match(baseline, /commercial farms in the county/);
+  assert.equal(signedLei(350), "+350 lei");
+  assert.equal(signedLei(-120), "-120 lei");
+});
+
+test("Survival Mode and the money estimate share the results without mixing scores and money", () => {
+  const result = resultSchema.parse({ ...survivalFixture(), mode: "computed" });
+  assert.ok(result.plans[0].economics && result.plans[0].replay?.[0].field_free_from, "fixture has money and dated replays");
+  const html = renderToStaticMarkup(
+    createElement(RecommendationResults, {
+      result,
+      busy: false,
+      error: "",
+      request: fullExampleRequest,
+      onRecalculate: () => {},
+      onRecalculateMoney: () => {},
+    }),
+  );
+  // Order: summary, then the stress test, then the plan details holding the money.
+  const glance = html.indexOf('id="results-summary"');
+  const survival = html.indexOf('aria-labelledby="survival-cta-title"');
+  const details = html.indexOf('id="plan-details"');
+  const money = html.indexOf('class="plan-money"');
+  const moneyForm = html.indexOf('id="money-inputs"');
+  assert.ok(glance > 0 && glance < survival && survival < details, "glance, Survival Mode, details");
+  assert.ok(details < money && details < moneyForm, "money lives in the plan details");
+  // Every money section is labelled as an estimate.
+  const moneySections = html.match(/<section class="plan-money"[^>]*>[\s\S]*?<\/h4>/g) ?? [];
+  assert.ok(moneySections.length >= 2);
+  for (const section of moneySections) assert.match(section, /aria-label="Money per hectare and year, estimate"[\s\S]*plan-money-tag">estimate</);
+  // The Survival call to action shows no money.
+  const cta = html.slice(survival, details);
+  assert.doesNotMatch(cta, /\blei\b/);
+  // Ids stay unique with both features on the page.
+  const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(ids.length, new Set(ids).size);
+
+  // Inside Survival Mode: season scores only, plus a note that money is a separate estimate.
+  const panel = renderToStaticMarkup(
+    createElement(SurvivalPanel, { result, request: fullExampleRequest, initialChallenge: "drought" }),
+  );
+  const text = panel.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  assert.match(text, /These are 0–100 scores for one past season, not money\./);
+  assert.match(text, /not recalculated for \d{4}/);
+  assert.doesNotMatch(text, /[\d,]+ lei/, "no money amounts in the stress test");
+  const challenge = buildChallenge("drought", result, fullExampleRequest);
+  assert.ok(challenge.available);
+  for (const outcome of challenge.outcomes)
+    if (outcome.season?.exact) assert.equal(outcome.season.fieldFree, challenge.fieldFree, "same historical start for every rotation");
+
+  // Without economics the note is not shown.
+  const noMoney = resultSchema.parse({
+    ...result,
+    plans: result.plans.map(({ economics: _e, ...plan }) => plan),
+    baseline: result.baseline && (({ economics: _e, ...plan }) => plan)(result.baseline),
+  });
+  const plain = buildChallenge("drought", noMoney, fullExampleRequest);
+  assert.ok(plain.available);
+  assert.ok(!plain.notes.some((note) => note.includes("not money")));
 });

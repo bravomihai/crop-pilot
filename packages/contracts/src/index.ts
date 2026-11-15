@@ -74,6 +74,15 @@ export const requestSchema = z
     // When present, the result also contains `baseline`: that cycle continued for the
     // next three main crops and evaluated like the plans, so they can be compared.
     current_rotation: z.array(cropIdSchema).min(1).max(5).optional(),
+    // The farmer's own prices and costs for the money estimate, per crop id. Used only for
+    // this calculation and never stored.
+    money_inputs: z
+      .object({
+        prices_lei_per_t: z.record(cropIdSchema, z.number().positive().max(100000)).optional(),
+        costs_lei_per_ha: z.record(cropIdSchema, z.number().positive().max(100000)).optional(),
+      })
+      .strict()
+      .optional(),
     soil: soilSchema.optional(),
     priorities: z
       .object({
@@ -208,6 +217,75 @@ export const climateContextSchema = z
     note: z.string().optional(),
   })
   .strict();
+// A money range in lei: low / typical / high. `null` in its place means unknown, never 0.
+export const moneyRangeSchema = z
+  .object({ low: z.number(), typical: z.number(), high: z.number() })
+  .strict();
+const valueRangeSchema = moneyRangeSchema;
+// Rough money estimate for a plan, per hectare. An estimate from county averages, past
+// prices and published cost budgets, not a forecast. It never changes the ranking.
+export const economicsSchema = z
+  .object({
+    currency: z.literal("RON"),
+    // Plan length used to turn the plan's totals into amounts per year.
+    covered_years: z.number().positive(),
+    county: z.string().nullable(),
+    // Per hectare per year; null = unknown (for example a crop without a price series).
+    per_year: z
+      .object({
+        income: moneyRangeSchema.nullable(),
+        costs: moneyRangeSchema.nullable(),
+        subsidies: moneyRangeSchema.nullable(),
+        margin: moneyRangeSchema.nullable(),
+        // Part of the typical margin that comes from crop order (yield effect of the previous
+        // crop and nitrogen left by a legume), lei per hectare and year; null when none applies.
+        crop_order_effect: z.number().nullable().optional(),
+      })
+      .strict(),
+    // Per crop, for its one season (not per year).
+    crops: z
+      .array(
+        z
+          .object({
+            crop_id: z.string(),
+            crop_name: z.string(),
+            previous_crop: z.string().nullable().optional(),
+            // Rating of the previous crop for this crop in the regional rules.
+            previous_rating: z.enum(["good", "ok", "poor", "forbidden"]).nullable().optional(),
+            yield_t_per_ha: valueRangeSchema.nullable(),
+            yield_basis: z.enum(["commercial_farms", "all_farms"]).nullable().optional(),
+            price_lei_per_t: valueRangeSchema.nullable(),
+            price_basis: z.enum(["regional", "national", "farmer"]).nullable().optional(),
+            income: moneyRangeSchema.nullable(),
+            costs: moneyRangeSchema.nullable(),
+            cost_basis: z.enum(["iceadr", "farmer"]).nullable().optional(),
+            // Fertiliser saved because a legume came before, lei per hectare.
+            nitrogen_saving: moneyRangeSchema.nullable().optional(),
+            // Typical lei per hectare gained (or lost) from the previous crop, for this season.
+            crop_order_effect: z.number().nullable().optional(),
+          })
+          .strict(),
+      )
+      .max(3),
+    // CAP payments that apply, per hectare per year, with the condition attached.
+    payments: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            label: z.string(),
+            lei_per_ha_year: z.number().nullable(),
+            included: z.enum(["always", "if_eligible", "not_included"]),
+            condition: z.string(),
+          })
+          .strict(),
+      )
+      .max(12),
+    warnings: z.array(z.string()),
+    notes: z.array(z.string()),
+    source_ids: z.array(z.string()),
+  })
+  .strict();
 export const planSchema = z
   .object({
     id: z.string(),
@@ -228,6 +306,8 @@ export const planSchema = z
     violations: z.array(z.string()).optional(),
     // The plan replayed over past seasons at this location, oldest first.
     replay: z.array(replaySeasonSchema).max(60).optional(),
+    // Rough money estimate per hectare and year (see economicsSchema).
+    economics: economicsSchema.optional(),
   })
   .strict();
 export const monthlyClimateSchema = z
@@ -295,6 +375,8 @@ export const resultSchema = z
 export type RecommendationRequest = z.infer<typeof requestSchema>;
 export type RecommendationResult = z.infer<typeof resultSchema>;
 export type RotationPlan = z.infer<typeof planSchema>;
+export type PlanEconomics = z.infer<typeof economicsSchema>;
+export type MoneyRange = z.infer<typeof moneyRangeSchema>;
 export type CriterionScores = z.infer<typeof criterionScoresSchema>;
 export type HistorySource = z.infer<typeof historySourceSchema>;
 export type ReplaySeason = z.infer<typeof replaySeasonSchema>;

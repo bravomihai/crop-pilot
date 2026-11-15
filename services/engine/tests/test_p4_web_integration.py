@@ -389,6 +389,26 @@ def test_selected_crop_assessment_and_rotation_use_the_same_real_engine(monkeypa
     )
     assert result["plans"][0] == original["plans"][0]
 
+    with_money = {
+        **request,
+        "money_inputs": {"prices_lei_per_t": {"potato": 1500}},
+    }
+    recalculated = pipeline.recommend(with_money, "chosen-crop-money")
+    assert next_route_errors(with_money, recalculated, "chosen-crop-money") == []
+    assert recalculated["crop_assessment"]["selected"][0]["crop_id"] == "potato"
+    chosen_plan = next(
+        plan for plan in recalculated["plans"]
+        if any(step["crop_id"] == "potato" for step in plan["steps"])
+    )
+    potato_money = next(crop for crop in chosen_plan["economics"]["crops"] if crop["crop_id"] == "potato")
+    assert potato_money["price_basis"] == "farmer"
+    assert potato_money["price_lei_per_t"]["typical"] == 1500
+    assert [
+        (plan["steps"], plan["scores"]) for plan in recalculated["plans"]
+    ] == [
+        (plan["steps"], plan["scores"]) for plan in result["plans"]
+    ]
+
 
 # --- Merge with PR #7: duplicate messages in the result --------------------------------------
 

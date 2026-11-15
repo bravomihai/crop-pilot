@@ -210,7 +210,151 @@
             }
           ]
         }
-      ]
+      ],
+      "economics": {
+        "currency": "RON",
+        "covered_years": 2.8,
+        "county": "Calarasi",
+        "per_year": {
+          "income": null,
+          "costs": null,
+          "subsidies": {
+            "low": 530,
+            "typical": 530,
+            "high": 830
+          },
+          "margin": null,
+          "crop_order_effect": 150
+        },
+        "crops": [
+          {
+            "crop_id": "winter_wheat",
+            "crop_name": "Winter wheat",
+            "previous_crop": null,
+            "previous_rating": null,
+            "yield_t_per_ha": {
+              "low": 5.04,
+              "typical": 5.56,
+              "high": 5.87
+            },
+            "yield_basis": "commercial_farms",
+            "price_lei_per_t": {
+              "low": 920,
+              "typical": 940,
+              "high": 1070
+            },
+            "price_basis": "regional",
+            "income": {
+              "low": 4740,
+              "typical": 5230,
+              "high": 5520
+            },
+            "costs": {
+              "low": 5420,
+              "typical": 5420,
+              "high": 5420
+            },
+            "cost_basis": "iceadr",
+            "nitrogen_saving": null,
+            "crop_order_effect": null
+          },
+          {
+            "crop_id": "pea",
+            "crop_name": "Pea",
+            "previous_crop": "Winter wheat",
+            "previous_rating": "good",
+            "yield_t_per_ha": {
+              "low": 1.46,
+              "typical": 2.22,
+              "high": 2.46
+            },
+            "yield_basis": "commercial_farms",
+            "price_lei_per_t": null,
+            "price_basis": null,
+            "income": null,
+            "costs": null,
+            "cost_basis": null,
+            "nitrogen_saving": null,
+            "crop_order_effect": null
+          },
+          {
+            "crop_id": "winter_wheat",
+            "crop_name": "Winter wheat",
+            "previous_crop": "Pea",
+            "previous_rating": "good",
+            "yield_t_per_ha": {
+              "low": 5.3,
+              "typical": 5.86,
+              "high": 6.18
+            },
+            "yield_basis": "commercial_farms",
+            "price_lei_per_t": {
+              "low": 920,
+              "typical": 940,
+              "high": 1070
+            },
+            "price_basis": "regional",
+            "income": {
+              "low": 4980,
+              "typical": 5510,
+              "high": 5810
+            },
+            "costs": {
+              "low": 5150,
+              "typical": 5230,
+              "high": 5310
+            },
+            "cost_basis": "iceadr",
+            "nitrogen_saving": {
+              "low": 110,
+              "typical": 190,
+              "high": 270
+            },
+            "crop_order_effect": 470
+          }
+        ],
+        "payments": [
+          {
+            "id": "PD-01",
+            "label": "Basic income support (BISS)",
+            "lei_per_ha_year": 530,
+            "included": "always",
+            "condition": "Paid on every eligible hectare of an active farmer; the same for every plan."
+          },
+          {
+            "id": "PD-04",
+            "label": "Eco-scheme for arable land",
+            "lei_per_ha_year": 300,
+            "included": "if_eligible",
+            "condition": "This plan grows a nitrogen-fixing legume, which helps meet the eco-scheme's optional requirements, if the rest of your farm also meets them. Only if the whole farm meets the eco-scheme: at least 85% of its arable land covered by crops, plus the optional requirements it chooses."
+          },
+          {
+            "id": "PD-02",
+            "label": "Redistributive payment (CRISS)",
+            "lei_per_ha_year": null,
+            "included": "not_included",
+            "condition": "Depends on the size of your farm, not on the plan; not included in the totals."
+          }
+        ],
+        "warnings": [],
+        "notes": [
+          "Pea: no official recent price series. Add the price you get to complete the estimate.",
+          "Pea: no published cost budget. Add your cost per hectare to complete the estimate."
+        ],
+        "source_ids": [
+          "ins-agr110a",
+          "ins-ppa102c",
+          "iceadr-budgets",
+          "apia-2026-rates",
+          "apia-coupled-2025",
+          "apia-ecoscheme-2026",
+          "ins-agr108a-109a",
+          "eurostat-input-prices",
+          "nitrogen-credit",
+          "ecb-eur-ron",
+          "gisco-nuts3"
+        ]
+      }
     }
   ],
   "monthly_climate": [],
@@ -434,7 +578,168 @@
           }
         ]
       }
-    ]
+    ],
+    "economics": {
+      "currency": "RON",
+      "covered_years": 2.8,
+      "county": "Calarasi",
+      "per_year": {
+        "income": {
+          "low": 4900,
+          "typical": 5700,
+          "high": 7000
+        },
+        "costs": {
+          "low": 5850,
+          "typical": 5850,
+          "high": 5850
+        },
+        "subsidies": {
+          "low": 530,
+          "typical": 530,
+          "high": 830
+        },
+        "margin": {
+          "low": -420,
+          "typical": 380,
+          "high": 1980
+        },
+        "crop_order_effect": 100
+      },
+      "crops": [
+        {
+          "crop_id": "winter_wheat",
+          "crop_name": "Winter wheat",
+          "previous_crop": null,
+          "previous_rating": null,
+          "yield_t_per_ha": {
+            "low": 5.04,
+            "typical": 5.56,
+            "high": 5.87
+          },
+          "yield_basis": "commercial_farms",
+          "price_lei_per_t": {
+            "low": 920,
+            "typical": 940,
+            "high": 1070
+          },
+          "price_basis": "regional",
+          "income": {
+            "low": 4740,
+            "typical": 5230,
+            "high": 5520
+          },
+          "costs": {
+            "low": 5420,
+            "typical": 5420,
+            "high": 5420
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": null
+        },
+        {
+          "crop_id": "maize",
+          "crop_name": "Maize",
+          "previous_crop": "Winter wheat",
+          "previous_rating": "good",
+          "yield_t_per_ha": {
+            "low": 4.35,
+            "typical": 5.54,
+            "high": 8.68
+          },
+          "yield_basis": "commercial_farms",
+          "price_lei_per_t": {
+            "low": 880,
+            "typical": 990,
+            "high": 1110
+          },
+          "price_basis": "regional",
+          "income": {
+            "low": 4310,
+            "typical": 5480,
+            "high": 8590
+          },
+          "costs": {
+            "low": 5540,
+            "typical": 5540,
+            "high": 5540
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": 270
+        },
+        {
+          "crop_id": "winter_wheat",
+          "crop_name": "Winter wheat",
+          "previous_crop": "Maize",
+          "previous_rating": "ok",
+          "yield_t_per_ha": {
+            "low": 5.04,
+            "typical": 5.56,
+            "high": 5.87
+          },
+          "yield_basis": "commercial_farms",
+          "price_lei_per_t": {
+            "low": 920,
+            "typical": 940,
+            "high": 1070
+          },
+          "price_basis": "regional",
+          "income": {
+            "low": 4740,
+            "typical": 5230,
+            "high": 5520
+          },
+          "costs": {
+            "low": 5420,
+            "typical": 5420,
+            "high": 5420
+          },
+          "cost_basis": "iceadr",
+          "nitrogen_saving": null,
+          "crop_order_effect": null
+        }
+      ],
+      "payments": [
+        {
+          "id": "PD-01",
+          "label": "Basic income support (BISS)",
+          "lei_per_ha_year": 530,
+          "included": "always",
+          "condition": "Paid on every eligible hectare of an active farmer; the same for every plan."
+        },
+        {
+          "id": "PD-04",
+          "label": "Eco-scheme for arable land",
+          "lei_per_ha_year": 300,
+          "included": "if_eligible",
+          "condition": "Only if the whole farm meets the eco-scheme: at least 85% of its arable land covered by crops, plus the optional requirements it chooses."
+        },
+        {
+          "id": "PD-02",
+          "label": "Redistributive payment (CRISS)",
+          "lei_per_ha_year": null,
+          "included": "not_included",
+          "condition": "Depends on the size of your farm, not on the plan; not included in the totals."
+        }
+      ],
+      "warnings": [],
+      "notes": [],
+      "source_ids": [
+        "ins-agr110a",
+        "ins-ppa102c",
+        "iceadr-budgets",
+        "apia-2026-rates",
+        "apia-coupled-2025",
+        "apia-ecoscheme-2026",
+        "ins-agr108a-109a",
+        "eurostat-input-prices",
+        "nitrogen-credit",
+        "ecb-eur-ron",
+        "gisco-nuts3"
+      ]
+    }
   },
   "assumptions": [
     "Example only: no data was fetched and no rules were applied."
@@ -446,6 +751,64 @@
     {
       "id": "demo-fixture",
       "title": "Invented example for integration"
+    },
+    {
+      "id": "ins-agr110a",
+      "title": "INS TEMPO AGR110A: average yield per hectare by county (updated 29-06-2026)",
+      "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table",
+      "resolution": "county, yearly"
+    },
+    {
+      "id": "ins-ppa102c",
+      "title": "INS TEMPO PPA102C: average farm-gate prices by development region (updated 11-11-2026)",
+      "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table",
+      "resolution": "development region, yearly"
+    },
+    {
+      "id": "iceadr-budgets",
+      "title": "ICEADR: income and cost budgets per hectare, conventional system, production year 2022-2023",
+      "url": "https://iceadr.ro/wp-content/uploads/2024/02/2023_ghid-veget.pdf"
+    },
+    {
+      "id": "apia-2026-rates",
+      "title": "CAP direct payment rates reported for the 2026 campaign (OMADR 288/2026, as reported in the farming press; check the Order)",
+      "url": "https://revista-ferma.ro/plata-avans-apia-2026-sume-pe-hectar-si-cap-de-animal/"
+    },
+    {
+      "id": "apia-coupled-2025",
+      "title": "Coupled support rates for soybean, 2025 claim year (as reported; check the Order)",
+      "url": "https://www.bzi.ro/s-a-stabilit-cuantumul-pe-hectar-pentru-sprijinul-cuplat-vegetal-fermierii-asteapta-banii-de-anul-trecut-5517994"
+    },
+    {
+      "id": "apia-ecoscheme-2026",
+      "title": "APIA: 2026 payment application instructions, eco-scheme PD-04 (Annex 2)",
+      "url": "https://apia.org.ro/wp-content/uploads/2026/03/Anexa-2.pdf"
+    },
+    {
+      "id": "ecb-eur-ron",
+      "title": "European Central Bank EUR/RON reference rate, 2026-09-30",
+      "url": "https://data.ecb.europa.eu/data/datasets/EXR"
+    },
+    {
+      "id": "gisco-nuts3",
+      "title": "Eurostat GISCO NUTS 2021 county boundaries (© EuroGeographics)",
+      "url": "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"
+    },
+    {
+      "id": "ins-agr108a-109a",
+      "title": "INS TEMPO AGR108A and AGR109A: cultivated area and production by county and type of holding (commercial farms = total minus individual holdings)",
+      "url": "http://statistici.insse.ro:8077/tempo-online/#/pages/tables/insse-table",
+      "resolution": "county, yearly"
+    },
+    {
+      "id": "eurostat-input-prices",
+      "title": "Eurostat apri_ap_ina: purchase prices of agricultural inputs in Romania (ammonium nitrate, urea, diesel)",
+      "url": "https://ec.europa.eu/eurostat/databrowser/view/apri_ap_ina/default/table"
+    },
+    {
+      "id": "nitrogen-credit",
+      "title": "Nitrogen left by pea and soybean for the next crop: Romanian fertilisation practice (30-50 kg N/ha) and Soon (2005), about 20 kg N/ha for wheat after pea",
+      "url": "https://www.bzi.ro/ce-influenteaza-necesarul-de-azot-la-porumb-si-cum-se-stabileste-fertilizarea-culturii-5571958"
     }
   ],
   "disclaimer": "Invented example values. Not a recommendation.",
