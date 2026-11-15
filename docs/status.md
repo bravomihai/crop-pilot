@@ -129,10 +129,10 @@ token could not publish workflows. To activate it, move the file to
 ## Verificare P2 live — 2026-11-14
 
 - NASA POWER: datele din 2025 au 365 de înregistrări și 12 rezumate lunare, fără zile
-  lipsă pentru temperatură sau precipitații, în Fundulea, Dobrogea și Slobozia.
+  lipsă pentru temperatură sau precipitații, în cele trei puncte de test (Câmpia Română, Dobrogea și Bărăgan).
 - SoilGrids: profilul ponderat 0–30 cm a furnizat textură, pH, carbon organic și AWC
-  estimate la Fundulea și Dobrogea. La Slobozia nu au fost disponibile valori.
-- Fluxul complet `computed` la Fundulea a folosit 20 de ani, a produs trei planuri și
+  estimate în Câmpia Română și Dobrogea. În punctul din Bărăgan nu au fost disponibile valori.
+- Fluxul complet `computed` în punctul din Câmpia Română a folosit 20 de ani, a produs trei planuri și
   baseline, iar răspunsul a trecut validarea contractului.
 - Testele motorului după integrarea P2: 160 trecute. Agregarea pe contur rămâne
   neimplementată; rezultatele SoilGrids sunt estimări, nu analize de teren.
@@ -245,7 +245,7 @@ merged yet (see Remaining team work). Fixed:
 
 Verified: Python 223 passed; web TypeScript, backend 87/87, UI 30/30, production build.
 **Live** (real NASA POWER, SoilGrids, SRTM; temporary local engine in computed mode and
-the built web app; Next.js `/api/recommendations`): Fundulea 8.1 s, complete with
+the built web app; Next.js `/api/recommendations`): the Romanian Plain example field 8.1 s, complete with
 baseline, 17 replayed seasons and 20 climate years; the same field with +2 °C / −20 %
 rain 6.6 s; Suceava 10.0 s on provisional rules with low confidence; Budapest 422.
 In the browser, the demo link, Calculate, the new charts and a +2 °C what-if worked, and
@@ -266,7 +266,7 @@ an empty summary section is not printed.
 
 Verified: Python 227 passed; web backend 95/95, UI 32/32, TypeScript, schemas unchanged,
 production build. **Live** (real NASA POWER, SoilGrids, SRTM; temporary local computed
-engine and built web app, in a browser): Fundulea with previous crop, current rotation
+engine and built web app, in a browser): the Romanian Plain example field with previous crop, current rotation
 maize → winter wheat, water focus (36 % weight) and pea avoided produced three plans
 without pea and the current-rotation baseline; replay (2007–2023) and climate
 (2006–2025) charts show computed data; a +2 °C what-if updated the replay note and the
@@ -313,3 +313,37 @@ regeneration without changes, and local/production Compose configuration. Checke
 that web and engine receive the same generated token and production exposes only
 HTTPS ingress. UI testing, a live OpenAI call, Docker startup/migrations and VPS
 deployment are left to the user. No paid API call or deployment was performed.
+
+## Easier-to-read results — 2026-11-15 (branch `tudor`)
+
+The results panel now opens with an **At a glance** card built from the result itself,
+without AI. It shows:
+- the best plan and its first sowing window;
+- the score comparison with the current rotation;
+- the main risks and the checks to do before deciding;
+- one line for each other plan;
+- the missing data a farmer can act on.
+
+Plan cards show the crops, dates, scores and one sentence. Benefits, trade-offs, the
+reason for each crop and the local checks are under "Why this plan?". Assumptions,
+all missing data and sources are collapsed under "How this was calculated". "Back to
+summary" links close the long sections. The results panel has a full-screen toggle,
+and Escape exits it.
+
+Engine text fixes:
+- the ET₀ wording is fixed;
+- the duplicate score, weather and ET₀ lines are removed;
+- the replay is described in one line;
+- the winterkill notes are merged into one line;
+- the soil note says when regional SoilGrids estimates were used.
+
+Unexpected engine failures are now logged (traceback only) before the 502.
+Slobozia/Fundulea were removed from tracked files: the INCDA source lost its place name
+and URL, and the examples use a neutral name.
+
+Verified: Python 231 passed; web backend 97/97, UI 35/35, TypeScript; schemas unchanged.
+**Live** (real NASA POWER, SoilGrids, SRTM from the local cache; engine via
+`pnpm dev:engine`, web via `pnpm dev`, in a browser): a computed result with the current
+rotation maize → winter wheat showed the summary, collapsed details and full screen
+correctly. Known on Windows only: `scripts/env.test.mjs` expects `/` path separators
+and fails 1 of 3 checks; the uvicorn `--reload` supervisor can crash on file changes.

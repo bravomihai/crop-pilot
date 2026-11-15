@@ -331,10 +331,13 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
     rain = float(scenario.get("rain_change_pct") or 0.0)
     scenario_on = temp != 0 or rain != 0
 
-    assumptions = [
+    # The data service states its own weather and ET0 assumptions; do not repeat them.
+    described = bool(environment.get("assumptions"))
+    assumptions = [] if described else [
         "Weather is replayed from past seasons at this point; it is regional context (NASA POWER grid), not a field measurement.",
+    ]
+    assumptions += [
         "Water: FAO-56 daily soil water balance over a 1.5 m profile carried from crop to crop; crops draw only on their root zone, which deepens from 0.3 m to the crop's rooting depth; no runoff or capillary rise.",
-        "Scores compare options with each other; they are not yields, profits or probabilities.",
     ]
     data_gaps: list[str] = []
     local_checks: list[str] = []
@@ -427,9 +430,14 @@ def evaluate(rotation: list[str], request: dict, environment: dict, rules: dict)
             )
             shifts = []
         else:
+            et0_text = (
+                ""
+                if weather.et0_method.startswith("supplied")
+                else f"; reference evapotranspiration uses the {weather.et0_method} method"
+            )
             assumptions.append(
-                f"Each plan was replayed over {len(shifts)} past seasons "
-                f"between {weather.start.year} and {weather.end.year}; reference evapotranspiration by {weather.et0_method}."
+                f"Each plan is replayed over the past seasons between {weather.start.year} and {weather.end.year} "
+                f"that cover the whole plan (up to {settings['max_replay_years']}){et0_text}."
             )
 
     if soil_in["texture"] is None:

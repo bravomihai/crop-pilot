@@ -21,8 +21,8 @@ P3/P4 must agree on an intermediate evaluation contract before implementing chan
 The public request/result contract is already shared and checked in both languages.
 
 The first coverage area is the southern and south-eastern plains (Romanian Plain,
-Bărăgan, Dobrogea), using the main field crops. Fundulea is only the example test
-point. Return `insufficient_data` outside covered zones. An example locality does not
+Bărăgan, Dobrogea), using the main field crops. The example field in the Romanian Plain
+is only a test point. Return `insufficient_data` outside covered zones. An example locality does not
 establish agronomic validation.
 
 The new optional contract fields (`current_rotation`/`baseline`, `plan.scores`,

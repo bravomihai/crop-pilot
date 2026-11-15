@@ -323,13 +323,13 @@ for (const count of [0, 1, 2, 3]) {
 }
 
 const locationRequest = () =>
-  new Request("http://web/api/locations?q=Fundulea");
+  new Request("http://web/api/locations?q=Lehliu");
 test("geocoding requests English labels and preserves attribution", async () => {
   fetchMock.mock.mockImplementation(async () =>
     Response.json({
       results: [{
         id: 1,
-        name: "Fundulea",
+        name: "Lehliu",
         admin1: "Calarasi",
         country: "Romania",
         latitude: 44.4,
@@ -338,7 +338,7 @@ test("geocoding requests English labels and preserves attribution", async () => 
     }),
   );
   const body = await check(await locations(locationRequest()), 200);
-  assert.equal(body.locations[0].name, "Fundulea, Calarasi, Romania");
+  assert.equal(body.locations[0].name, "Lehliu, Calarasi, Romania");
   const [providerUrl] = fetchMock.mock.calls[0].arguments;
   assert.equal(new URL(String(providerUrl)).searchParams.get("language"), "en");
   assert.equal(body.attribution, "Open-Meteo / GeoNames");

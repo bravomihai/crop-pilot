@@ -8,6 +8,7 @@ never counts toward `status`.
 from __future__ import annotations
 
 import copy
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Callable
@@ -193,6 +194,30 @@ def _dedupe(items) -> list[str]:
     return list(dict.fromkeys(i for i in items if i))
 
 
+_WINTERKILL = re.compile(r"Winterkill risk for (.+?) ignores snow cover")
+
+
+def _merge_winterkill(gaps: list[str]) -> list[str]:
+    """One winterkill note for all winter crops shown, instead of one per crop."""
+    names = [m.group(1) for g in gaps if (m := _WINTERKILL.match(g))]
+    if len(names) < 2:
+        return gaps
+    crops = ", ".join(names[:-1]) + " and " + names[-1]
+    merged = (
+        f"Winterkill risk for {crops} ignores snow cover, which protects winter crops; "
+        "check winter hardiness locally."
+    )
+    out, placed = [], False
+    for g in gaps:
+        if _WINTERKILL.match(g):
+            if not placed:
+                out.append(merged)
+                placed = True
+        else:
+            out.append(g)
+    return out
+
+
 def _steps(evaluation: Evaluation, ctx: PlanContext) -> list[dict]:
     steps = []
     for index, step in enumerate(evaluation.calendar):
@@ -262,7 +287,13 @@ def recommend(
     elif previous_source == "unknown":
         data_gaps.append("The source of the most recent crop history entry was not stated.")
     if not soil or soil.get("source", "unknown") == "unknown":
-        data_gaps.append("Soil properties are not known from a laboratory analysis or an estimate; the soil assessment depends on regional data.")
+        regional_soil = (environment.get("static") or {}).get("soil") or environment.get("soil")
+        data_gaps.append(
+            "No soil analysis was entered; the soil assessment uses regional soil-map estimates (SoilGrids, 0–30 cm), "
+            "not a sample from this field."
+            if regional_soil
+            else "No soil analysis was entered and no regional soil estimate is available; the soil assessment is uncertain."
+        )
 
     catalog, catalog_issues = crop_catalog(rules)
     candidate_catalog = catalog
@@ -293,7 +324,9 @@ def recommend(
             data_gaps.append(
                 f"{len(plans)} feasible, documented plan(s) were found; the result was not padded with invented options."
             )
-        return RecommendationOutcome(plans, sources, _dedupe(assumptions), _dedupe(data_gaps), diagnostics, fixture, baseline)
+        return RecommendationOutcome(
+            plans, sources, _dedupe(assumptions), _merge_winterkill(_dedupe(data_gaps)), diagnostics, fixture, baseline
+        )
 
     candidate_set = generate_candidates(
         candidate_catalog, excluded, config.max_candidates

@@ -280,7 +280,12 @@ def test_local_checks_warnings_gaps_and_assumptions_carry_p3_evidence():
         for warning in evaluation["warnings"]:
             assert f"Watch out: {warning['message']}" in plan["tradeoffs"]
         for gap in evaluation["data_gaps"]:
-            assert gap in result["data_gaps"]
+            if gap.startswith("Winterkill risk for "):
+                # Merged into one line naming every winter crop shown.
+                crop = gap.split("Winterkill risk for ", 1)[1].split(" ignores", 1)[0]
+                assert any(g.startswith("Winterkill risk for ") and crop in g for g in result["data_gaps"]), gap
+            else:
+                assert gap in result["data_gaps"]
         for assumption in evaluation["assumptions"]:
             assert assumption in result["assumptions"]
         # P3 marks soil and productivity as estimates: never "high" confidence.
@@ -356,7 +361,7 @@ def test_identical_requests_give_identical_results_apart_from_timestamp():
 
 
 def engine_timeout_ms() -> int:
-    for line in (ROOT / "apps" / "web" / ".env.example").read_text(encoding="utf-8").splitlines():
+    for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
         if line.startswith("ENGINE_TIMEOUT_MS="):
             return int(line.split("=", 1)[1])
     return 90000  # default in apps/web/src/lib/server/upstream.ts
