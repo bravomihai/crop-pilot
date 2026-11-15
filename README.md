@@ -139,7 +139,7 @@ configurable with `OPENAI_SUMMARY_MODEL`. It explains the computed plans; it doe
 choose crops. Restart native servers after changing `.env`, or recreate the Docker
 web service with `docker compose up -d web`.
 
-Deployment to your own server is documented in [infra/vps.md](infra/vps.md).
+The shared-VPS deployment at crop-pilot.nemes.engineer uses host NGINX and a single checkout. GitHub Actions setup and manual migration/recovery are documented in [infra/deploy/README.md](infra/deploy/README.md). Standalone Caddy hosting remains documented in [infra/vps.md](infra/vps.md).
 The HTTPS profile uses the same root `.env`, plus your domain and certificate email.
 
 ## Checks
