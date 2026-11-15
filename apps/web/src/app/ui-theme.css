@@ -186,10 +186,11 @@
 .results-panel-title h2 { margin: 0; }
 .results-panel-actions { flex-wrap: wrap; margin-left: auto; gap: 8px; }
 .results-panel-header .planner-eyebrow { margin-bottom: 6px; }
-.map-results-scroll { background: var(--surface-muted); scrollbar-width: thin; scrollbar-color: var(--border-hover) transparent; }
+.map-results-scroll { background: var(--surface-muted); scrollbar-width: none; -ms-overflow-style: none; }
+.map-results-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .map-results-scroll .section-heading { margin: 0 0 24px; }
 .map-results-scroll .section-heading h2 { font-size: 18px; color: var(--ink); }
-.map-experience :is(.at-a-glance, .analysis-chart, .plan, .result-context, .results-what-if, .survival-cta, .survival-panel, .notice, .empty-state, .how-calculated, .glossary) {
+.map-experience :is(.at-a-glance, .analysis-chart, .plan, .result-context, .results-what-if, .survival-cta, .survival-panel, .money-inputs, .notice, .empty-state, .how-calculated, .glossary) {
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   background: var(--surface);
@@ -197,7 +198,7 @@
   padding: var(--card-padding);
   box-shadow: 0 2px 6px #00000003;
 }
-.map-experience :is(.analysis-chart, .results-what-if, .how-calculated, .glossary) { margin: 20px 0; }
+.map-experience :is(.analysis-chart, .results-what-if, .money-inputs, .how-calculated, .glossary) { margin: 20px 0; }
 .map-experience .at-a-glance { margin: 0 0 20px; border-top: 3px solid var(--forest); }
 .map-experience :is(.at-a-glance > .eyebrow, .glance-crops, .plan-why > summary, .how-calculated > summary, .plain-words-more > summary, .survival-year, .survival-tag) { color: var(--accent); }
 .glance-facts > div { border-color: var(--border); padding-top: 14px; }
