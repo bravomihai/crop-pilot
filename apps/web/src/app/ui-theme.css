@@ -30,6 +30,9 @@
   --score-track: #e7eeea;
   --card-radius: 16px;
   --control-radius: 10px;
+  --scrollbar-track: var(--surface-muted);
+  --scrollbar-thumb: #7f9a8b;
+  --scrollbar-thumb-hover: #123c2f;
   --card-padding: 24px;
   --panel-shadow: 0 16px 48px #00000026, 0 2px 8px #0000000d;
 }
@@ -47,6 +50,8 @@
     --border: #304a3b;
     --border-hover: #6a937b;
     --focus-ring: #c4dfce;
+    --scrollbar-thumb: #40624e;
+    --scrollbar-thumb-hover: #6a937b;
     --forest-hover: #1d5743;
     --score-blue: #376f96;
     --score-teal: #36775f;
@@ -56,6 +61,23 @@
     --panel-shadow: 0 16px 48px #00000066, 0 2px 8px #00000033;
   }
 }
+
+/* Apply the system palette to every scrollable panel, table and chart. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+/* Fallback for browsers using WebKit scrollbar styling. */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  background-clip: padding-box;
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+*::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
 
 .map-experience { color-scheme: inherit; }
 .map-experience :is(h1, h2) { color: var(--ink); }

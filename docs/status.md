@@ -751,3 +751,17 @@ Merged the latest main, preserving crop-planning additions. Verified: TypeScript
 all 52 UI tests, regenerated schemas without changes and whitespace checks.
 Required GitHub CI verifies the full build and containers before merge. Browser
 appearance and gestures were not visually reviewed in this change.
+
+
+## Theme consistency and scrollbars — 2026-11-15
+
+Money estimate cards, money inputs and Survival Mode now use the shared system
+theme tokens for surfaces, text, borders and focus states. All visible scrollbars
+use the light/dark palette, including nested planner, NASA layer, table and chart
+scroll areas. The outer results scrollbar remains hidden; the results region
+remains scrollable and keyboard focusable.
+
+The initial card/theme changes passed web TypeScript, all 43 UI tests and the
+production build before the latest concurrent integration changes. The final
+scrollbar styling received a whitespace check only, at the owner's request for
+code-only changes and personal visual review. Browser rendering was not verified.
