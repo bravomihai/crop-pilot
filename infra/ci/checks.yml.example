@@ -1,10 +1,20 @@
 name: Backend, contracts and containers
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Verify VPS access or deploy the tested main commit
+        type: choice
+        options: [verify, deploy]
+        default: verify
+        required: true
 permissions:
   contents: read
 concurrency:
-  group: checks-${{ github.ref }}
-  cancel-in-progress: true
+  group: checks-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -39,6 +49,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test:config
       - run: pnpm test:backend
+      - run: pnpm --filter @croppilot/web test:ui
       - run: pnpm db:deploy
       - run: pnpm test:cache
       - run: pnpm build
@@ -51,9 +62,15 @@ jobs:
       - run: uv sync --project services/engine --frozen --extra dev
       - run: services/engine/.venv/bin/python -m pytest services/engine/tests
       - run: python -m py_compile infra/cache-maintenance.py infra/check-local.py
+      - name: Validate deployment scripts
+        run: |
+          bash -n scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
+          shellcheck scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
+          node --test scripts/deploy-vps.test.mjs
       - name: Validate ingress configuration
         run: |
           docker run --rm --add-host web:127.0.0.1 -v "$PWD/infra/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.28-alpine nginx -t
+          docker run --rm -v "$PWD/infra/nginx.vps.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.28-alpine nginx -t
           docker run --rm -e DOMAIN=croppilot.example.com -e ACME_EMAIL=operations@example.com -v "$PWD/infra/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Validate Compose without real secrets
         env:
@@ -64,5 +81,43 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose -f compose.yaml -f infra/compose.production.yaml config --quiet
+          docker compose -f compose.yaml -f infra/compose.vps.yaml config --quiet
       - run: docker build -f apps/web/Dockerfile -t croppilot-web:ci .
       - run: docker build -f services/engine/Dockerfile -t croppilot-engine:ci .
+
+  deploy:
+    name: Deploy production
+    needs: verify
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'bravomihai/crop-pilot' &&
+      github.actor == 'bravomihai' &&
+      github.triggering_actor == 'bravomihai' &&
+      ((github.event_name == 'push' && vars.VPS_DEPLOY_ENABLED == 'true') ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: https://crop-pilot.nemes.engineer
+    concurrency:
+      group: croppilot-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify VPS or deploy the tested commit
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_PORT: ${{ vars.VPS_PORT }}
+          VPS_PATH: ${{ vars.VPS_PATH }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'deploy' }}
+        run: bash scripts/ci-deploy-ssh.sh
+      - name: Failure guidance
+        if: failure()
+        run: echo '::error::Check the failed stage and infra/deploy/README.md. Production migrations and rollback require administrator review.'
