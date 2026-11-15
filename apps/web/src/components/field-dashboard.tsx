@@ -20,7 +20,9 @@ const TEMPERATURE_STEPS = Array.from({ length: 17 }, (_, i) => -3 + i * 0.5);
 const RAINFALL_STEPS = Array.from({ length: 21 }, (_, i) => -50 + i * 5);
 
 export default function FieldDashboard() {
-  const [view, setView] = useState<Location>({ name: "Bărăgan", latitude: 44.567, longitude: 27.35 });
+  // Opens on the whole of Romania; a search result or a shared link zooms to the place.
+  const [view, setView] = useState<Location>({ name: "Romania", latitude: 45.9, longitude: 24.97 });
+  const [mapZoom, setMapZoom] = useState(7);
   const [selection, setSelection] = useState<Location | null>(null);
   const [panel, setPanel] = useState<Panel>("details");
   const [availableFrom, setAvailableFrom] = useState("");
@@ -52,6 +54,7 @@ export default function FieldDashboard() {
     if (field) {
       setSelection(field);
       setView(field);
+      setMapZoom(13);
     }
   }, []);
   // A what-if recalculation changes the scenario of the shown result; keep the form in step,
@@ -74,6 +77,7 @@ export default function FieldDashboard() {
     clear();
     setSelection(location);
     setView(location);
+    setMapZoom(13);
     setPanel("details");
   }
   async function analyse(event: FormEvent<HTMLFormElement>) {
@@ -100,7 +104,7 @@ export default function FieldDashboard() {
   return (
     <main className={`map-experience ${panel ? "is-panel-open" : ""}`} id="main">
       <a className="skip-link" href="#field-details" onClick={() => setPanel("details")}>Skip to field details</a>
-      <FieldMap view={view} selection={selection} onSelect={selectField} />
+      <FieldMap view={view} zoom={mapZoom} selection={selection} onSelect={selectField} />
 
       <header className="map-header">
         <a className="map-brand" href="#main" aria-label="CropPilot home">
