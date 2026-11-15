@@ -199,7 +199,6 @@ export default function FieldDashboard() {
       >
         <header className="results-panel-header">
           <div className="results-panel-title">
-            <Brand compact />
             <h2 id="plans-heading" tabIndex={-1} ref={resultsHeading}>Your crop plans</h2>
           </div>
           <div className="results-panel-actions">

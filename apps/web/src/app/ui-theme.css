@@ -221,6 +221,43 @@
   box-shadow: 0 2px 6px #00000003;
 }
 .map-experience :is(.analysis-chart, .results-what-if, .money-inputs, .how-calculated, .glossary) { margin: 20px 0; }
+/* A failed calculation shows only its reason and a warning symbol. */
+.map-results-scroll:has(.results-error) {
+  display: flex;
+  flex: 1;
+}
+.map-results-scroll:has(.results-error) > .results {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.map-experience .results-error {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 18px;
+  min-height: 220px;
+  margin: 0;
+  text-align: center;
+}
+.results-error-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--accent);
+}
+.map-experience .results-error p {
+  max-width: 48ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 .map-experience .at-a-glance { margin: 0 0 20px; border-top: 3px solid var(--forest); }
 .map-experience :is(.at-a-glance > .eyebrow, .glance-crops, .plan-why > summary, .how-calculated > summary, .plain-words-more > summary, .survival-year, .survival-tag) { color: var(--accent); }
 .glance-facts > div { border-color: var(--border); padding-top: 14px; }

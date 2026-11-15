@@ -780,3 +780,24 @@ as requested.
 Footer integration with current main verified with TypeScript, 52 UI tests and
 whitespace checks. The README update and previously merged results styling are
 preserved. Browser appearance remains for owner review.
+
+
+### Concise calculation error screen — 2026-11-15
+
+When a calculation fails without results, the results area now shows one themed
+card containing only the returned reason and a warning icon. Removed the empty
+section heading, generic failure title and follow-up instructions from this state.
+The message remains announced as an alert. Loading states and existing results
+are preserved. Verified: web TypeScript, all 52 UI tests and whitespace checks.
+Browser appearance remains for owner review.
+
+
+The error card now fills the available results area below the header, keeping
+equal top/bottom padding and centering the icon/message group horizontally and
+vertically. The change is scoped to failed calculations. This CSS adjustment
+received a whitespace check; browser review remains with the owner.
+
+
+The results header now shows “Your crop plans” without the CropPilot logo/name
+badge. The map header retains its branding. This markup adjustment received a
+whitespace check; visual review remains with the owner.
