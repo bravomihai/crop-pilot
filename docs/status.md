@@ -765,3 +765,18 @@ The initial card/theme changes passed web TypeScript, all 43 UI tests and the
 production build before the latest concurrent integration changes. The final
 scrollbar styling received a whitespace check only, at the owner's request for
 code-only changes and personal visual review. Browser rendering was not verified.
+
+
+### Pin controls beside the map signature — 2026-11-15
+
+The location toolbar containing “Click anywhere to move your pin” now sits to the
+right of the CropPilot / Space Apps 2026 signature in a shared footer row, with
+vertically centered alignment and a 20 px gap. The desktop footer has a 22 px
+bottom inset. Mobile retains its 31 px bottom inset and hides the signature as
+before. Verified with a whitespace check; visual review remains with the owner
+as requested.
+
+
+Footer integration with current main verified with TypeScript, 52 UI tests and
+whitespace checks. The README update and previously merged results styling are
+preserved. Browser appearance remains for owner review.

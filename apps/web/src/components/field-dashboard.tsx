@@ -214,8 +214,6 @@ export default function FieldDashboard() {
           <RecommendationResults result={result} busy={busy} error={error} request={lastRequest} onRecalculate={recalculate} onRecalculateMoney={recalculateMoney} onCancel={cancel} />
         </div>
       </section>
-
-      <span className="map-signature">CROPPILOT <i /> SPACE APPS 2026</span>
     </main>
   );
 }
