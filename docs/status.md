@@ -503,3 +503,54 @@ Verified: Python 247 passed; web backend 118/118, UI 43/43 (new test: page order
 labelled as an estimate on every card, no money amounts in Survival Mode, unique ids, same
 historical start for every rotation); configuration 3/3; TypeScript; schemas regenerated with
 no content change; production build. Not verified in this merge: a live browser run.
+
+## VPS engine permissions and CI triggers — 2026-11-15
+
+Main run 43702564664 passed application checks but failed the deployment health
+gate: new Python files inherited restrictive VPS checkout ACLs. Docker copied
+their root-owned permissions into the image, so the non-root engine could not
+read `fieldshift/api.py`. The service was restored by adding read/traverse
+permissions to public source inside the engine image; host secrets were unchanged.
+The recovered engine, web, gateway and maintenance services passed Compose
+health checks and the local computed-engine connectivity check.
+
+The engine Dockerfile now normalizes public source permissions before installing
+the package. Its existing CI build also verifies a non-root import with a
+restricted source file, without network access. CI runs on PRs and `main` pushes;
+feature branch pushes no longer create duplicate PR/push runs. Production health
+checks and the owner-only deployment gate remain required.
+
+
+Verified locally: the image built from a restricted source file imports the API
+as UID 1001 with networking disabled; workflow lint and six deployment guard
+tests pass. Public HTTPS serves revision 76c4c58 and reports the recovered engine
+as reachable in computed mode. The full GitHub suite and automatic deployment
+will verify the permanent change after merge.
+
+
+### Survival Mode integration with current production
+
+Integrated PR #17 on the maintainer branch without altering the contributor's
+branch. Its historical replay field, interface and tests merge cleanly with
+the current main. Retained the image permission fix, PR/main-only CI triggers,
+privacy-safe engine logs and owner-only deployment restrictions.
+
+Verified locally: 118 backend tests, 40 UI tests, 3 configuration checks,
+TypeScript and regenerated schemas matching the committed contract. Full Python,
+database, build and container checks run in GitHub before merge. No agronomic
+validation is implied.
+
+## Latest main merged into Survival Mode; money data packaged — 2026-11-15
+
+Merged `origin/main` (Mihail's engine image permission fix and PR/main-only CI triggers)
+into `feature/survival-mode`, keeping Survival Mode and the money estimate. Found while
+reviewing: the installed engine package, which the Docker image uses, did not include the
+money estimate's data (`fieldshift/evaluator/rules/economics/*.json`), so a container
+would have reported "Money estimate unavailable" for every result. `pyproject.toml` now
+declares those files as package data, and `tests/test_packaging.py` fails if any JSON or
+GeoJSON file under `fieldshift/` is left out (checked: it fails on the old setting).
+
+Verified: a built wheel now contains both economics files and the Romania boundary; Python
+248 passed; web backend 118/118, UI 43/43; configuration 3/3; TypeScript; schemas
+regenerated with no content change; production build. Not verified here: a Docker image
+build and a live run of the money estimate inside a container.
