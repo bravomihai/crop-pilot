@@ -13,6 +13,7 @@ import { PrintSheetButton } from "./ai-summary";
 import ResultsAtAGlance, { BackToSummary } from "./results-at-a-glance";
 import RequestSummary from "./request-summary";
 import SurvivalMode from "./survival-mode";
+import MoneyInputs from "./money-inputs";
 
 export default function RecommendationResults({
   result,
@@ -20,6 +21,7 @@ export default function RecommendationResults({
   error,
   request,
   onRecalculate,
+  onRecalculateMoney,
   onCancel,
 }: {
   result?: RecommendationResult;
@@ -27,6 +29,7 @@ export default function RecommendationResults({
   error: string;
   request?: RecommendationRequest;
   onRecalculate?: (scenario: RecommendationRequest["scenario"]) => void;
+  onRecalculateMoney?: (inputs: RecommendationRequest["money_inputs"]) => void;
   onCancel?: () => void;
 }) {
   return (
@@ -141,6 +144,7 @@ export default function RecommendationResults({
                 ))}
               </div>
             )}
+            <MoneyInputs result={result} request={request} busy={busy} onApply={onRecalculateMoney} />
             <PlanReplay result={result} scenario={request?.scenario} />
             <ClimateCard result={result} />
             {result.plans.length > 0 && <BackToSummary />}
