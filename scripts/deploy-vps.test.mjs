@@ -67,6 +67,8 @@ test("deploy fast-forwards to the tested SHA and checks migrations without apply
   assert.equal(f.git(f.repo, "rev-parse", "HEAD"), f.next);
   const calls = f.calls(), migration = calls.find(a => a.includes("run"));
   assert.deepEqual(migration.slice(-3), ["prisma", "migrate", "status"]);
+  const pulled = calls.find(a => a.includes("pull"));
+  assert.deepEqual(pulled.slice(-2), ["gateway", "cache-maintenance"]);
   const update = calls.find(a => a.includes("up"));
   assert.ok(update.includes("--no-deps"));
   assert.deepEqual(update.slice(-4), ["engine", "web", "gateway", "cache-maintenance"]);

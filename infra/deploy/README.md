@@ -40,7 +40,8 @@ The existing main rules require PRs and restrict merges to the repository admin.
    SSH host verification. PR jobs receive no deployment credentials.
 3. Acquire `.git/croppilot-deploy.lock`; require a clean main checkout and ignored
    server `.env`. Fetch main and require its tip to equal the exact tested SHA.
-4. Fast-forward the checkout, retaining server settings. Build migration, engine
+4. Fast-forward the checkout, retaining server settings. Pull gateway/maintenance
+   images without pulling or replacing PostgreSQL. Build migration, engine
    and web images. Run only `prisma migrate status` against production.
 5. Stop if migrations are pending/failed. Otherwise update engine, web, gateway
    and cache maintenance, leaving PostgreSQL in place. Check running images,
