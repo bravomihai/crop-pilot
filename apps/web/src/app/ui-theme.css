@@ -10,6 +10,8 @@
   --ink: #000000;
   --muted: #526259;
   --accent: #123c2f;
+  --selection-background: var(--accent);
+  --selection-text: var(--surface);
   --blue: var(--accent);
   --border: #d5dfd9;
   --border-hover: #7f9a8b;
@@ -122,6 +124,45 @@
   cursor: pointer;
 }
 .map-experience select option { color: var(--ink); background: var(--surface); }
+.map-experience select option:enabled:is(:checked, :hover, :focus) {
+  background: var(--selection-background);
+  color: var(--selection-text);
+}
+/* Opt into a styleable picker instead of the operating system's blue highlight. */
+@supports (appearance: base-select) {
+  .map-experience select,
+  .map-experience select::picker(select) { appearance: base-select; }
+  /* The trigger already has the shared chevron background. */
+  .map-experience select::picker-icon { display: none; }
+  .map-experience select::picker(select) {
+    max-height: min(360px, 50dvh);
+    max-width: calc(100vw - 24px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--control-radius);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--panel-shadow);
+    font: inherit;
+  }
+  .map-experience select option {
+    min-height: 36px;
+    padding: 9px 12px;
+    gap: 10px;
+    border-radius: 6px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .map-experience select option::checkmark { color: currentColor; }
+  .map-experience select option:focus-visible {
+    outline: 2px solid var(--selection-background);
+    outline-offset: -2px;
+  }
+  .map-experience select option:disabled { color: var(--muted); cursor: not-allowed; }
+}
 .map-experience :is(select, input)::placeholder { color: var(--muted); opacity: 1; }
 .map-experience :is(select, input):disabled { opacity: .6; cursor: not-allowed; }
 .map-experience :is(select, input):focus-visible { border-color: var(--border-hover); }
@@ -160,8 +201,9 @@
 /* Brand leads the map and results headers at the top left. */
 .map-header { gap: 20px; right: 176px; }
 .map-header-end { gap: 12px; }
-.map-brand { flex-shrink: 0; height: 54px; border-radius: var(--card-radius); box-shadow: var(--panel-shadow); }
-.map-brand-symbol { border: 0; }
+.map-brand { flex-shrink: 0; height: 54px; border: 1px solid var(--border); border-radius: var(--card-radius); background: var(--surface); color: var(--accent) !important; box-shadow: var(--panel-shadow); }
+.map-brand-symbol { border: 0; color: var(--accent); }
+.map-brand small { color: var(--muted); }
 .map-brand--compact { height: 44px; padding: 0 14px 0 6px; box-shadow: none; border-radius: var(--control-radius); }
 .map-brand--compact > span:last-child { font-size: 17px; }
 .map-brand--compact small { display: none; }
@@ -221,17 +263,17 @@
   box-shadow: 0 2px 6px #00000003;
 }
 .map-experience :is(.analysis-chart, .results-what-if, .money-inputs, .how-calculated, .glossary) { margin: 20px 0; }
-/* A failed calculation shows only its reason and a warning symbol. */
-.map-results-scroll:has(.results-error) {
+/* Loading and failed calculations share a centered, full-height state. */
+.map-results-scroll:has(:is(.results-error, .results-loading)) {
   display: flex;
   flex: 1;
 }
-.map-results-scroll:has(.results-error) > .results {
+.map-results-scroll:has(:is(.results-error, .results-loading)) > .results {
   display: grid;
   flex: 1;
   min-width: 0;
 }
-.map-experience .results-error {
+.map-experience :is(.results-error, .results-loading) {
   display: grid;
   justify-items: center;
   align-content: center;
@@ -240,7 +282,7 @@
   margin: 0;
   text-align: center;
 }
-.results-error-icon {
+.results-error-icon, .results-loading-icon {
   display: grid;
   place-items: center;
   width: 64px;
@@ -249,7 +291,7 @@
   background: var(--surface-muted);
   color: var(--accent);
 }
-.map-experience .results-error p {
+.map-experience :is(.results-error, .results-loading) p {
   max-width: 48ch;
   margin: 0;
   color: var(--ink);

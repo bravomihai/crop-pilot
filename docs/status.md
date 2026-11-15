@@ -826,3 +826,30 @@ Verified: TypeScript, backend tests, all 52 UI tests, 18 focused Python
 economics/packaging tests, unchanged regenerated schemas and whitespace checks.
 The full suite and container builds run in GitHub before merge. Browser
 appearance was not visually reviewed; no agronomic validation is implied.
+
+
+### System-themed dropdown highlights — 2026-11-15
+
+Dropdown options now use dark green with light text in light mode, and light
+green with dark text in dark mode, for selected, hovered and focused options.
+The shared stylesheet opts into the browser's customizable select picker where
+supported, keeping standard select values, labels, keyboard handling and change
+events. The open menu also uses the shared surface, borders and scrollbars.
+Browsers without customizable select support retain their native picker and may
+still control its highlight colours. Implementation follows the
+[Chrome select styling guidance](https://developer.chrome.com/docs/modern-web-guidance/guides/forms/branded-select-styling).
+Verified: whitespace checks only; browser review remains with the owner.
+
+
+### Matching loading layout, favicon and adaptive logo
+
+The first calculation now uses the same centered, full-height result state as
+the no-response screen, with a spinner, concise status and one cancel control.
+Existing results remain visible during recalculation with cancellation available.
+Added `app/icon.svg` using the existing leaf path in dark green (`#123c2f`). The
+on-screen leaf and wordmark use theme colors: dark green in light mode and light
+green in dark mode, on the current surface color.
+
+Verified: TypeScript, all 52 UI tests, valid SVG XML and whitespace checks.
+The production build and container checks run in GitHub; visual review remains
+with the owner.
