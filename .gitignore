@@ -23,3 +23,4 @@ venv/
 # Downloaded assets; never ignore Python source folders called data_service
 /data/
 /services/engine/cache/
+/cache/
