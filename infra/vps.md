@@ -1,5 +1,11 @@
 # CropPilot on your VPS
 
+For the configured shared VPS at `crop-pilot.nemes.engineer`, use the
+[GitHub Actions and existing-NGINX guide](deploy/README.md). Its checkout is
+`/home/ubuntu/crop-pilot`, and production migrations are manual.
+
+The instructions below describe the alternative standalone Caddy installation.
+
 Use a Linux VPS with Docker Engine and the Docker Compose plugin. No AWS account,
 CloudFormation, IAM or SSM configuration is required. For Ubuntu installation, follow
 [Docker's official instructions](https://docs.docker.com/engine/install/ubuntu/).

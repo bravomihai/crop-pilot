@@ -5,7 +5,9 @@ scripts have been removed.
 
 - `compose.yaml`: PostgreSQL cache, migration, engine, web, request gateway, cache cleanup.
 - `nginx.conf`: public request limits; blocks public access to the internal cache API.
-- `Caddyfile` + `compose.production.yaml`: VPS HTTPS, exposing only ports 80/443.
+- `Caddyfile` + `compose.production.yaml`: standalone-server HTTPS.
+- `compose.vps.yaml` + `nginx.vps.conf`: shared VPS with an existing host NGINX.
+- `deploy/README.md`: GitHub Actions, account permissions, and manual migration/recovery.
 - `vps.md`: domain, root configuration, startup, updates, and recovery.
 - `.github/workflows/checks.yml`: contract, configuration, web, Python, database, and container checks.
 - `ci/checks.yml.example`: reference copy of the workflow.

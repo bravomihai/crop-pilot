@@ -48,9 +48,9 @@ def recommendations(request: dict, x_request_id: str | None = Header(default=Non
         raise HTTPException(
             503, "Scientific engine is not ready; explicitly use demo mode"
         )
-    except Exception:
-        # The traceback only (no request body), so failures can be diagnosed.
-        logging.getLogger("croppilot.engine").exception("Recommendation failed")
+    except Exception as error:
+        # Provider exception messages/tracebacks can contain coordinates or credentials.
+        logging.getLogger("croppilot.engine").error("Recommendation failed (%s)", type(error).__name__)
         raise HTTPException(502, "Environmental analysis could not be completed")
     if validate("recommendation-result", result):
         raise HTTPException(500, "Engine output does not match the shared contract")

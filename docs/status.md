@@ -129,10 +129,10 @@ token could not publish workflows. To activate it, move the file to
 ## Verificare P2 live — 2026-11-14
 
 - NASA POWER: datele din 2025 au 365 de înregistrări și 12 rezumate lunare, fără zile
-  lipsă pentru temperatură sau precipitații, în cele trei puncte de test (Câmpia Română, Dobrogea și Bărăgan).
+  lipsă pentru temperatură sau precipitații, în Fundulea, Dobrogea și Slobozia.
 - SoilGrids: profilul ponderat 0–30 cm a furnizat textură, pH, carbon organic și AWC
-  estimate în Câmpia Română și Dobrogea. În punctul din Bărăgan nu au fost disponibile valori.
-- Fluxul complet `computed` în punctul din Câmpia Română a folosit 20 de ani, a produs trei planuri și
+  estimate la Fundulea și Dobrogea. La Slobozia nu au fost disponibile valori.
+- Fluxul complet `computed` la Fundulea a folosit 20 de ani, a produs trei planuri și
   baseline, iar răspunsul a trecut validarea contractului.
 - Testele motorului după integrarea P2: 160 trecute. Agregarea pe contur rămâne
   neimplementată; rezultatele SoilGrids sunt estimări, nu analize de teren.
@@ -245,7 +245,7 @@ merged yet (see Remaining team work). Fixed:
 
 Verified: Python 223 passed; web TypeScript, backend 87/87, UI 30/30, production build.
 **Live** (real NASA POWER, SoilGrids, SRTM; temporary local engine in computed mode and
-the built web app; Next.js `/api/recommendations`): the Romanian Plain example field 8.1 s, complete with
+the built web app; Next.js `/api/recommendations`): Fundulea 8.1 s, complete with
 baseline, 17 replayed seasons and 20 climate years; the same field with +2 °C / −20 %
 rain 6.6 s; Suceava 10.0 s on provisional rules with low confidence; Budapest 422.
 In the browser, the demo link, Calculate, the new charts and a +2 °C what-if worked, and
@@ -266,7 +266,7 @@ an empty summary section is not printed.
 
 Verified: Python 227 passed; web backend 95/95, UI 32/32, TypeScript, schemas unchanged,
 production build. **Live** (real NASA POWER, SoilGrids, SRTM; temporary local computed
-engine and built web app, in a browser): the Romanian Plain example field with previous crop, current rotation
+engine and built web app, in a browser): Fundulea with previous crop, current rotation
 maize → winter wheat, water focus (36 % weight) and pea avoided produced three plans
 without pea and the current-rotation baseline; replay (2007–2023) and climate
 (2006–2025) charts show computed data; a +2 °C what-if updated the replay note and the
@@ -362,6 +362,55 @@ that web and engine receive the same generated token and production exposes only
 HTTPS ingress. UI testing, a live OpenAI call, Docker startup/migrations and VPS
 deployment are left to the user. No paid API call or deployment was performed.
 
+## Shared NGINX VPS and CI/CD — 2026-11-15
+
+Prepared a single production checkout at /home/ubuntu/crop-pilot, a dedicated
+croppilot-deploy account/key, main-only production environment, and host NGINX
+HTTPS. Removed the earlier unshipped release-directory/privileged-receiver
+approach. The VPS Compose profile publishes only 127.0.0.1:18080 and leaves
+production migrations manual. The Actions deployment requires successful CI,
+main, and both original/rerun actors to be bravomihai. It fast-forwards only to
+the exact tested main SHA, preserves local settings, refuses dirty/stale
+checkouts and pending migrations, and verifies container/HTTPS health.
+
+Verified locally: 227 Python tests, 97 backend tests, 33 UI tests, 3 configuration
+checks, TypeScript and production build; 5 isolated deployment regression tests;
+ShellCheck, actionlint, VPS Compose isolation/manual-migration dependency, and
+NGINX syntax. Verified dedicated-key SSH, Docker access, certificate issuance
+and the existing certificate-renewal timer on the VPS. GitHub CI passed on PR #13
+and its main merge, 63afbd3. The first installation applied the initial cache
+migration explicitly, outside automatic CD, and started all five CropPilot
+services. Only the gateway is published, on 127.0.0.1:18080; the existing
+Universident database remains healthy.
+
+Verified live over HTTPS: expected commit, homepage and browser JavaScript,
+location search, invalid input rejected with 400, internal cache blocked with
+404, and computed-engine reachability. The public Fundulea example returned
+HTTP 200 in 11.3 seconds, complete with three plans of three crops each; its
+response passed the shared JSON schema. The CI SSH script also passed its
+read-only verification against the real server. This checks deployment and
+integration, not agronomic validity. No paid AI request was made; the optional
+OpenAI key remains unset on the server.
+
+Normal updates explicitly pull gateway/maintenance images before replacement,
+without pulling or replacing PostgreSQL. Automatic deployment was enabled after
+the initial installation checks; the next main merge exercises that path.
+
+
+### Docker 29 image verification
+
+The first push-triggered deployment built and updated the application to main
+commit 1fc2933, but the final image check falsely rejected the unchanged engine.
+Docker's running container referenced its platform manifest/config while the
+default image lookup returned an OCI index with build attestations. Verified
+on the real VPS that the engine's platform manifest exactly matched the newly
+built engine image and that public HTTPS served the expected web commit.
+
+Deployment verification now compares platform manifests using API 1.49+.
+Six deployment regression tests include distinct legacy config/index/platform
+IDs and a negative case that still rejects a genuinely stale running image.
+The remaining main/actor, migration and health gates are unchanged.
+
 ## Easier-to-read results — 2026-11-15 (branch `tudor`)
 
 The results panel now opens with an **At a glance** card built from the result itself,
@@ -385,7 +434,8 @@ Engine text fixes:
 - the winterkill notes are merged into one line;
 - the soil note says when regional SoilGrids estimates were used.
 
-Unexpected engine failures are now logged (traceback only) before the 502.
+Unexpected engine failures are logged by error type before the 502; exception
+messages and tracebacks are omitted because provider URLs can contain field coordinates.
 Slobozia/Fundulea were removed from tracked files: the INCDA source lost its place name
 and URL, and the examples use a neutral name.
 
@@ -395,3 +445,22 @@ Verified: Python 231 passed; web backend 97/97, UI 35/35, TypeScript; schemas un
 rotation maize → winter wheat showed the summary, collapsed details and full screen
 correctly. Known on Windows only: `scripts/env.test.mjs` expects `/` path separators
 and fails 1 of 3 checks; the uvicorn `--reload` supervisor can crash on file changes.
+
+### Integration review with current VPS deployment
+
+Preserved the current CI/CD and deployment records while merging Tudor's
+commits. Replaced exception tracebacks with error-type-only logging because
+provider URLs can include field coordinates or credentials, and added an HTTP
+regression test proving those values do not reach logs or error responses.
+Cancelled summary responses are ignored.
+
+Verified: 232 Python tests, 97 backend tests, 35 UI tests, 3 configuration
+checks, TypeScript, unchanged generated schemas, and a production build.
+Browser checks with an explicitly local demo engine covered the At a glance
+card, collapsed details, full-screen toggle, return navigation and Escape;
+paid AI and NASA calls were disabled for that UI check. No scientific
+validation is implied.
+
+The CI/CD correction was independently verified by the successful automatic
+main run 43700477811 and live HTTPS at commit d7f5eea: a real example request
+returned three computed plans of three crops each and passed the shared schema.

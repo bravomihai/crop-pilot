@@ -38,7 +38,8 @@ function usePlainWords(result: RecommendationResult): State {
     })
       .then(async (response) => {
         if (!response.ok) throw new Error();
-        setState({ status: "ready", summary: (await response.json()) as Summary });
+        const summary = (await response.json()) as Summary;
+        if (!controller.signal.aborted) setState({ status: "ready", summary });
       })
       .catch(() => {
         if (!controller.signal.aborted) setState({ status: "unavailable" });
