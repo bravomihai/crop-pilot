@@ -313,3 +313,22 @@ regeneration without changes, and local/production Compose configuration. Checke
 that web and engine receive the same generated token and production exposes only
 HTTPS ingress. UI testing, a live OpenAI call, Docker startup/migrations and VPS
 deployment are left to the user. No paid API call or deployment was performed.
+
+## Shared NGINX VPS and CI/CD — 2026-11-15
+
+Prepared a single production checkout at /home/ubuntu/crop-pilot, a dedicated
+croppilot-deploy account/key, main-only production environment, and host NGINX
+HTTPS. Removed the earlier unshipped release-directory/privileged-receiver
+approach. The VPS Compose profile publishes only 127.0.0.1:18080 and leaves
+production migrations manual. The Actions deployment requires successful CI,
+main, and both original/rerun actors to be bravomihai. It fast-forwards only to
+the exact tested main SHA, preserves local settings, refuses dirty/stale
+checkouts and pending migrations, and verifies container/HTTPS health.
+
+Verified locally: 227 Python tests, 97 backend tests, 33 UI tests, 3 configuration
+checks, TypeScript and production build; 5 isolated deployment regression tests;
+ShellCheck, actionlint, VPS Compose isolation/manual-migration dependency, and
+NGINX syntax. Verified dedicated-key SSH, Docker access, certificate issuance
+and the existing certificate-renewal timer on the VPS. GitHub execution and
+the first live application deployment remain to be verified. Automatic
+deployment is disabled until initial provisioning is checked.

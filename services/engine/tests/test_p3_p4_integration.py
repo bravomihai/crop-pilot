@@ -356,7 +356,7 @@ def test_identical_requests_give_identical_results_apart_from_timestamp():
 
 
 def engine_timeout_ms() -> int:
-    for line in (ROOT / "apps" / "web" / ".env.example").read_text(encoding="utf-8").splitlines():
+    for line in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
         if line.startswith("ENGINE_TIMEOUT_MS="):
             return int(line.split("=", 1)[1])
     return 90000  # default in apps/web/src/lib/server/upstream.ts
