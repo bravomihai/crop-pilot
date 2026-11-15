@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { resultSchema, requestSchema } from "@fieldshift/contracts";
+import { resultSchema, requestSchema } from "@croppilot/contracts";
 import {
   bareGaps,
   linearTrend,

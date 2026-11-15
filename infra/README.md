@@ -1,38 +1,66 @@
-# FieldShift infrastructure
+# CropPilot infrastructure
 
-- `compose.yaml`: local PostgreSQL, migration, web, engine, NGINX gateway, and cache maintenance.
-- `nginx.conf`: request/body limits and protection of the internal API from public access.
-- `cache-maintenance.py`: authenticated periodic cleanup of expired public data.
-- `Caddyfile` + `compose.production.yaml`: HTTPS profile without direct service ports.
-- `aws/host.yaml`, `aws/configure.py`, `aws/README.md`: prepared EC2 infrastructure and
-  secret loading; no AWS resources have been created.
-- `.github/workflows/checks.yml`: checks prepared for pushes/PRs.
-  `ci/checks.yml.example` is the reference copy; the workflow has not yet run on GitHub.
+The app runs on a Linux VPS with Docker Compose. AWS provisioning and secret-loading
+scripts have been removed.
 
-## Local verification
+- `compose.yaml`: PostgreSQL cache, migration, engine, web, request gateway, cache cleanup.
+- `nginx.conf`: public request limits; blocks public access to the internal cache API.
+- `Caddyfile` + `compose.production.yaml`: VPS HTTPS, exposing only ports 80/443.
+- `vps.md`: domain, root configuration, startup, updates, and recovery.
+- `.github/workflows/checks.yml`: contract, configuration, web, Python, database, and container checks.
+- `ci/checks.yml.example`: reference copy of the workflow.
 
-With Node available in the shell and dependencies installed, start the local configuration:
+## One configuration file
+
+Use `.env` at the repository root, alongside `compose.yaml`. Docker Compose reads it
+for interpolation. Native web, engine, and Prisma commands load the same file.
+Do not create environment files inside `apps/web` or `services/engine`.
+The root `.env` is ignored by Git and excluded from container builds.
+
+For a new checkout, copy `.env.example` to `.env` and replace the password and token.
+The internal token must contain at least 32 characters. This checkout already has
+generated local credentials. Use separate credentials on a public VPS.
+
+## Local startup
+
+Stop any native development server using port 3000 before starting the full Docker
+stack. Do not run the native and container web servers on that port together.
 
 ```sh
-docker compose up -d --build --wait
-pnpm test:cache
-services/engine/.venv/bin/python infra/check-local.py
+docker compose config --quiet
+docker compose up -d --build --wait --wait-timeout 180
 ```
 
-The integration script uses localhost only. It checks the demo engine, live geocoding,
-cache, and gateway limits; it temporarily stops only this project's PostgreSQL and
-recreates the engine in `computed` mode, then restores the database and `demo` mode.
-Do not run it against a shared deployment. It does not delete volumes or active data.
-Migration runs automatically as a separate Compose service. Local configuration is ignored by Git.
+Open http://localhost:8080. The gateway forwards to the website, which forwards
+Calculate requests to `http://engine:8000` inside Docker using the shared token.
+`ENGINE_MODE=computed` and `ENABLE_NASA_POWER=true` use real public data;
+`NEXT_PUBLIC_USE_MOCK_API=false` keeps frontend fixtures disabled.
+The migration service creates the cache table before the web service starts.
 
-The application with public-request limits is at `http://localhost:8080`; the direct
-development port is 3000. The database and engine bind only to loopback in the local
-profile. For production, use the [AWS guide](aws/README.md), which removes these ports.
+Check connectivity without submitting a field or changing services:
 
-The cache stores public data only. Farmer forms, entered history, and recommendations
-are not persisted. No SMS/WhatsApp messages are sent.
+```sh
+python3 infra/check-local.py
+docker compose ps
+```
 
-Primary configuration references: [NGINX](https://nginx.org/en/docs/http/ngx_http_limit_req_module.html),
-[Compose](https://docs.docker.com/reference/compose-file/merge/),
-[node-postgres](https://node-postgres.com/apis/client),
-[Caddy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
+Then select a real Romanian field in the UI and press Calculate. The first request
+can take longer while public weather and soil data are fetched. A health check alone
+does not verify a successful calculation or agronomic accuracy.
+
+## Optional English summary
+
+Add `OPENAI_API_KEY` to the root `.env`. The default model is `gpt-6-luna`, configurable
+through `OPENAI_SUMMARY_MODEL`. `AI_SUMMARY_ENABLED=true` enables the feature when a key
+is present. Missing keys and provider failures leave the calculated plans usable.
+The summary uses OpenAI Responses with structured output, response storage disabled,
+and no tools. It rewrites the calculated results; it does not generate the rotation.
+After changing the key or model, run `docker compose up -d web` to recreate the web
+service with the new values. Native development servers need a restart.
+
+The cache stores public data only, not farmer forms, histories or recommendations.
+For public hosting, follow [the VPS guide](vps.md).
+
+References: [Compose environment files](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/),
+[Compose merge rules](https://docs.docker.com/reference/compose-file/merge/),
+[Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).

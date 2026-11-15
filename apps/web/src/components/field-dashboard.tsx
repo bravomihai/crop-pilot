@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { HistorySource, Location, RecommendationRequest } from "@fieldshift/contracts";
+import type { HistorySource, Location, RecommendationRequest } from "@croppilot/contracts";
 import { useRecommendations } from "@/lib/use-recommendations";
 import { RULE_CROPS, HISTORY_SOURCES } from "@/lib/crop-options";
 import { afterAutumnSowing, fieldFromQuery } from "@/lib/planning-dates";
@@ -102,14 +102,14 @@ export default function FieldDashboard() {
       <FieldMap view={view} selection={selection} onSelect={selectField} />
 
       <header className="map-header">
-        <a className="map-brand" href="#main" aria-label="FieldShift home">
+        <a className="map-brand" href="#main" aria-label="CropPilot home">
           <span className="map-brand-symbol"><Icon name="leaf" size={23} /></span>
-          <span>FieldShift<small>Crop planning</small></span>
+          <span>CropPilot<small>Crop planning</small></span>
         </a>
         <LocationSearch onSelect={chooseLocation} />
         <div className="map-header-end">
           <span className="prototype-pill"><i />Prototype</span>
-          <button className="map-icon-button" type="button" aria-label="About FieldShift" onClick={() => info.current?.showModal()}><Icon name="info" /></button>
+          <button className="map-icon-button" type="button" aria-label="About CropPilot" onClick={() => info.current?.showModal()}><Icon name="info" /></button>
         </div>
       </header>
 
@@ -177,7 +177,7 @@ export default function FieldDashboard() {
 
       <span className="map-signature">FIELDSHIFT <i /> SPACE APPS 2026</span>
       <dialog className="map-about" ref={info} aria-labelledby="about-title">
-        <div className="planner-heading"><h2 id="about-title">FieldShift</h2><button type="button" className="quiet-icon" aria-label="Close about FieldShift" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
+        <div className="planner-heading"><h2 id="about-title">CropPilot</h2><button type="button" className="quiet-icon" aria-label="Close about CropPilot" onClick={() => info.current?.close()}><Icon name="close" /></button></div>
         <p>Crop planning prototype. No account; your field stays in this tab.</p>
         <p>Map: Esri / OpenStreetMap. NASA layers show regional context, not field measurements.</p>
         <p>Demo results are fictional. Review computed plans with a local agronomist.</p>

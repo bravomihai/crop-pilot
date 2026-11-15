@@ -1,3 +1,4 @@
+name: croppilot
 x-logging: &logging
   driver: json-file
   options: { max-size: "10m", max-file: "3" }
@@ -5,9 +6,9 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-fieldshift}
+      POSTGRES_USER: ${POSTGRES_USER:-croppilot}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: ${POSTGRES_DB:-fieldshift}
+      POSTGRES_DB: ${POSTGRES_DB:-croppilot}
     ports: ["127.0.0.1:5432:5432"]
     volumes: ["postgres_data:/var/lib/postgresql/data"]
     healthcheck:
@@ -23,7 +24,7 @@ services:
       dockerfile: apps/web/Dockerfile
       target: build
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-fieldshift}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-fieldshift}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-croppilot}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-croppilot}
     command: ["pnpm", "db:deploy"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -35,8 +36,10 @@ services:
     environment:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
       ENGINE_MODE: ${ENGINE_MODE:-computed}
+      HISTORY_YEARS: ${HISTORY_YEARS:-20}
+      ENABLE_ENGINE_DOCS: ${ENABLE_ENGINE_DOCS:-false}
       ENABLE_NASA_POWER: ${ENABLE_NASA_POWER:-true}
-      FIELDSHIFT_CACHE_DIR: ${FIELDSHIFT_CACHE_DIR:-/tmp/fieldshift-cache}
+      CROPPILOT_CACHE_DIR: ${CROPPILOT_CACHE_DIR:-/tmp/croppilot-cache}
       SOILGRIDS_TIMEOUT_S: ${SOILGRIDS_TIMEOUT_S:-8}
       DATA_DEADLINE_S: ${DATA_DEADLINE_S:-60}
       CACHE_BACKEND_URL: http://web:3000
@@ -59,13 +62,14 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-fieldshift}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-fieldshift}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-croppilot}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-croppilot}
       CACHE_ENABLED: ${CACHE_ENABLED:-true}
       ENGINE_URL: http://engine:8000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
-      ENGINE_TIMEOUT_MS: "90000"
+      ENGINE_TIMEOUT_MS: ${ENGINE_TIMEOUT_MS:-90000}
       # Optional AI summary (server-side only). Empty key: the page says it is not set up.
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_SUMMARY_MODEL: ${OPENAI_SUMMARY_MODEL:-gpt-6-luna}
       AI_SUMMARY_ENABLED: ${AI_SUMMARY_ENABLED:-true}
     ports: ["127.0.0.1:3000:3000"]
     depends_on:

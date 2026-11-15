@@ -10,7 +10,7 @@ Examples: `packages/contracts/examples/`.
 | POST | `/api/recommendations` | Complete form → result in the same request |
 | GET | `/api/engine/status` | Engine connectivity, mode, and contract compatibility; no agronomic calculation |
 | GET | `/api/health` | Service identity/contract version; does not check external services |
-| POST | `/api/summary` | Optional AI summary of a computed result, `{result, language: "en"|"ro"}`; 503 `summary_not_configured` without `ANTHROPIC_API_KEY`. Body ≤ 256 KB; the gateway allows 6/min per IP (burst 2) |
+| POST | `/api/summary` | Optional English-only OpenAI summary of a computed result, `{result}`; 503 `summary_not_configured` without `OPENAI_API_KEY`. Body ≤ 256 KB; the gateway allows 6/min per IP (burst 2) |
 
 There are no endpoints for users, authentication, farms, or saved results. Calculation
 does not require login. Next.js validates the schema and at least one positive priority.
@@ -77,7 +77,7 @@ perform calculations, or call NASA. Redirects are not followed.
 Example 200 response:
 
 ```json
-{"status":"reachable","service":"fieldshift-engine","contract_version":"1.0","mode":"demo","request_id":"<uuid>"}
+{"status":"reachable","service":"croppilot-engine","contract_version":"1.0","mode":"demo","request_id":"<uuid>"}
 ```
 
 `reachable` confirms only connectivity and response shape/version. `computed` is
@@ -143,4 +143,4 @@ direct service ports are removed. These limits do not apply to development port
 Application logs contain `event`, a static operation name, `request_id`, status,
 an error code when applicable, and `duration_ms`. They contain no request bodies,
 URLs, tokens, or raw exception messages. No analysis history is created. Logs go to
-standard output with Docker rotation; they are not an alerting system or AWS monitoring service.
+standard output with Docker rotation; they are not an alerting or server-monitoring system.

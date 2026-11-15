@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 CONTRACTS_DIR = Path(
     os.getenv(
-        "FIELDSHIFT_CONTRACTS",
+        "CROPPILOT_CONTRACTS",
         Path(__file__).resolve().parents[3] / "packages" / "contracts",
     )
 )

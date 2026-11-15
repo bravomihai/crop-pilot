@@ -6,7 +6,7 @@
 | P2 data | `services/engine/fieldshift/data_service` | Daily data, units, quality, sources, and public-data cache |
 | P3 agronomy | `services/engine/fieldshift/evaluator` | Regional rules, calendar, checks against actual history, and criterion evaluation |
 | P4 recommendations | `services/engine/fieldshift/recommender`, `pipeline.py` | Generation and comparison of three plans containing three crops each |
-| P5 backend | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra` | Validation, Python HTTP integration, Prisma/PostgreSQL cache, and AWS |
+| P5 backend | `apps/web/src/app/api`, `src/lib/server`, `prisma`, `compose.yaml`, `infra` | Validation, Python HTTP integration, Prisma/PostgreSQL cache, and VPS hosting |
 
 ## Parallel development
 

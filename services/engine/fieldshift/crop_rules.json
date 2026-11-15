@@ -134,7 +134,7 @@
     },
     {
       "id": "ro-thermal-bands",
-      "title": "FieldShift provisional thermal bands derived from NASA POWER April–September temperature climatology"
+      "title": "CropPilot provisional thermal bands derived from NASA POWER April–September temperature climatology"
     },
     {
       "id": "romania-calendar-estimate",
@@ -171,7 +171,7 @@
     },
     {
       "id": "fieldshift-mcda",
-      "title": "FieldShift transparent ranking method; screening scores are not yield predictions"
+      "title": "CropPilot transparent ranking method; screening scores are not yield predictions"
     }
   ],
   "assumptions": [

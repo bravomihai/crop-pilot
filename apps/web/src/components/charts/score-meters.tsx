@@ -1,4 +1,4 @@
-import type { CriterionScores } from "@fieldshift/contracts";
+import type { CriterionScores } from "@croppilot/contracts";
 import { SCORE_CRITERIA, scorePercent } from "@/lib/chart-data";
 
 export function ScoreMeter({
