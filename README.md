@@ -1,10 +1,4 @@
-# CropPilot
-
-Crop rotation planning with NASA environmental data.
-
-[Live application](https://crop-pilot.nemes.engineer/)
-
-## What it does
+# [CropPilot](https://crop-pilot.nemes.engineer/)
 
 CropPilot helps farmers in Romania compare crop rotations based on field location, crop history, soil conditions, irrigation, and planning priorities. It generates up to three alternative plans, each with three successive main crops, sowing and harvest windows, and clear benefits and trade-offs.
 
