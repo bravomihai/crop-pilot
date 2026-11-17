@@ -4,6 +4,7 @@ import "./globals.css";
 import "./analysis.css";
 import "./map-workspace.css";
 import "./ui-theme.css";
+import "./controls.css";
 export const metadata: Metadata = {
   title: "CropPilot — crop planning",
   description:

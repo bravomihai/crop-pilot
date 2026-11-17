@@ -19,6 +19,7 @@ team before adding fields or changing request shapes. Interface text is English.
 | `src/components/ai-summary.tsx` | Optional English-only OpenAI summary and the print button; `lib/summary-payload.ts` trims what is sent |
 | `src/components/glossary.tsx` | Plain explanations of the terms used in the results |
 | `src/components/charts/` | Score meters and comparison, rotation timeline, replay and climate charts |
+| `src/app/controls.css` | Shared inputs, dropdowns, buttons, disabled states and keyboard focus |
 | `src/components/regional-map-context.tsx` | Optional NASA GIBS layers, POWER cell and rule-zone outlines |
 | `src/lib/api.ts` | The only frontend entry for calculations; explicit mock mode |
 | `src/lib/use-recommendations.ts` | Calculation state, cancellation and debounced recalculation |
@@ -177,7 +178,10 @@ external integrations; check those manually in a browser at narrow and wide widt
 
 ## Shared visual system — 2026-11-15
 
-`src/app/ui-theme.css` defines the shared interface tokens and control/card styles.
+`src/app/ui-theme.css` defines shared theme tokens and card styles.
+`src/app/controls.css` owns shared interactive controls and their planner/search
+variants. Header controls share size and corner tokens; layout stylesheets position
+their containers.
 Light and dark appearance follows `prefers-color-scheme` automatically; the main
 page offers no theme selector and stores no theme preference. Light mode uses
 soft white surfaces with a slight green tint, black text and forest green
