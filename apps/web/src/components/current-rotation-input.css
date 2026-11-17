@@ -1,0 +1,29 @@
+.current-rotation .rotation-crops {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.rotation-crop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rotation-crop-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.rotation-crop-row > button.rotation-remove {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+}

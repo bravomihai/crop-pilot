@@ -69,6 +69,10 @@ PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
+The field-details panel uses larger, high-contrast labels and short helper text,
+without the earlier eyebrow label. The More options hover has side padding so
+its content stays clear of the edges.
+
 - Search for a place or click the map to select a point. A shared link such as
   `/?lat=44.45&lon=26.5&name=Fundulea` selects that location. Point requests do not
   include a boundary, so ESA WorldCover cannot establish land-cover suitability;
@@ -85,6 +89,8 @@ PostgreSQL cache stores public data only.
 - Scenario steps are the same in the form and in the results what-if (−3…+5 °C in
   0.5 °C steps, −50…+50 % rain in 5 % steps). After a what-if recalculation the form
   shows the scenario of the displayed result.
+- Current rotation entries stay in the order added. Each row has a crop selector
+  and a trash button, with no visible numbering or reorder controls.
 - Changing any form input clears older results. A calculation can be cancelled.
 
 ## Results panel

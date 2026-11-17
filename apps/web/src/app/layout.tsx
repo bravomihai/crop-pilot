@@ -5,6 +5,7 @@ import "./analysis.css";
 import "./map-workspace.css";
 import "./ui-theme.css";
 import "./controls.css";
+import "../components/current-rotation-input.css";
 export const metadata: Metadata = {
   title: "CropPilot",
   description:

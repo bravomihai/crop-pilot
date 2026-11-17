@@ -91,7 +91,7 @@
 .map-experience :is(select, input):focus-visible { border-color: var(--border-hover); }
 .map-experience input:is([type="checkbox"], [type="radio"]) { accent-color: var(--forest); width: 16px; height: 16px; flex-shrink: 0; }
 .map-experience input[type="range"] { accent-color: var(--accent); cursor: pointer; min-height: 32px; }
-.map-experience :is(.button, .fullscreen-toggle, .map-back-button, .search-dismiss, .cancel-calculation, .glance-link, .print-sheet-button, .text-button, .rotation-row-actions :where(button)) {
+.map-experience :is(.button, .fullscreen-toggle, .map-back-button, .search-dismiss, .cancel-calculation, .glance-link, .print-sheet-button, .text-button) {
   min-height: 40px;
   border: 1px solid var(--border);
   border-radius: var(--control-radius);
@@ -113,7 +113,7 @@
   border-color: var(--forest-hover);
   color: #ffffff;
 }
-.map-experience :is(.quiet-icon, .map-back-button, .fullscreen-toggle, .button--secondary, .search-dismiss, .cancel-calculation, .text-button, .rotation-row-actions :where(button), .print-sheet-button, .map-clear):hover:not(:disabled) {
+.map-experience :is(.quiet-icon, .map-back-button, .fullscreen-toggle, .button--secondary, .search-dismiss, .cancel-calculation, .text-button, .print-sheet-button, .map-clear):hover:not(:disabled) {
   background: var(--surface-hover);
   border-color: var(--border-hover);
   color: var(--ink);
@@ -153,7 +153,6 @@
 .map-experience .dashboard-search button:hover:not(:disabled) { background: var(--forest-hover); }
 .map-experience .dashboard-search:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .map-experience .search-popover li button:hover { background: var(--surface-hover); }
-.map-experience .rotation-row-actions :where(button) { min-width: 36px; padding: 7px 10px; }
 .map-experience .current-rotation > button {
   min-height: 40px;
   padding: 7px 10px;
