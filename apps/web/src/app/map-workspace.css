@@ -62,7 +62,7 @@
 .map-experience .planner-fields label { display: flex; flex-direction: column; gap: 7px; margin: 0 0 15px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .planner-field-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 .planner-options { border: 0; border-top: 1px solid var(--border); margin: 1px 0 0; padding: 0; }
-.planner-options > summary { display: flex; align-items: center; gap: 8px; padding: 17px 0; color: var(--accent); font-size: 11px; font-weight: 600; cursor: pointer; list-style: none; }
+.planner-options > summary { display: flex; align-items: center; gap: 8px; padding: 17px 12px; color: var(--accent); font-size: 11px; font-weight: 600; cursor: pointer; list-style: none; }
 .planner-options > summary::-webkit-details-marker { display: none; }
 .planner-options > summary::before { content: "+"; font-size: 18px; font-weight: 400; line-height: 1; }
 .planner-options[open] > summary::before { content: "−"; }
