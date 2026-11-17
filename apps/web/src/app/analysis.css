@@ -874,84 +874,9 @@
   color: var(--muted);
 }
 
-.regional-map-context {
-  padding: 18px;
-  background: var(--surface);
-  color: var(--ink);
-  border-top: 1px solid var(--border);
-}
 .location-map-wrap {
   min-width: 0;
 }
-.location-map-wrap .regional-map-context {
-  padding: 14px 0;
-}
-.regional-map-context h3 {
-  font-size: 13px;
-  margin: 0 0 9px;
-}
-.regional-map-context p {
-  font-size: 10px;
-  color: var(--muted);
-  margin: 9px 0;
-}
-.regional-map-context details {
-  padding-top: 8px;
-}
-.regional-map-context summary {
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--blue);
-}
-.regional-map-context label {
-  display: grid;
-  gap: 8px;
-  font-size: 11px;
-  margin-top: 12px;
-}
-.regional-map-context input[type="range"] {
-  width: 100%;
-  min-height: 28px;
-  accent-color: var(--chart-blue);
-}
-.regional-map-context label.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 0;
-}
-.gibs-layer-options {
-  display: grid;
-  gap: 12px;
-  margin-top: 18px;
-}
-.gibs-layer-option {
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-muted);
-}
-.gibs-legend {
-  margin-top: 12px;
-}
-.gibs-legend img {
-  width: min(100%, 378px);
-  height: auto;
-  background: white;
-  padding: 5px;
-  border-radius: 5px;
-}
-.gibs-legend p {
-  overflow-wrap: anywhere;
-  font-size: 10px;
-}
-.gibs-legend a {
-  font-size: 10px;
-}
-.regional-map-context p.coverage-warning {
-  color: var(--warning-text);
-}
-
 @media (max-width: 1100px) {
   .calculator-fields {
     grid-template-columns: 1fr 1fr;

@@ -9,14 +9,6 @@ import {
   timelineData,
 } from "../src/lib/chart-data";
 import {
-  advertisedDate,
-  contextMonths,
-  gibsTileUrl,
-  isCovered,
-  powerCell,
-  RULE_ZONES,
-} from "../src/lib/regional-context";
-import {
   fullExampleRequest,
   getRecommendations,
   mockFixture,
@@ -77,49 +69,6 @@ test("simple trend ignores unknown years instead of treating them as zero", () =
   assert.equal(trend.slope, 2);
   assert.equal(trend.at(2021), 12);
   assert.equal(linearTrend([{ year: 2020, value: null }]), null);
-});
-test("POWER cell snaps latitude and longitude to the specified distinct grid spacings", () => {
-  assert.deepEqual(powerCell({ latitude: 44.56, longitude: 27.36 }), [
-    [44.25, 27.1875],
-    [44.75, 27.8125],
-  ]);
-  assert.equal(RULE_ZONES.length, 4);
-  assert.equal(isCovered({ latitude: 44.56, longitude: 27.36 }), true);
-  assert.equal(isCovered({ latitude: 46.77, longitude: 23.59 }), false);
-  assert.equal(isCovered({ latitude: 43.65, longitude: 22.6 }), true);
-});
-test("month snapshots respect advertised dates, interval gaps, and sampling periods", () => {
-  const values = [
-    "2025-01-01/2025-02-02/P1D",
-    "2025-04-10/2025-06-01/P2D",
-    "2025-08-13",
-  ];
-  assert.equal(advertisedDate(values, "2025-01"), "2025-01-31");
-  assert.equal(advertisedDate(values, "2025-02"), "2025-02-02");
-  assert.equal(advertisedDate(values, "2025-03"), null);
-  assert.equal(advertisedDate(values, "2025-04"), "2025-04-30");
-  assert.equal(advertisedDate(values, "2025-08"), "2025-08-13");
-  assert.equal(advertisedDate(["2025-01-01/2025-12-01/P1M"], "2025-06"), null);
-  const months = contextMonths(new Date("2026-11-14T00:00:00Z"));
-  assert.equal(months.length, 60);
-  assert.equal(months[0], "2021-12");
-  assert.equal(months.at(-1), "2026-11");
-  assert.match(
-    gibsTileUrl(
-      {
-        id: "verified",
-        matrix: "GoogleMapsCompatible_Level6",
-        style: "default",
-        maxNativeZoom: 6,
-        tileSize: 256,
-        values: [],
-        defaultDate: "2025-01-01",
-        title: "test",
-      },
-      "2025-01-01",
-    ),
-    /verified\/default\/2025-01-01\/GoogleMapsCompatible_Level6\/\{z\}\/\{y\}\/\{x\}\.png$/,
-  );
 });
 test("supported form crops and documentary history sources match the merged request contract", () => {
   const rules = JSON.parse(readFileSync(

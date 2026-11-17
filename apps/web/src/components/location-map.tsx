@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, CircleMarker, Polygon } from "leaflet";
 import type { Location } from "@croppilot/contracts";
-import RegionalMapContext from "./regional-map-context";
 import type { Coordinate } from "@/lib/parcel-geometry";
 export default function LocationMap({
   location,
@@ -125,10 +124,6 @@ export default function LocationMap({
         role="region"
         aria-label="Map: select a point or draw a field boundary"
         aria-disabled={disabled || undefined}
-      />
-      <RegionalMapContext
-        map={ready ? map.current : null}
-        location={location}
       />
     </div>
   );

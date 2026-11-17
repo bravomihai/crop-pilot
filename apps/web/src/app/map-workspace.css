@@ -91,14 +91,6 @@
 .map-experience .map-instructions { position: absolute; z-index: 900; bottom: 112px; left: 50%; transform: translateX(-50%); max-width: 400px; margin: 0; padding: 8px 13px; border: 0; border-radius: 8px; font-size: 12px; color: #fff; background: #123c2fe6; }
 .map-experience .map-instructions:empty { display: none; }
 .map-experience .tile-warning { position: absolute; z-index: 900; bottom: 112px; left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 12px; max-width: 85vw; border-radius: 9px; font-size: 11px; background: var(--surface); color: var(--ink); }
-.map-context-menu { position: absolute; z-index: 950; right: 24px; top: 24px; max-width: calc(100vw - 48px); }
-.map-context-menu > summary { display: flex; align-items: center; gap: 9px; height: 39px; padding: 0 13px; background: var(--surface); color: var(--accent); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; list-style: none; font-size: 11px; box-shadow: 0 3px 12px #00000020; width: max-content; margin-left: auto; }
-.map-context-menu > summary::-webkit-details-marker { display: none; }
-.map-context-content { width: 320px; max-width: calc(100vw - 48px); margin-top: 9px; max-height: calc(100dvh - 255px); overflow: auto; background: var(--surface); border-radius: 15px; padding: 16px; box-shadow: 0 8px 35px #00000030; }
-.map-experience .regional-map-context { padding: 0; border: 0; margin: 0; background: transparent; color: var(--ink); }
-.map-experience .regional-map-context h3 { font-size: 13px; }
-.map-experience .regional-map-context p, .map-experience .regional-map-context label { font-size: 11px; line-height: 1.6; }
-.map-experience .regional-map-context input { accent-color: var(--accent); }
 .map-footer { position: absolute; z-index: 900; bottom: 22px; left: 24px; max-width: calc(100% - 48px); display: flex; align-items: center; gap: 20px; }
 .map-experience .map-footer .map-toolbar { position: static; transform: none; flex-shrink: 0; }
 .map-signature { display: flex; align-items: center; gap: 9px; flex-shrink: 0; white-space: nowrap; font-size: 9px; letter-spacing: 1.3px; color: #ffffff; text-shadow: 0 1px 5px #000000; }
@@ -158,10 +150,6 @@
   .map-header-end { margin: 0; }
   .prototype-pill { display: none; }
   .map-icon-button { height: 36px; width: 36px; }
-  .map-context-menu { top: 12px; right: 12px; }
-  .map-context-menu > summary { width: 38px; height: 38px; padding: 0; justify-content: center; }
-  .map-context-menu > summary span { display: none; }
-  .map-context-content { max-height: calc(100dvh - 220px); }
   .map-planner { top: auto; bottom: 95px; left: 12px; width: calc(100% - 24px); max-height: min(56dvh, calc(100dvh - 240px)); border-radius: 19px; }
   .map-planner:not(.has-field) { max-width: 344px; }
   .planner-heading { padding: 19px 20px 13px; }
@@ -215,7 +203,7 @@
   color: #ffffff;
   border-color: var(--accent);
 }
-.map-experience :is(.what-if-sliders, .regional-map-context) input[type=range] {
+.map-experience .what-if-sliders input[type=range] {
   accent-color: var(--accent);
 }
 .map-experience .empty-state-symbol { background: var(--forest); color: #ffffff; }

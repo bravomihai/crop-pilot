@@ -87,7 +87,7 @@
 .map-experience :is(.planner-eyebrow, .local-note, .planner-steps, .field-hint) { color: var(--muted); }
 
 /* Brand leads the map and results headers at the top left. */
-.map-header { gap: 20px; right: 176px; }
+.map-header { gap: 20px; }
 .map-header-end { gap: 12px; }
 .map-brand { flex-shrink: 0; height: var(--header-control-height); border: 1px solid var(--border); border-radius: var(--header-control-radius); background: var(--surface); color: var(--accent) !important; box-shadow: var(--panel-shadow); }
 .map-brand-symbol { border: 0; color: var(--accent); }
@@ -98,7 +98,7 @@
 .map-experience .dashboard-search { height: var(--header-control-height); border-radius: var(--header-control-radius); }
 
 /* Panels and cards use one edge, border and spacing system. */
-.map-planner, .map-results-panel, .map-context-content, .map-experience .search-popover {
+.map-planner, .map-results-panel, .map-experience .search-popover {
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   box-shadow: var(--panel-shadow);
@@ -191,7 +191,7 @@
 .map-experience .plan .confidence { margin-bottom: 18px; }
 .map-experience .sequence { border-color: var(--border); }
 .map-experience .sequence li::before { background: var(--accent); }
-.map-experience :is(.survival-evidence, .survival-decision, .survival-reveal, .survival-row, .survival-metrics > div, .gibs-layer-option) { border: 1px solid var(--border); border-radius: var(--card-radius); background: var(--surface-muted); }
+.map-experience :is(.survival-evidence, .survival-decision, .survival-reveal, .survival-row, .survival-metrics > div) { border: 1px solid var(--border); border-radius: var(--card-radius); background: var(--surface-muted); }
 .map-experience .survival-card { border-radius: var(--card-radius); background: var(--surface-muted); border-color: var(--border); }
 .map-experience .survival-card-icon { color: var(--accent); border-radius: var(--control-radius); }
 .map-experience :is(.survival-card, .survival-choice):hover { border-color: var(--border-hover); background: var(--surface-hover); }
@@ -214,16 +214,6 @@
 .map-experience .score-meter-track > span { background: var(--score-blue); }
 .map-experience :is(.comparison-baseline .comparison-track, .score-baseline .score-meter-track) > span { background: var(--muted); }
 
-/* NASA layers are part of the same panel and control system. */
-.map-context-menu > summary { min-height: 54px; border-color: var(--border); border-radius: var(--control-radius); }
-.map-context-content { width: 360px; padding: var(--card-padding); }
-.map-experience .regional-map-context { border: 0; padding: 0; }
-.map-experience .regional-map-context h3 { font-size: 16px; color: var(--ink); }
-.map-experience .regional-map-context label { color: var(--muted); }
-.map-experience .regional-map-context select { width: 100%; }
-.map-experience .regional-map-context .checkbox-label { color: var(--ink); min-height: 32px; }
-.map-experience .gibs-layer-option { padding: 16px; }
-.map-experience .coverage-warning { border-radius: var(--control-radius); border-color: var(--border); }
 .map-experience .map-toolbar { border-color: var(--border); border-radius: var(--card-radius); }
 .map-experience .map-toolbar button:hover:not(:disabled) { background: var(--forest-hover); }
 .map-experience .map-toolbar .map-clear:hover { background: var(--surface-hover); }
@@ -237,8 +227,7 @@
 }
 @media (max-width: 760px) {
   :root { --card-padding: 18px; }
-  .map-header { gap: 8px; right: 70px; }
-  .map-context-menu > summary { width: 42px; height: 48px; min-height: 48px; }
+  .map-header { gap: 8px; }
   .map-header-end { gap: 8px; }
   .map-brand { width: auto; padding: 0 12px 0 4px; gap: 2px; }
   .map-brand > span:last-child { display: block; font-size: 16px; }

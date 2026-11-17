@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import type { Location } from "@croppilot/contracts";
 import type { Map as LeafletMap } from "leaflet";
 import Icon from "./icon";
-import RegionalMapContext from "../regional-map-context";
 
 // Avoid imagery levels where the basemap can return unavailable-data tiles.
 const MAX_MAP_ZOOM = 17;
@@ -32,7 +31,6 @@ export default function FieldMap(props: Props) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [tileError, setTileError] = useState(false);
-  const [contextOpen, setContextOpen] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -116,10 +114,6 @@ export default function FieldMap(props: Props) {
       </div>
       <p className={`map-instructions ${failed ? "has-error" : ""}`} id="map-instructions" role="status">{failed ? "Map unavailable. Try a location search." : !ready ? "Loading map…" : ""}</p>
       {tileError && <p className="tile-warning" role="status">Satellite imagery is unavailable. Try reloading the page or use a location search.</p>}
-      <details className="map-context-menu" onToggle={e => setContextOpen(e.currentTarget.open)}>
-        <summary aria-label="NASA layers"><Icon name="satellite" size={17} /><span>NASA layers</span></summary>
-        {contextOpen && <div className="map-context-content"><RegionalMapContext map={ready ? map.current : null} location={props.selection ?? undefined} /></div>}
-      </details>
     </section>
   );
 }

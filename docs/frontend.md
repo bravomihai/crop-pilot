@@ -20,7 +20,6 @@ team before adding fields or changing request shapes. Interface text is English.
 | `src/components/glossary.tsx` | Plain explanations of the terms used in the results |
 | `src/components/charts/` | Score meters and comparison, rotation timeline, replay and climate charts |
 | `src/app/controls.css` | Shared inputs, dropdowns, buttons, disabled states and keyboard focus |
-| `src/components/regional-map-context.tsx` | Optional NASA GIBS layers, POWER cell and rule-zone outlines |
 | `src/lib/api.ts` | The only frontend entry for calculations; explicit mock mode |
 | `src/lib/use-recommendations.ts` | Calculation state, cancellation and debounced recalculation |
 | `src/lib/planning-dates.ts` | Autumn-sowing hint and the `?lat=&lon=&name=` demo field link |
@@ -129,53 +128,6 @@ git diff --check
 The automated checks do not verify browser gestures, layout, tile services, or
 external integrations; check those manually in a browser at narrow and wide widths.
 
-## NASA regional context layers
-
-`RegionalMapContext` opens from the map page's **NASA layers** menu. It reads the EPSG:3857
-[GIBS capabilities document](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml)
-in the browser. The following exact identifiers were verified on 2026-11-14:
-
-| Display layer | Identifier | Advertised matrix set | Default snapshot at verification |
-| --- | --- | --- | --- |
-| SMAP root-zone soil moisture | `SMAP_L4_Analyzed_Root_Zone_Soil_Moisture` | `GoogleMapsCompatible_Level6` | 2026-11-10 |
-| MODIS daytime land surface temperature | `MODIS_Terra_Land_Surface_Temp_Day` | `GoogleMapsCompatible_Level7` | 2026-11-14 |
-| GPM IMERG precipitation rate | `IMERG_Precipitation_Rate` | `GoogleMapsCompatible_Level6` | 2026-11-13 |
-
-The chosen matrix sets advertise 256 px tiles, with native levels 0–6 / 0–7 / 0–6.
-The component reads the matrix set, native zoom, tile size, default style, Time
-values, and horizontal LegendURL again at runtime. No unavailable layer, date,
-or matrix is guessed. The legends are the advertised
-`SMAP_Analyzed_Soil_Moisture_H.svg`, `MODIS_Land_Surface_Temp_H.svg`, and
-`GPM_Precipitation_Rate_H.svg` under `https://gibs.earthdata.nasa.gov/legends/`.
-Their text labels are also fetched from the official SVG and displayed as text.
-
-The month control covers the current UTC month and preceding 59 months. It shows
-the last advertised daily snapshot within each month, not a monthly average.
-Daily interval gaps are respected; an unavailable month shows a message and sends
-no tile request. Play/pause advances months. Each layer has its own toggle,
-opacity slider, and official legend. Attribution is **NASA GIBS / EOSDIS** and the
-interface labels the overlays **Regional context (km-scale), not a field
-measurement.**
-
-The weather-cell rectangle snaps to 0.5° latitude / 0.625° longitude and extends
-±0.25° / ±0.3125°. Four dashed crop-rule boxes are copied into
-`src/lib/regional-context.ts` from `ro_south.json` (`region.boxes`), with a source
-comment. An outside-zone point displays a warning that plans there use provisional
-Romania-wide temperature-profile rules and need local review. Capabilities, legend, and tile failures
-are isolated from the base map and form.
-
-## Check changes
-
-```powershell
-corepack pnpm --recursive typecheck
-corepack pnpm --filter @croppilot/web test:ui
-corepack pnpm --filter @croppilot/web test:backend
-git diff --check
-```
-
-The automated checks do not verify browser gestures, layout, tile services, or
-external integrations; check those manually in a browser at narrow and wide widths.
-
 ## Shared visual system — 2026-11-15
 
 `src/app/ui-theme.css` defines shared theme tokens and card styles.
@@ -189,7 +141,7 @@ soft white surfaces with a slight green tint, black text and forest green
 Score bars have muted, distinct colours with darker variants in dark mode; other
 chart series and geographic imagery keep their existing colours.
 
-Planner, results and NASA layer panels share 16 px card corners, consistent
+Planner and results panels share 16 px card corners, consistent
 borders, spacing, dropdowns and keyboard focus indicators. Branding sits at the
 top left of the map and results headers. The results title reads logo, CropPilot,
 then Your crop plans, without the earlier THE NEXT CHAPTER eyebrow. Results retain the summary and plan
@@ -209,10 +161,12 @@ on a rounded light green (`#c4dfce`) background.
 
 ### Map controls
 
-NASA layers opens from the top-right corner, aligned with the map header on
-desktop and mobile. The header reserves space for the button. Satellite imagery
-is the only basemap; the street-map selector and on-screen zoom buttons are
-removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
+Regional NASA imagery overlays have been removed because their resolution does not
+support field-level zoom. NASA POWER weather and SRTM terrain data remain part of
+the calculation engine.
+
+Satellite imagery is the only basemap; the street-map selector and on-screen zoom
+buttons are removed. Scroll, pinch and keyboard zoom remain available within levels 6–17.
 
 The map attribution control is disabled in every build at the owner's request
 for design review. Layer attribution metadata is retained. Restore the control
