@@ -202,6 +202,11 @@ is bounded to levels 6–17; all basemaps disable wrapping and panning is constr
 to the world bounds to prevent repeated world tiles.
 
 
+### Browser branding
+
+The tab title is `CropPilot`. The favicon keeps the dark green leaf (`#123c2f`)
+on a rounded light green (`#c4dfce`) background.
+
 ### Map controls
 
 NASA layers opens from the top-right corner, aligned with the map header on
