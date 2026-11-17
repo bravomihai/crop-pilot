@@ -15,7 +15,6 @@ import {
   type FieldSelection,
 } from "@/lib/parcel-geometry";
 import Icon from "./icon";
-import RegionalMapContext from "../regional-map-context";
 
 const MAX_MAP_ZOOM = 17;
 
@@ -53,7 +52,6 @@ export default function ParcelMap(props: Props) {
   const [message, setMessage] = useState("Draw your field boundary on the map.");
   const [tileError, setTileError] = useState(false);
   const [referenceError, setReferenceError] = useState(false);
-  const [contextOpen, setContextOpen] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -602,23 +600,6 @@ export default function ParcelMap(props: Props) {
           drawing remain separate from these reference layers.
         </p>
       )}
-      <details
-        className="map-context-menu"
-        onToggle={(event) => setContextOpen(event.currentTarget.open)}
-      >
-        <summary aria-label="NASA layers">
-          <Icon name="satellite" size={17} />
-          <span>NASA layers</span>
-        </summary>
-        {contextOpen && (
-          <div className="map-context-content">
-            <RegionalMapContext
-              map={ready ? map.current : null}
-              location={props.selection?.location}
-            />
-          </div>
-        )}
-      </details>
     </section>
   );
 }

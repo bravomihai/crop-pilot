@@ -1,0 +1,179 @@
+/* Shared interactive controls. Layout sheets should only position their containers. */
+.map-experience {
+  --control-height: 42px;
+  --control-font-size: 12px;
+  --header-control-height: 54px;
+  --header-control-radius: var(--card-radius);
+}
+.map-experience :is(button, input, select) { font: inherit; }
+
+.map-experience :where(button, a, input, select, summary) {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.map-experience :where(button, a, input, select, summary):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.map-experience button:disabled {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: .6;
+  box-shadow: none;
+}
+
+/* One control treatment across the planner and results. */
+.map-experience :is(input, select):not([type="range"], [type="checkbox"], [type="radio"]) {
+  min-width: 0;
+  min-height: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background-color: var(--surface-muted);
+  color: var(--ink);
+  padding: 10px 12px;
+  color-scheme: inherit;
+  font: inherit;
+  font-size: var(--control-font-size);
+}
+.map-experience select:not([multiple]) {
+  appearance: none;
+  font-weight: 400;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%237e9788' stroke-width='1.8' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.map-experience select option { color: var(--ink); background: var(--surface); }
+.map-experience select option:enabled:is(:checked, :hover, :focus) {
+  background: var(--selection-background);
+  color: var(--selection-text);
+}
+/* Opt into a styleable picker instead of the operating system's blue highlight. */
+@supports (appearance: base-select) {
+  .map-experience select:not([multiple], [size]),
+  .map-experience select:not([multiple], [size])::picker(select) { appearance: base-select; }
+  .map-experience select:not([multiple], [size]) { display: flex; align-items: center; }
+  /* The trigger already has the shared chevron background. */
+  .map-experience select::picker-icon { display: none; }
+  .map-experience select::picker(select) {
+    max-height: min(360px, 50dvh);
+    max-width: calc(100vw - 24px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--control-radius);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--panel-shadow);
+    font: inherit;
+  }
+  .map-experience select option {
+    min-height: 36px;
+    padding: 9px 12px;
+    gap: 10px;
+    border-radius: 6px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  .map-experience select option::checkmark { color: currentColor; }
+  .map-experience select option:focus-visible {
+    outline: 2px solid var(--selection-background);
+    outline-offset: -2px;
+  }
+  .map-experience select option:disabled { color: var(--muted); cursor: not-allowed; }
+}
+.map-experience :is(select, input)::placeholder { color: var(--muted); opacity: 1; }
+.map-experience :is(select, input):disabled { opacity: .6; cursor: not-allowed; }
+.map-experience :is(select, input):focus-visible { border-color: var(--border-hover); }
+.map-experience input:is([type="checkbox"], [type="radio"]) { accent-color: var(--forest); width: 16px; height: 16px; flex-shrink: 0; }
+.map-experience input[type="range"] { accent-color: var(--accent); cursor: pointer; min-height: 32px; }
+.map-experience :is(.button, .fullscreen-toggle, .map-back-button, .search-dismiss, .cancel-calculation, .glance-link, .print-sheet-button, .text-button, .rotation-row-actions :where(button)) {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  padding: 10px 14px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 12px !important;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.map-experience :is(.button--primary, .calculate-button, .glance-link, .survival-cta-button, .reopen-results) {
+  color: #ffffff;
+  background: var(--forest);
+  border: 1px solid var(--forest);
+  border-radius: var(--control-radius);
+}
+.map-experience :is(.button--primary, .calculate-button, .glance-link, .survival-cta-button, .reopen-results):hover:not(:disabled) {
+  background: var(--forest-hover);
+  border-color: var(--forest-hover);
+  color: #ffffff;
+}
+.map-experience :is(.quiet-icon, .map-back-button, .fullscreen-toggle, .button--secondary, .search-dismiss, .cancel-calculation, .text-button, .rotation-row-actions :where(button), .print-sheet-button, .map-clear):hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  color: var(--ink);
+}
+.map-experience summary { border-radius: 6px; }
+.map-experience summary:hover { color: var(--accent); background-color: var(--surface-muted); }
+
+/* Planner inputs share the same spacing and border treatment as results inputs. */
+.map-experience .planner-fields :is(input, select):not([type="range"], [type="checkbox"], [type="radio"]) {
+  width: 100%;
+  height: var(--control-height);
+  margin: 0;
+  box-shadow: none;
+}
+.map-experience .planner-fields input:not([type="checkbox"]) { font-weight: 600; }
+
+/* The location search is an unboxed input inside its own control. */
+.map-experience .dashboard-search input {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+}
+.map-experience .dashboard-search input::placeholder { color: var(--muted); }
+.map-experience .dashboard-search button {
+  border-radius: var(--control-radius);
+  background: var(--forest);
+  color: #ffffff;
+}
+.map-experience .dashboard-search button:hover:not(:disabled) { background: var(--forest-hover); }
+.map-experience .dashboard-search:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.map-experience .search-popover li button:hover { background: var(--surface-hover); }
+.map-experience .rotation-row-actions :where(button) { min-width: 36px; padding: 7px 10px; }
+.map-experience .current-rotation > button {
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 11px;
+}
+.map-experience .button--secondary {
+  background: var(--surface);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 760px) {
+  .map-experience {
+    --header-control-height: 48px;
+    --header-control-radius: var(--control-radius);
+  }
+  .map-experience .planner-fields { --control-font-size: 16px; }
+  .map-experience .dashboard-search input { font-size: 12px; }
+}

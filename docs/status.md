@@ -3,6 +3,23 @@
 This file includes historical verification records. Later entries describe newer
 runtime and interface states; earlier checks are not new claims of scientific validation.
 
+## Shared controls and map cleanup — 2026-11-17
+
+Shared form, dropdown, button and focus styles live in `apps/web/src/app/controls.css`.
+The brand and search share header size/corner tokens. The tab title is `CropPilot`;
+the favicon uses the dark green leaf on a light green background.
+
+The optional NASA imagery overlays and their menu have been removed because their
+native resolution does not support field-level zoom. Their component, helper
+code and overlay-only styles are removed.
+The satellite basemap and NASA POWER/SRTM calculation integrations remain unchanged.
+
+Verified locally: contract generation, TypeScript checking through the production
+build, and a successful production build. Browser review covered field selection
+and the form at desktop/mobile widths in light/dark themes, no overlay controls or
+GIBS requests, and no browser errors. No new tests were added; obsolete
+overlay-helper checks were removed. No production deployment was performed.
+
 ## Main integration into maria
 
 The main-branch integration retains drawn fields, separately analysed field parts,

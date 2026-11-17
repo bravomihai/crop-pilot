@@ -17,6 +17,5 @@ CropPilot supports agricultural decisions; its rules and scores require local ag
 
 - **[NASA POWER](https://power.larc.nasa.gov/)** — historical daily temperature, precipitation, humidity, wind, and solar radiation. These support crop evaluation, drought and heat indicators, and reference evapotranspiration calculations.
 - **[SRTM elevation](https://www.opentopodata.org/datasets/srtm/)** — terrain data accessed through OpenTopoData to estimate slope for erosion-risk assessment.
-- **[NASA GIBS](https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml)** — map overlays for SMAP root-zone soil moisture, MODIS land surface temperature and vegetation index (NDVI), and GPM IMERG precipitation. These provide visual context rather than inputs to the recommendation scores.
 
 Additional sources include ISRIC SoilGrids for soil estimates and ESA WorldCover for historical land-cover screening. Environmental datasets provide regional or modelled context rather than field measurements.
