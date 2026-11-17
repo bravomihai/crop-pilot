@@ -75,9 +75,6 @@
 .map-experience .current-rotation legend, .crop-exclusions legend, .climate-options legend { color: var(--muted); font-size: 11px; font-weight: 550; margin-bottom: 10px; }
 .map-experience .current-rotation legend small, .climate-options small { font-size: 9px; font-weight: 400; color: var(--muted); }
 .map-experience .current-rotation p { font-size: 10px; line-height: 1.5; color: var(--muted); margin: 0 0 12px; }
-.map-experience .current-rotation ol { margin: 0; padding: 0; }
-.map-experience .current-rotation li { display: block; background: var(--surface); padding: 8px; border-radius: 8px; margin-bottom: 8px; }
-.map-experience .rotation-row-actions { display: flex; gap: 5px; margin-bottom: 8px; }
 .map-experience .crop-exclusions, .map-experience .climate-options { border: 0; padding: 0; margin: 0 0 18px; min-width: 0; }
 .crop-exclusions > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .map-experience .crop-exclusions label { margin: 0; display: flex; flex-direction: row; align-items: center; gap: 5px; font-size: 10px; }

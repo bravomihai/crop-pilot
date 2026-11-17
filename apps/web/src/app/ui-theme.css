@@ -111,8 +111,6 @@
 .planner-action { border-color: var(--border); }
 .planner-options, .planner-steps b { border-color: var(--border); }
 .map-experience .selected-field { border-radius: var(--control-radius); }
-.map-experience .current-rotation li { border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--surface-muted); padding: 12px; }
-.map-experience .rotation-row-actions { margin-bottom: 0; margin-top: 8px; }
 .crop-exclusions label { position: relative; cursor: pointer; }
 .map-experience .crop-exclusions label { gap: 0; }
 .crop-exclusions label input { position: absolute; opacity: 0; width: 1px; height: 1px; }
