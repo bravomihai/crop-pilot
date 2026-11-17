@@ -3,6 +3,17 @@
 This file includes historical verification records. Later entries describe newer
 runtime and interface states; earlier checks are not new claims of scientific validation.
 
+## Compact planning form — 2026-11-17
+
+Current rotation entries are single-line crop selectors with a trash icon; visible
+crop numbering and reorder controls are removed. More options has 12 px of side
+padding. The field-details eyebrow is removed, labels and section headings are
+larger with stronger contrast, and helper text is shorter.
+
+The production build and all 52 existing UI checks passed. Browser review covered
+desktop/mobile widths in light/dark themes, aligned dropdown/trash rows, crop changes
+and deletion, and the disclosure hover spacing. No tests were added.
+
 ## Shared controls and map cleanup — 2026-11-17
 
 Shared form, dropdown, button and focus styles live in `apps/web/src/app/controls.css`.

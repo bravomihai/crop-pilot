@@ -69,6 +69,10 @@ PostgreSQL cache stores public data only.
 
 ## Map page behaviour
 
+The field-details panel uses larger, high-contrast labels and short helper text,
+without the earlier eyebrow label. The More options hover has side padding so
+its content stays clear of the edges.
+
 - Search for a place or click the map to select a point. A shared link such as
   `/?lat=44.45&lon=26.5&name=Fundulea` selects that location. Point requests do not
   include a boundary, so ESA WorldCover cannot establish land-cover suitability;

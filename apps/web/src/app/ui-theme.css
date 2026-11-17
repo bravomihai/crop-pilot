@@ -107,7 +107,7 @@
 }
 .map-planner { width: 360px; }
 .planner-heading { padding: 24px 24px 20px; }
-.planner-heading h1 { font-size: 28px; font-weight: 600; }
+.planner-heading h1 { font-size: 30px; font-weight: 600; }
 .planner-action { border-color: var(--border); }
 .planner-options, .planner-steps b { border-color: var(--border); }
 .map-experience .selected-field { border-radius: var(--control-radius); }
@@ -224,6 +224,7 @@
   .results-panel-header { padding: 18px 22px; }
 }
 @media (max-width: 760px) {
+  .planner-heading h1 { font-size: 28px; }
   :root { --card-padding: 18px; }
   .map-header { gap: 8px; }
   .map-header-end { gap: 8px; }

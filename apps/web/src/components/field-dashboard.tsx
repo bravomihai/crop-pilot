@@ -135,7 +135,7 @@ export default function FieldDashboard() {
 
       <section className={`map-planner ${selection ? "has-field" : ""}`} id="field-details" aria-labelledby="planner-title" hidden={panel !== "details"}>
         <div className="planner-heading">
-          <div><span className="planner-eyebrow">YOUR NEXT SEASON</span><h1 id="planner-title" ref={detailsHeading} tabIndex={-1}>{selection ? "Field details" : "Pick your field."}</h1></div>
+          <div><h1 id="planner-title" ref={detailsHeading} tabIndex={-1}>{selection ? "Field details" : "Pick your field."}</h1></div>
           <button className="quiet-icon" type="button" aria-label="Minimise field details" onClick={() => setPanel(null)}><Icon name="close" size={18} /></button>
         </div>
         {!selection ? (
@@ -155,10 +155,10 @@ export default function FieldDashboard() {
               <div className="planner-fields">
                 <PreferredCropInput value={preferredCrop} onChange={setPreferredCrop} />
                 {preferredCrop && excludedCrops.includes(preferredCrop) && (
-                  <p className="field-hint" role="status">Your chosen crop is also in crops to avoid. Remove it from that list or choose another crop.</p>
+                  <p className="field-hint" role="status">This crop is excluded. Choose another or update Crops to avoid.</p>
                 )}
                 <label htmlFor="available-from">Available from<input id="available-from" type="date" required min={today || undefined} aria-describedby="available-from-hint" value={availableFrom} onChange={e => setAvailableFrom(e.target.value)} /></label>
-                {afterAutumnSowing(availableFrom) && <p className="field-hint" id="available-from-hint">Autumn sowing usually ends in early November, so plans will start with spring crops. If the field is free earlier, pick that date.</p>}
+                {afterAutumnSowing(availableFrom) && <p className="field-hint" id="available-from-hint">Autumn sowing has ended. Plans start with spring crops.</p>}
                 <label htmlFor="previous-crop">Previous crop<select id="previous-crop" value={previousCrop} onChange={e => setPreviousCrop(e.target.value)}><option value="">Not sure / no previous crop</option>{RULE_CROPS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
                 <CurrentRotationInput prefix="map-rotation" badge="Recommended" value={currentRotation} onChange={value => { clear(); setCurrentRotation(value); }} />
                 <div className="planner-field-row">
